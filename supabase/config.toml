@@ -1,0 +1,3 @@
+# Fonction serveur du projet DF-boosting (projet Supabase "Replay")
+[functions.df-api]
+verify_jwt = false
