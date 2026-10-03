@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Database, Download, RefreshCw, HardDrive, Check, Copy, Table, ArrowLeft, AlertTriangle } from 'lucide-react';
+import { X, Database, Download, HardDrive, Check, Copy, Table, ArrowLeft, AlertTriangle } from 'lucide-react';
 import { db } from '../db/store';
 import { useLockBodyScroll } from '../utils/useLockBodyScroll';
 import { formatScoreM } from '../utils/formatUtils';
@@ -15,8 +15,6 @@ export const SqliteInspectorModal: React.FC<SqliteInspectorModalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'sql' | 'users' | 'posts' | 'security' | 'advances'>('sql');
   const [copied, setCopied] = useState(false);
-  const [resetDone, setResetDone] = useState(false);
-  const [confirmReset, setConfirmReset] = useState(false);
 
   useLockBodyScroll(isOpen);
 
@@ -53,13 +51,6 @@ export const SqliteInspectorModal: React.FC<SqliteInspectorModalProps> = ({
     a.download = `delta_force_backup_${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(url);
-  };
-
-  const handleExecuteReset = () => {
-    db.resetToFactoryDefaults();
-    setResetDone(true);
-    setConfirmReset(false);
-    setTimeout(() => setResetDone(false), 3000);
   };
 
   return (
@@ -133,34 +124,6 @@ export const SqliteInspectorModal: React.FC<SqliteInspectorModalProps> = ({
             </button>
           </div>
 
-          {confirmReset ? (
-            <div className="flex items-center gap-1.5 animate-in fade-in">
-              <span className="text-[11px] text-amber-300 font-semibold">Confirmer réinitialisation ?</span>
-              <button
-                type="button"
-                onClick={handleExecuteReset}
-                className="px-2.5 py-1 bg-red-600 hover:bg-red-500 text-white rounded text-[11px] font-bold cursor-pointer"
-              >
-                Oui, Réinitialiser
-              </button>
-              <button
-                type="button"
-                onClick={() => setConfirmReset(false)}
-                className="px-2 py-1 bg-slate-800 text-slate-300 hover:text-white rounded text-[11px] cursor-pointer"
-              >
-                Non
-              </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setConfirmReset(true)}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 bg-amber-950/40 border border-amber-700/60 text-amber-300 hover:bg-amber-900/60 rounded transition-colors cursor-pointer"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${resetDone ? 'animate-spin' : ''}`} />
-              {resetDone ? 'Réinitialisé avec succès !' : 'Données d\'usine'}
-            </button>
-          )}
         </div>
 
         {/* Tabs for inspecting tables */}

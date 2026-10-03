@@ -21,6 +21,7 @@ export default function App() {
   const { theme, t } = useApp();
   const isLight = theme === 'light';
 
+  const [isReady, setIsReady] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(db.getCurrentUser());
   const [activeView, setActiveView] = useState<string>('grid');
   const [isWelcomeAnimating, setIsWelcomeAnimating] = useState(false);
@@ -55,6 +56,13 @@ export default function App() {
   });
 
   const [isSqlModalOpen, setIsSqlModalOpen] = useState(false);
+
+  useEffect(() => {
+    db.whenReady().then(() => {
+      setCurrentUser(db.getCurrentUser());
+      setIsReady(true);
+    });
+  }, []);
 
   // Sync state with db store
   useEffect(() => {
@@ -126,6 +134,14 @@ export default function App() {
   };
 
   // 1. NOT LOGGED IN -> SHOW ONLY LOGIN PAGE (SIMPLE, MODERN & INTUITIVE)
+  if (!isReady) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-slate-400 text-sm font-mono">
+        Chargement…
+      </div>
+    );
+  }
+
   if (!currentUser) {
     return (
       <div className={`min-h-screen flex flex-col font-sans transition-colors duration-200 ${

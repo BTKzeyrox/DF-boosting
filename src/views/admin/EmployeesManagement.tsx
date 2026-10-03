@@ -39,12 +39,14 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [editName, setEditName] = useState('');
   const [editPhone, setEditPhone] = useState('');
+  const [editPassword, setEditPassword] = useState('');
   const [editShift, setEditShift] = useState<ShiftType>('day');
   const [editBadge, setEditBadge] = useState<User['performance_badge']>('Standard');
 
   // Add User Modal
   const [showAddModal, setShowAddModal] = useState(false);
   const [newUsername, setNewUsername] = useState('');
+  const [newPassword, setNewPassword] = useState('');
   const [newName, setNewName] = useState('');
   const [newPhone, setNewPhone] = useState('+261 34 ');
   const [newShift, setNewShift] = useState<ShiftType>('day');
@@ -94,11 +96,20 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
     setEditPhone(user.phone);
     setEditShift(user.shift);
     setEditBadge(user.performance_badge);
+    setEditPassword('');
   };
 
-  const handleSaveEdit = (e: React.FormEvent) => {
+  const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingUser) return;
+
+    if (editPassword) {
+      const pw = await db.setPassword(editingUser.id, editPassword);
+      if (!pw.success) {
+        alert(pw.error || 'Mot de passe non modifié.');
+        return;
+      }
+    }
 
     db.updateUser(editingUser.id, {
       name: editName,
@@ -110,15 +121,19 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
     setEditingUser(null);
   };
 
-  const handleCreateUser = (e: React.FormEvent) => {
+  const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setAddUserError(null);
-    if (!newUsername.trim() || !newName.trim()) {
+    if (!newUsername.trim() || !newName.trim() || !newPassword) {
       setAddUserError('Veuillez renseigner tous les champs obligatoires');
       return;
     }
+    if (newPassword.length < 6) {
+      setAddUserError('Le mot de passe doit avoir au moins 6 caractères.');
+      return;
+    }
 
-    db.addUser({
+    const created = await db.addUser({
       username: newUsername.toLowerCase().trim(),
       name: newName.trim(),
       phone: newPhone.trim(),
@@ -137,10 +152,16 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
         specialty: 'Opérateur Polyvalent'
       },
       performance_badge: 'Standard',
-    });
+    }, newPassword);
+
+    if (!created.success) {
+      setAddUserError(created.error || 'Création impossible.');
+      return;
+    }
 
     setShowAddModal(false);
     setNewUsername('');
+    setNewPassword('');
     setNewName('');
   };
 
@@ -501,6 +522,20 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
 
             <form onSubmit={handleSaveEdit} className="space-y-4">
               <div>
+                <label className="block text-slate-300 uppercase mb-1">Mot de passe (6 caractères min.)</label>
+                <input
+                  type="text"
+                  value={newPassword}
+                  onChange={e => setNewPassword(e.target.value)}
+                  required
+                  minLength={6}
+                  autoComplete="off"
+                  placeholder="à communiquer à l'employé"
+                  className="w-full bg-[#141e2a] border border-slate-700 rounded-lg p-2 text-white"
+                />
+              </div>
+
+              <div>
                 <label className="block text-slate-300 uppercase mb-1">Nom Complet</label>
                 <input
                   type="text"
@@ -517,6 +552,19 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                   type="text"
                   value={editPhone}
                   onChange={e => setEditPhone(e.target.value)}
+                  className="w-full bg-[#141e2a] border border-slate-700 rounded-lg p-2 text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-300 uppercase mb-1">Nouveau mot de passe (optionnel)</label>
+                <input
+                  type="text"
+                  value={editPassword}
+                  onChange={e => setEditPassword(e.target.value)}
+                  minLength={6}
+                  autoComplete="off"
+                  placeholder="laisser vide = inchangé"
                   className="w-full bg-[#141e2a] border border-slate-700 rounded-lg p-2 text-white"
                 />
               </div>

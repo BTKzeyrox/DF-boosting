@@ -1,6 +1,0 @@
-{
-  "name": "Delta Force Boosting Operations System",
-  "description": "Tactical management system for Delta Force boosting teams with anti-cheat validation, shift tracking, proof lightbox, payroll, and interactive calendar.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}

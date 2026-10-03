@@ -7,23 +7,19 @@ import {
   ShiftType,
   ClientContract,
 } from '../types';
-import {
-  INITIAL_USERS,
-  INITIAL_POSTS,
-  INITIAL_SECURITY_LOGS,
-  INITIAL_ADVANCE_REQUESTS,
-  INITIAL_MESSAGES,
-  AVAILABLE_CLIENT_CONTRACTS,
-} from './initialData';
+import { AVAILABLE_CLIENT_CONTRACTS } from './initialData';
 
-const STORAGE_KEYS = {
-  USERS: 'df_users_v1',
-  POSTS: 'df_posts_v1',
-  CONTRACTS: 'df_contracts_v1',
-  SECURITY_LOGS: 'df_sec_logs_v1',
-  ADVANCES: 'df_advances_v1',
-  MESSAGES: 'df_messages_v1',
-  CURRENT_USER: 'df_current_user_v1',
+const TOKEN_KEY = 'df_session_token_v2';
+const COLS = ['users', 'posts', 'contracts', 'securityLogs', 'advances', 'messages'] as const;
+type Col = (typeof COLS)[number];
+
+const SORTERS: Partial<Record<Col, (a: any, b: any) => number>> = {
+  users: (a, b) => (a.role === b.role ? String(a.id).localeCompare(String(b.id)) : a.role === 'admin' ? -1 : 1),
+  posts: (a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')),
+  contracts: (a, b) => (a.post_number || 0) - (b.post_number || 0),
+  securityLogs: (a, b) => String(b.id).localeCompare(String(a.id)),
+  advances: (a, b) => String(b.id).localeCompare(String(a.id)),
+  messages: (a, b) => String(a.timestamp || '').localeCompare(String(b.timestamp || '')) || String(a.id).localeCompare(String(b.id)),
 };
 
 class DeltaForceStore {
@@ -36,48 +32,159 @@ class DeltaForceStore {
   private currentUser: User | null = null;
   private listeners: Set<() => void> = new Set();
 
+  // --- Synchronisation avec le serveur (Supabase via /api) ---
+  private token: string | null = null;
+  private since = '';
+  private synced: Record<Col, Map<string, string>> = this.emptySynced();
+  private dirty = false;
+  private syncing = false;
+  private syncTimer: ReturnType<typeof setTimeout> | null = null;
+  private pollTimer: ReturnType<typeof setInterval> | null = null;
+  private readyPromise: Promise<void>;
+
   constructor() {
-    this.init();
+    try {
+      this.token = localStorage.getItem(TOKEN_KEY);
+    } catch {
+      this.token = null;
+    }
+    this.readyPromise = this.token ? this.restore() : Promise.resolve();
   }
 
-  private init() {
-    try {
-      const storedUsers = localStorage.getItem(STORAGE_KEYS.USERS);
-      this.users = storedUsers ? JSON.parse(storedUsers) : [...INITIAL_USERS];
+  public whenReady(): Promise<void> {
+    return this.readyPromise;
+  }
 
-      const storedPosts = localStorage.getItem(STORAGE_KEYS.POSTS);
-      this.posts = storedPosts ? JSON.parse(storedPosts) : [...INITIAL_POSTS];
+  private emptySynced(): Record<Col, Map<string, string>> {
+    return {
+      users: new Map(), posts: new Map(), contracts: new Map(),
+      securityLogs: new Map(), advances: new Map(), messages: new Map(),
+    };
+  }
 
-      const storedContracts = localStorage.getItem(STORAGE_KEYS.CONTRACTS);
-      this.contracts = storedContracts ? JSON.parse(storedContracts) : [...AVAILABLE_CLIENT_CONTRACTS];
-
-      const storedLogs = localStorage.getItem(STORAGE_KEYS.SECURITY_LOGS);
-      this.securityLogs = storedLogs ? JSON.parse(storedLogs) : [...INITIAL_SECURITY_LOGS];
-
-      const storedAdvances = localStorage.getItem(STORAGE_KEYS.ADVANCES);
-      this.advanceRequests = storedAdvances ? JSON.parse(storedAdvances) : [...INITIAL_ADVANCE_REQUESTS];
-
-      const storedMessages = localStorage.getItem(STORAGE_KEYS.MESSAGES);
-      this.messages = storedMessages ? JSON.parse(storedMessages) : [...INITIAL_MESSAGES];
-
-      const storedCurrent = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
-      if (storedCurrent) {
-        const parsed = JSON.parse(storedCurrent);
-        // refresh with fresh user data if previously logged in
-        this.currentUser = this.users.find(u => u.id === parsed.id) || null;
-      } else {
-        // Start on login page by default
-        this.currentUser = null;
-      }
-    } catch {
-      this.users = [...INITIAL_USERS];
-      this.posts = [...INITIAL_POSTS];
-      this.contracts = [...AVAILABLE_CLIENT_CONTRACTS];
-      this.securityLogs = [...INITIAL_SECURITY_LOGS];
-      this.advanceRequests = [...INITIAL_ADVANCE_REQUESTS];
-      this.messages = [...INITIAL_MESSAGES];
-      this.currentUser = null;
+  private arr(col: Col): any[] {
+    switch (col) {
+      case 'users': return this.users;
+      case 'posts': return this.posts;
+      case 'contracts': return this.contracts;
+      case 'securityLogs': return this.securityLogs;
+      case 'advances': return this.advanceRequests;
+      case 'messages': return this.messages;
     }
+  }
+
+  private setArr(col: Col, value: any[]) {
+    switch (col) {
+      case 'users': this.users = value; break;
+      case 'posts': this.posts = value; break;
+      case 'contracts': this.contracts = value; break;
+      case 'securityLogs': this.securityLogs = value; break;
+      case 'advances': this.advanceRequests = value; break;
+      case 'messages': this.messages = value; break;
+    }
+  }
+
+  private resetLocal() {
+    COLS.forEach(c => this.setArr(c, []));
+    this.synced = this.emptySynced();
+    this.since = '';
+    this.dirty = false;
+    this.currentUser = null;
+  }
+
+  private async api(path: string, init?: RequestInit): Promise<{ ok: boolean; status: number; data: any }> {
+    try {
+      const res = await fetch(`/api/${path}`, {
+        ...init,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
+        },
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 401 && this.token && path !== 'login') this.expireSession();
+      return { ok: res.ok, status: res.status, data };
+    } catch {
+      return { ok: false, status: 0, data: { error: 'Réseau indisponible.' } };
+    }
+  }
+
+  private expireSession() {
+    this.token = null;
+    try { localStorage.removeItem(TOKEN_KEY); } catch { /* ignore */ }
+    this.stopPolling();
+    this.resetLocal();
+    this.emit();
+  }
+
+  private async restore() {
+    const ok = await this.pull(true);
+    if (ok) this.startPolling();
+  }
+
+  private startPolling() {
+    this.stopPolling();
+    this.pollTimer = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+      void this.pull();
+    }, 5000);
+  }
+
+  private stopPolling() {
+    if (this.pollTimer) clearInterval(this.pollTimer);
+    this.pollTimer = null;
+  }
+
+  // Récupère les changements du serveur. Retourne true si la session est valide.
+  private async pull(force = false): Promise<boolean> {
+    if (!this.token) return false;
+    const r = await this.api(`state?since=${encodeURIComponent(this.since)}`);
+    if (!r.ok) return false;
+    if (!force && (this.dirty || this.syncing)) return true; // changements locaux en attente : on ignore ce tour
+
+    const cols = r.data.collections || {};
+    let changedAny = false;
+    for (const col of COLS) {
+      const c = cols[col];
+      if (!c) continue;
+      const idSet = new Set<string>(c.ids || []);
+      let list = this.arr(col);
+      const before = list.length;
+      list = list.filter(x => idSet.has(x.id));
+      let changed = list.length !== before;
+      for (const rec of c.changed || []) {
+        const json = JSON.stringify(rec);
+        if (this.synced[col].get(rec.id) === json && list.some(x => x.id === rec.id)) continue;
+        const idx = list.findIndex(x => x.id === rec.id);
+        if (idx >= 0) list[idx] = rec; else list.push(rec);
+        this.synced[col].set(rec.id, json);
+        changed = true;
+      }
+      for (const id of Array.from(this.synced[col].keys())) if (!idSet.has(id)) this.synced[col].delete(id);
+      if (changed) {
+        const sorter = SORTERS[col];
+        if (sorter) list.sort(sorter);
+        this.setArr(col, list);
+        changedAny = true;
+      }
+    }
+    this.since = r.data.serverTime || this.since;
+
+    // Premier démarrage : l'admin remplit les 20 postes
+    if (r.data.me?.role === 'admin' && this.contracts.length === 0 && (cols.contracts?.ids || []).length === 0) {
+      this.contracts = [...AVAILABLE_CLIENT_CONTRACTS];
+      this.notify();
+      changedAny = true;
+    }
+
+    const me = r.data.me ? this.users.find(u => u.id === r.data.me.id) || r.data.me : null;
+    if (me) {
+      const prev = JSON.stringify(this.currentUser);
+      this.currentUser = me;
+      if (prev !== JSON.stringify(me)) changedAny = true;
+    }
+    if (changedAny) this.emit();
+    return true;
   }
 
   public subscribe(listener: () => void) {
@@ -87,58 +194,102 @@ class DeltaForceStore {
     };
   }
 
-  private notify() {
-    this.save();
+  private emit() {
     this.listeners.forEach(fn => fn());
   }
 
-  private save() {
-    try {
-      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(this.users));
-      localStorage.setItem(STORAGE_KEYS.POSTS, JSON.stringify(this.posts));
-      localStorage.setItem(STORAGE_KEYS.CONTRACTS, JSON.stringify(this.contracts));
-      localStorage.setItem(STORAGE_KEYS.SECURITY_LOGS, JSON.stringify(this.securityLogs));
-      localStorage.setItem(STORAGE_KEYS.ADVANCES, JSON.stringify(this.advanceRequests));
-      localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(this.messages));
-      if (this.currentUser) {
-        localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(this.currentUser));
-      } else {
-        localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+  // Appelé après chaque modification locale : envoie au serveur après un court délai
+  private notify() {
+    if (this.token) {
+      this.dirty = true;
+      if (this.syncTimer) clearTimeout(this.syncTimer);
+      this.syncTimer = setTimeout(() => void this.flush(), 300);
+    }
+    this.emit();
+  }
+
+  private diff() {
+    const changes: Record<string, { upserts: any[]; deletes: string[] }> = {};
+    const sent: Record<string, { sets: Map<string, string>; deletes: string[] }> = {};
+    for (const col of COLS) {
+      const upserts: any[] = [];
+      const sets = new Map<string, string>();
+      const current = new Set<string>();
+      for (const rec of this.arr(col)) {
+        current.add(rec.id);
+        const json = JSON.stringify(rec);
+        if (this.synced[col].get(rec.id) !== json) { upserts.push(rec); sets.set(rec.id, json); }
       }
-    } catch (e) {
-      console.error('Storage save error:', e);
+      const deletes = Array.from(this.synced[col].keys()).filter(id => !current.has(id));
+      if (upserts.length || deletes.length) {
+        changes[col] = { upserts, deletes };
+        sent[col] = { sets, deletes };
+      }
+    }
+    return { changes, sent };
+  }
+
+  private async flush() {
+    if (this.syncing || !this.token) return;
+    this.syncing = true;
+    let retry = false;
+    try {
+      const { changes, sent } = this.diff();
+      if (Object.keys(changes).length === 0) { this.dirty = false; return; }
+      const r = await this.api('sync', { method: 'POST', body: JSON.stringify({ changes }) });
+      if (!r.ok) { retry = r.status !== 401 && r.status !== 403 && r.status !== 400; if (!retry) this.dirty = false; return; }
+      for (const col of Object.keys(sent) as Col[]) {
+        sent[col].sets.forEach((json, id) => this.synced[col].set(id, json));
+        sent[col].deletes.forEach(id => this.synced[col].delete(id));
+      }
+      if (r.data.rejected?.length) {
+        // Certaines modifications refusées par le serveur : on recharge l'état officiel
+        this.dirty = false;
+        this.since = '';
+        this.syncing = false;
+        await this.pull(true);
+        return;
+      }
+      const again = this.diff();
+      if (Object.keys(again.changes).length > 0) retry = true; else this.dirty = false;
+    } finally {
+      this.syncing = false;
+      if (retry && this.token) {
+        if (this.syncTimer) clearTimeout(this.syncTimer);
+        this.syncTimer = setTimeout(() => void this.flush(), 2500);
+      }
     }
   }
 
   // --- AUTHENTICATION ---
-  public login(username: string): { success: boolean; error?: string; user?: User } {
-    const user = this.users.find(
-      u => u.username.toLowerCase() === username.trim().toLowerCase()
-    );
-
-    if (!user) {
-      return { success: false, error: 'Identifiant invalide. Utilisateur introuvable.' };
-    }
-
-    if (user.status === 'blocked') {
-      return { success: false, error: 'Access denied. Account is blocked.' };
-    }
-
-    user.is_online = true;
-    this.currentUser = user;
-    this.notify();
-    return { success: true, user };
+  public async login(username: string, password: string): Promise<{ success: boolean; error?: string; user?: User }> {
+    const r = await this.api('login', { method: 'POST', body: JSON.stringify({ username, password }) });
+    if (!r.ok) return { success: false, error: r.data?.error || 'Erreur de connexion.' };
+    this.stopPolling();
+    this.resetLocal();
+    this.token = r.data.token;
+    try { localStorage.setItem(TOKEN_KEY, r.data.token); } catch { /* ignore */ }
+    await this.pull(true);
+    this.currentUser = this.users.find(u => u.id === r.data.user.id) || r.data.user;
+    this.startPolling();
+    this.emit();
+    return { success: true, user: this.currentUser as User };
   }
 
   public logout(): void {
-    if (this.currentUser) {
-      const u = this.users.find(usr => usr.id === this.currentUser?.id);
-      if (u) {
-        u.is_online = false;
-      }
-      this.currentUser = null;
-      this.notify();
+    if (this.token) {
+      fetch('/api/logout', { method: 'POST', keepalive: true, headers: { Authorization: `Bearer ${this.token}`, 'Content-Type': 'application/json' } }).catch(() => {});
     }
+    this.token = null;
+    try { localStorage.removeItem(TOKEN_KEY); } catch { /* ignore */ }
+    this.stopPolling();
+    this.resetLocal();
+    this.emit();
+  }
+
+  public async setPassword(userId: string, password: string, currentPassword?: string): Promise<{ success: boolean; error?: string }> {
+    const r = await this.api('set-password', { method: 'POST', body: JSON.stringify({ userId, password, currentPassword }) });
+    return r.ok ? { success: true } : { success: false, error: r.data?.error || 'Erreur.' };
   }
 
   public getCurrentUser(): User | null {
@@ -568,18 +719,17 @@ class DeltaForceStore {
     return { success: true };
   }
 
-  public addUser(userData: Omit<User, 'id' | 'is_online' | 'total_score_boosted' | 'total_earnings_ar' | 'pending_advance_ar'>): { success: boolean; user: User } {
-    const newUser: User = {
-      ...userData,
-      id: `user-emp-${Date.now()}`,
-      is_online: false,
-      total_score_boosted: 0,
-      total_earnings_ar: 0,
-      pending_advance_ar: 0,
-    };
-    this.users.push(newUser);
-    this.notify();
-    return { success: true, user: newUser };
+  public async addUser(
+    userData: Omit<User, 'id' | 'is_online' | 'total_score_boosted' | 'total_earnings_ar' | 'pending_advance_ar'>,
+    password: string
+  ): Promise<{ success: boolean; user?: User; error?: string }> {
+    const r = await this.api('create-user', { method: 'POST', body: JSON.stringify({ user: userData, password }) });
+    if (!r.ok) return { success: false, error: r.data?.error || 'Création impossible.' };
+    const u = r.data.user as User;
+    this.users.push(u);
+    this.synced.users.set(u.id, JSON.stringify(u));
+    this.emit();
+    return { success: true, user: u };
   }
 
   // --- SECURITY LOGS ("Petit Malin") ---
@@ -674,14 +824,9 @@ class DeltaForceStore {
 
   // --- RESET / EXPORT SQL & JSON BACKUP ---
   public resetToFactoryDefaults(): void {
-    localStorage.clear();
-    this.users = [...INITIAL_USERS];
-    this.posts = [...INITIAL_POSTS];
-    this.securityLogs = [...INITIAL_SECURITY_LOGS];
-    this.advanceRequests = [...INITIAL_ADVANCE_REQUESTS];
-    this.messages = [...INITIAL_MESSAGES];
-    this.currentUser = this.users[0]; // Admin by default or null
-    this.notify();
+    // Ne supprime rien : recharge simplement l'état officiel depuis le serveur
+    this.since = '';
+    void this.pull(true);
   }
 
   public exportDatabaseSql(): string {

@@ -8,7 +8,6 @@ import {
   Database,
   Eye,
   EyeOff,
-  Sparkles,
   Sun,
   Moon,
   Globe,
@@ -45,45 +44,25 @@ export const LoginView: React.FC<LoginViewProps> = ({
     subtitle: 'OPÉRATIONS TACTIQUES DE BOOSTING & SÉCURISATION',
   });
 
-  const handleLogin = (e?: React.FormEvent) => {
+  const handleLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setErrorMsg(null);
 
-    if (!username.trim()) {
-      setErrorMsg(lang === 'zh' ? '请输入操作员账号。' : 'Veuillez saisir votre identifiant opérateur.');
+    if (!username.trim() || !password) {
+      setErrorMsg(lang === 'zh' ? '请输入账号和密码。' : 'Veuillez saisir votre pseudo et votre mot de passe.');
       return;
     }
 
     setIsLoading(true);
+    const result = await db.login(username.trim(), password);
+    setIsLoading(false);
 
-    setTimeout(() => {
-      const result = db.login(username.trim());
-      setIsLoading(false);
+    if (!result.success || !result.user) {
+      setErrorMsg(result.error || (lang === 'zh' ? '身份验证失败' : "Erreur d'authentification"));
+      return;
+    }
 
-      if (!result.success || !result.user) {
-        setErrorMsg(result.error || (lang === 'zh' ? '身份验证失败' : "Erreur d'authentification"));
-        return;
-      }
-
-      onLoginSuccess(result.user);
-    }, 200);
-  };
-
-  const handleQuickLogin = (uname: string) => {
-    setUsername(uname);
-    setPassword('DeltaForce2026!');
-    setErrorMsg(null);
-    setIsLoading(true);
-
-    setTimeout(() => {
-      const result = db.login(uname);
-      setIsLoading(false);
-      if (!result.success || !result.user) {
-        setErrorMsg(result.error || (lang === 'zh' ? '身份验证失败' : "Erreur d'authentification"));
-        return;
-      }
-      onLoginSuccess(result.user);
-    }, 150);
+    onLoginSuccess(result.user);
   };
 
   return (
@@ -151,7 +130,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
             <span>{lang === 'fr' ? '🇨🇳 中文' : '🇫🇷 FR'}</span>
           </button>
 
-          {/* Cloud SQL Button */}
+          {/* Database inspector button */}
           <button
             onClick={onOpenSqlModal}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-mono transition-colors cursor-pointer ${
@@ -283,75 +262,6 @@ export const LoginView: React.FC<LoginViewProps> = ({
               </button>
             </form>
 
-            {/* Quick 1-Click Fast Accounts (For Easy Testing) */}
-            <div className={`mt-5 pt-4 border-t ${isLight ? 'border-slate-100' : 'border-slate-800/80'}`}>
-              <div className="text-[10px] font-mono opacity-60 uppercase font-semibold mb-2.5 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                <span>{t('quick_login_label')}</span>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleQuickLogin('admin')}
-                  className={`p-2 rounded-xl border text-left transition-all cursor-pointer ${
-                    isLight
-                      ? 'bg-slate-50 hover:bg-amber-50 border-slate-200 hover:border-amber-300'
-                      : 'bg-[#080e16] hover:bg-amber-950/40 border-slate-700/80 hover:border-amber-500/50'
-                  }`}
-                >
-                  <div className="text-[10px] font-tactical font-bold text-amber-500">
-                    {t('role_admin')}
-                  </div>
-                  <div className="text-[9px] opacity-60 font-mono truncate">Eric</div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleQuickLogin('tojo')}
-                  className={`p-2 rounded-xl border text-left transition-all cursor-pointer ${
-                    isLight
-                      ? 'bg-slate-50 hover:bg-emerald-50 border-slate-200 hover:border-emerald-300'
-                      : 'bg-[#080e16] hover:bg-emerald-950/40 border-slate-700/80 hover:border-emerald-500/50'
-                  }`}
-                >
-                  <div className="text-[10px] font-tactical font-bold text-emerald-500">
-                    {t('role_day')}
-                  </div>
-                  <div className="text-[9px] opacity-60 font-mono truncate">Tojo</div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleQuickLogin('rado')}
-                  className={`p-2 rounded-xl border text-left transition-all cursor-pointer ${
-                    isLight
-                      ? 'bg-slate-50 hover:bg-cyan-50 border-slate-200 hover:border-cyan-300'
-                      : 'bg-[#080e16] hover:bg-cyan-950/40 border-slate-700/80 hover:border-cyan-500/50'
-                  }`}
-                >
-                  <div className="text-[10px] font-tactical font-bold text-cyan-500">
-                    {t('role_night')}
-                  </div>
-                  <div className="text-[9px] opacity-60 font-mono truncate">Rado</div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleQuickLogin('malin')}
-                  className={`p-2 rounded-xl border text-left transition-all cursor-pointer ${
-                    isLight
-                      ? 'bg-slate-50 hover:bg-red-50 border-slate-200 hover:border-red-300'
-                      : 'bg-[#080e16] hover:bg-red-950/40 border-slate-700/80 hover:border-red-500/50'
-                  }`}
-                >
-                  <div className="text-[10px] font-tactical font-bold text-red-500">
-                    {t('role_blocked')}
-                  </div>
-                  <div className="text-[9px] opacity-60 font-mono truncate">Sécurité</div>
-                </button>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -422,7 +332,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
         isLight ? 'border-slate-200' : 'border-slate-800/80'
       }`}>
         <div>Delta Force : Hawk Ops · 2026</div>
-        <div>1M = 1 000 Ar · Cloud SQL PostgreSQL</div>
+        <div>1M = 1 000 Ar · Supabase</div>
       </footer>
     </div>
   );
