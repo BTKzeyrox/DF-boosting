@@ -10,6 +10,7 @@ import {
 import { AVAILABLE_CLIENT_CONTRACTS } from './initialData';
 
 const TOKEN_KEY = 'df_session_token_v2';
+const API_BASE = 'https://ljorjzrxkxqacmmkmqdx.supabase.co/functions/v1/df-api';
 const COLS = ['users', 'posts', 'contracts', 'securityLogs', 'advances', 'messages'] as const;
 type Col = (typeof COLS)[number];
 
@@ -94,7 +95,7 @@ class DeltaForceStore {
 
   private async api(path: string, init?: RequestInit): Promise<{ ok: boolean; status: number; data: any }> {
     try {
-      const res = await fetch(`/api/${path}`, {
+      const res = await fetch(`${API_BASE}/${path}`, {
         ...init,
         headers: {
           'Content-Type': 'application/json',
@@ -278,7 +279,7 @@ class DeltaForceStore {
 
   public logout(): void {
     if (this.token) {
-      fetch('/api/logout', { method: 'POST', keepalive: true, headers: { Authorization: `Bearer ${this.token}`, 'Content-Type': 'application/json' } }).catch(() => {});
+      fetch(`${API_BASE}/logout`, { method: 'POST', keepalive: true, headers: { Authorization: `Bearer ${this.token}`, 'Content-Type': 'application/json' } }).catch(() => {});
     }
     this.token = null;
     try { localStorage.removeItem(TOKEN_KEY); } catch { /* ignore */ }
