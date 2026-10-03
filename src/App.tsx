@@ -1,0 +1,343 @@
+import React, { useState, useEffect } from 'react';
+import { User, PostSession } from './types';
+import { db } from './db/store';
+import { Sidebar } from './components/Sidebar';
+import { WelcomeAnimation } from './components/WelcomeAnimation';
+import { LoginView } from './views/LoginView';
+import { AdminDashboard } from './views/admin/AdminDashboard';
+import { EmployeesManagement } from './views/admin/EmployeesManagement';
+import { EmployeeDashboard } from './views/employee/EmployeeDashboard';
+import { CalendarView } from './views/CalendarView';
+import { LightboxModal } from './components/LightboxModal';
+import { CVViewerModal } from './components/CVViewerModal';
+import { DayDetailsModal } from './components/DayDetailsModal';
+import { SqliteInspectorModal } from './components/SqliteInspectorModal';
+import { generateDeltaForcePoster } from './utils/imageUtils';
+import { Menu, Shield } from 'lucide-react';
+import { useApp } from './context/AppContext';
+import { LogoutTransition } from './components/LogoutTransition';
+
+export default function App() {
+  const { theme, t } = useApp();
+  const isLight = theme === 'light';
+
+  const [currentUser, setCurrentUser] = useState<User | null>(db.getCurrentUser());
+  const [activeView, setActiveView] = useState<string>('grid');
+  const [isWelcomeAnimating, setIsWelcomeAnimating] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  // Modals state
+  const [lightboxParams, setLightboxParams] = useState<{
+    isOpen: boolean;
+    imageUrl: string;
+    title: string;
+    subtitle?: string;
+    score?: number;
+    clientTag?: string;
+    operatorName?: string;
+    timestamp?: string;
+  }>({
+    isOpen: false,
+    imageUrl: '',
+    title: '',
+  });
+
+  const [cvModalUser, setCvModalUser] = useState<User | null>(null);
+
+  const [dayDetailsState, setDayDetailsState] = useState<{
+    isOpen: boolean;
+    dateStr: string | null;
+    shifts: PostSession[];
+  }>({
+    isOpen: false,
+    dateStr: null,
+    shifts: [],
+  });
+
+  const [isSqlModalOpen, setIsSqlModalOpen] = useState(false);
+
+  // Sync state with db store
+  useEffect(() => {
+    const unsubscribe = db.subscribe(() => {
+      const user = db.getCurrentUser();
+      setCurrentUser(user ? { ...user } : null);
+    });
+    return unsubscribe;
+  }, []);
+
+  // Update view upon login with Welcome animation
+  const handleLoginSuccess = (user: User) => {
+    setCurrentUser(user);
+    setIsWelcomeAnimating(true);
+    setActiveView('grid'); // Default view is the 20-post 2x10 grid!
+  };
+
+  const handleLogout = () => {
+    db.logout();
+    setCurrentUser(null);
+    setIsWelcomeAnimating(false);
+    setActiveView('login');
+  };
+
+  // Open Lightbox
+  const handleOpenProofLightbox = (params: {
+    imageUrl: string;
+    title: string;
+    subtitle?: string;
+    score?: number;
+    clientTag?: string;
+    operatorName?: string;
+    timestamp?: string;
+  }) => {
+    setLightboxParams({
+      isOpen: true,
+      imageUrl: params.imageUrl,
+      title: params.title,
+      subtitle: params.subtitle,
+      score: params.score,
+      clientTag: params.clientTag,
+      operatorName: params.operatorName,
+      timestamp: params.timestamp,
+    });
+  };
+
+  // Open Official Poster
+  const handleOpenPoster = (customUrl?: string) => {
+    handleOpenProofLightbox({
+      imageUrl: customUrl || generateDeltaForcePoster(),
+      title: 'Affiche Officielle // Delta Force Hawk Ops 2026',
+      subtitle: 'Directives de Mission, Barème de Boost & Sécurité Petit Malin',
+      timestamp: new Date().toLocaleDateString('fr-FR'),
+    });
+  };
+
+  // Open CV
+  const handleOpenEmployeeCV = (employee: User) => {
+    setCvModalUser(employee);
+  };
+
+  // Open Calendar Day Modal
+  const handleSelectDay = (dateStr: string, shifts: PostSession[]) => {
+    setDayDetailsState({
+      isOpen: true,
+      dateStr,
+      shifts,
+    });
+  };
+
+  // 1. NOT LOGGED IN -> SHOW ONLY LOGIN PAGE (SIMPLE, MODERN & INTUITIVE)
+  if (!currentUser) {
+    return (
+      <div className={`min-h-screen flex flex-col font-sans transition-colors duration-200 ${
+        isLight
+          ? 'bg-slate-100 text-slate-900 selection:bg-emerald-500/20 selection:text-emerald-800'
+          : 'bg-[#070b10] text-slate-100 selection:bg-emerald-500/30 selection:text-emerald-300'
+      }`}>
+        <LoginView
+          onLoginSuccess={handleLoginSuccess}
+          onOpenSqlModal={() => setIsSqlModalOpen(true)}
+          onOpenPosterLightbox={handleOpenPoster}
+        />
+        <LightboxModal
+          isOpen={lightboxParams.isOpen}
+          onClose={() => setLightboxParams(prev => ({ ...prev, isOpen: false }))}
+          imageUrl={lightboxParams.imageUrl}
+          title={lightboxParams.title}
+          subtitle={lightboxParams.subtitle}
+          score={lightboxParams.score}
+          clientTag={lightboxParams.clientTag}
+          operatorName={lightboxParams.operatorName}
+          timestamp={lightboxParams.timestamp}
+        />
+        <SqliteInspectorModal
+          isOpen={isSqlModalOpen}
+          onClose={() => setIsSqlModalOpen(false)}
+        />
+        <LogoutTransition />
+      </div>
+    );
+  }
+
+  // 2. WELCOME ANIMATION (UPON LOGIN)
+  if (isWelcomeAnimating) {
+    return (
+      <WelcomeAnimation
+        user={currentUser}
+        onComplete={() => setIsWelcomeAnimating(false)}
+      />
+    );
+  }
+
+  // 3. LOGGED IN -> MODERN SIDEBAR LAYOUT
+  return (
+    <div className={`min-h-screen flex flex-col font-sans transition-colors duration-200 ${
+      isLight
+        ? 'bg-slate-100 text-slate-900 selection:bg-emerald-500/20 selection:text-emerald-800'
+        : 'bg-[#070b10] text-slate-100 selection:bg-emerald-500/30 selection:text-emerald-300'
+    }`}>
+      
+      {/* Modern Tactical Sidebar */}
+      <Sidebar
+        currentUser={currentUser}
+        activeView={activeView}
+        onNavigate={view => {
+          if (view === 'profile') {
+            setCvModalUser(currentUser);
+            return;
+          }
+          setActiveView(view);
+        }}
+        onLogout={handleLogout}
+        onOpenSqlModal={() => setIsSqlModalOpen(true)}
+        onOpenEmployeeCV={handleOpenEmployeeCV}
+        onOpenPosterLightbox={handleOpenPoster}
+        isOpenMobile={isMobileSidebarOpen}
+        onCloseMobile={() => setIsMobileSidebarOpen(false)}
+      />
+
+      {/* Main Container with Sidebar offset */}
+      <div className="flex-1 lg:pl-72 flex flex-col min-h-screen">
+        
+        {/* Mobile Top Header (with Menu Burger) */}
+        <header className={`lg:hidden p-3.5 border-b flex items-center justify-between sticky top-0 z-30 ${
+          isLight ? 'bg-white border-slate-200' : 'bg-[#0a111a] border-slate-800'
+        }`}>
+          <div className="flex items-center gap-2.5">
+            <button
+              onClick={() => setIsMobileSidebarOpen(true)}
+              className={`p-2 rounded-xl border transition-colors cursor-pointer ${
+                isLight ? 'bg-slate-100 border-slate-200 text-slate-700' : 'bg-[#111a26] border-slate-700 text-slate-300 hover:text-white'
+              }`}
+              title="Ouvrir le menu latéral"
+            >
+              <Menu className="w-5 h-5 text-emerald-500" />
+            </button>
+            <div className="flex items-center gap-2">
+              <Shield className="w-4 h-4 text-emerald-500" />
+              <span className="font-tactical font-black text-sm tracking-wider bg-gradient-to-r from-emerald-500 to-teal-500 bg-clip-text text-transparent">
+                DELTA FORCE
+              </span>
+            </div>
+          </div>
+
+          <div className={`text-[10px] font-mono px-2 py-0.5 rounded border font-bold ${
+            isLight ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-emerald-950/80 text-emerald-400 border-emerald-700/60'
+          }`}>
+            20 POSTES (2x10)
+          </div>
+        </header>
+
+        {/* Dynamic Page Content Based on activeView */}
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+          {currentUser.role === 'admin' ? (
+            /* ================= ADMIN SEPARATED PAGES ================= */
+            <>
+              {activeView === 'employees' ? (
+                <EmployeesManagement onOpenEmployeeCV={handleOpenEmployeeCV} />
+              ) : activeView === 'calendar' ? (
+                <CalendarView
+                  currentUser={currentUser}
+                  onSelectDay={handleSelectDay}
+                />
+              ) : activeView === 'chat' ? (
+                <EmployeeDashboard
+                  currentUser={currentUser}
+                  onOpenProofLightbox={handleOpenProofLightbox}
+                  activeSubTab="chat"
+                  onNavigateTab={tab => setActiveView(tab)}
+                />
+              ) : activeView === 'poster' ? (
+                <EmployeeDashboard
+                  currentUser={currentUser}
+                  onOpenProofLightbox={handleOpenProofLightbox}
+                  activeSubTab="poster"
+                  onNavigateTab={tab => setActiveView(tab)}
+                />
+              ) : (
+                /* Default Admin Views: 'grid' (20 postes 2x10), 'active-post' (sessions), 'dashboard', 'security' */
+                <AdminDashboard
+                  currentUser={currentUser}
+                  onOpenProofLightbox={handleOpenProofLightbox}
+                  onOpenEmployeeCV={handleOpenEmployeeCV}
+                  onNavigateToEmployees={() => setActiveView('employees')}
+                  onNavigateToCalendar={() => setActiveView('calendar')}
+                  activeSubTab={
+                    activeView === 'grid'
+                      ? 'grid'
+                      : activeView === 'active-post'
+                      ? 'sessions'
+                      : activeView === 'security'
+                      ? 'security'
+                      : 'dashboard'
+                  }
+                  onNavigateTab={tab => setActiveView(tab)}
+                />
+              )}
+            </>
+          ) : (
+            /* ================= EMPLOYEE SEPARATED PAGES ================= */
+            <>
+              {activeView === 'calendar' ? (
+                <CalendarView
+                  currentUser={currentUser}
+                  onSelectDay={handleSelectDay}
+                />
+              ) : (
+                /* Employee Dashboard managing sub-pages: 'grid' (20 postes 2x10), 'active-post', 'advances', 'chat', 'poster' */
+                <EmployeeDashboard
+                  currentUser={currentUser}
+                  onOpenProofLightbox={handleOpenProofLightbox}
+                  activeSubTab={
+                    activeView === 'advances' || activeView === 'chat' || activeView === 'active-post' || activeView === 'poster'
+                      ? (activeView as any)
+                      : 'grid'
+                  }
+                  onNavigateTab={tab => setActiveView(tab)}
+                />
+              )}
+            </>
+          )}
+        </main>
+      </div>
+
+      {/* CV VIEWER MODAL */}
+      <CVViewerModal
+        isOpen={cvModalUser !== null}
+        onClose={() => setCvModalUser(null)}
+        user={cvModalUser}
+      />
+
+      {/* DETAILED DAY MODAL (Pop-up on Calendar Click) */}
+      <DayDetailsModal
+        isOpen={dayDetailsState.isOpen}
+        dateStr={dayDetailsState.dateStr}
+        onClose={() => setDayDetailsState(prev => ({ ...prev, isOpen: false }))}
+        onBack={() => setDayDetailsState(prev => ({ ...prev, isOpen: false }))}
+        shifts={dayDetailsState.shifts}
+        onOpenProofLightbox={handleOpenProofLightbox}
+      />
+
+      {/* SQLITE INSPECTOR & EXPORT MODAL */}
+      <SqliteInspectorModal
+        isOpen={isSqlModalOpen}
+        onClose={() => setIsSqlModalOpen(false)}
+      />
+
+      {/* LIGHTBOX MODAL - AT THE VERY BOTTOM SO IT OVERLAYS ALL OTHER MODALS WITHOUT CONFLICT */}
+      <LightboxModal
+        isOpen={lightboxParams.isOpen}
+        onClose={() => setLightboxParams(prev => ({ ...prev, isOpen: false }))}
+        imageUrl={lightboxParams.imageUrl}
+        title={lightboxParams.title}
+        subtitle={lightboxParams.subtitle}
+        score={lightboxParams.score}
+        clientTag={lightboxParams.clientTag}
+        operatorName={lightboxParams.operatorName}
+        timestamp={lightboxParams.timestamp}
+      />
+
+      {/* SMOOTH ANIMATED LOGOUT TRANSITION */}
+      <LogoutTransition />
+    </div>
+  );
+}
