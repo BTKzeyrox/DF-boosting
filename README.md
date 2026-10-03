@@ -4,6 +4,8 @@ Application de gestion d'équipe de boosting Delta Force : 20 postes (grille 2x1
 
 **Stack :** React + Vite + Tailwind (hébergé sur Vercel) · API = Supabase Edge Function `df-api` · base Supabase (tables `df_*`).
 
+> **Assistant IA (AI Studio, etc.) : lis d'abord [AI_STUDIO.md](AI_STUDIO.md).**
+
 ## Connexion
 Pseudo + mot de passe (pas d'email). L'admin crée les employés (pseudo + mot de passe) depuis la page Employés.
 
