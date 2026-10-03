@@ -9,7 +9,6 @@ import {
   ShieldAlert,
   Image,
   LogOut,
-  Database,
   UserCheck,
   Shield,
   X,
@@ -26,7 +25,6 @@ interface SidebarProps {
   activeView: string;
   onNavigate: (view: string) => void;
   onLogout: () => void;
-  onOpenSqlModal: () => void;
   onOpenEmployeeCV?: (employee: User) => void;
   onOpenPosterLightbox?: () => void;
   isOpenMobile?: boolean;
@@ -38,7 +36,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   activeView,
   onNavigate,
   onLogout,
-  onOpenSqlModal,
   onOpenEmployeeCV,
   onOpenPosterLightbox,
   isOpenMobile = false,
@@ -319,7 +316,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </nav>
         </div>
 
-        {/* 4. BOTTOM SECTION: Theme Toggle, Language Switcher, Database & Logout */}
+        {/* 4. BOTTOM SECTION: Theme Toggle, Language Switcher & Logout */}
         <div className={`shrink-0 p-3 border-t space-y-2 ${
           isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#0c1420] border-slate-800/80'
         }`}>
@@ -362,46 +359,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <span>{lang === 'fr' ? '🇨🇳 中文' : '🇫🇷 FR'}</span>
             </button>
           </div>
-
-          {/* Quick Database Inspector Button */}
-          <button
-            onClick={onOpenSqlModal}
-            className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg border text-xs font-mono transition-colors cursor-pointer ${
-              isLight
-                ? 'bg-white hover:bg-slate-100 border-slate-200 text-slate-700'
-                : 'bg-[#101b27] hover:bg-[#142333] border-slate-700/60 text-slate-300 hover:text-emerald-400'
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <Database className="w-3.5 h-3.5 text-cyan-400" />
-              <span>{t('btn_sql_export')}</span>
-            </div>
-            <span className={`text-[9px] px-1.5 py-0.2 rounded ${
-              isLight ? 'bg-slate-100 text-slate-600' : 'bg-slate-800 text-slate-400'
-            }`}>
-              Postgres
-            </span>
-          </button>
-
-          {/* Direct Download ZIP Archive Button */}
-          <a
-            href="/delta-force-boosting.zip"
-            download="delta-force-boosting.zip"
-            className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg border text-xs font-mono transition-all cursor-pointer ${
-              isLight
-                ? 'bg-emerald-50 hover:bg-emerald-100 border-emerald-300 text-emerald-800'
-                : 'bg-emerald-950/40 hover:bg-emerald-900/60 border-emerald-500/40 text-emerald-300 hover:text-white'
-            }`}
-            title="Télécharger l'intégralité du code source (archive ZIP)"
-          >
-            <div className="flex items-center gap-2">
-              <Download className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="font-bold">Télécharger (.ZIP)</span>
-            </div>
-            <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-400 font-bold border border-emerald-500/30">
-              ZIP
-            </span>
-          </a>
 
           {/* Déconnexion Button with smooth animated exit */}
           <button

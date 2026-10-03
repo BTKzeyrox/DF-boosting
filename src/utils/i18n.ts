@@ -32,14 +32,11 @@ export const TRANSLATIONS = {
     badge_unlimited: 'Illimité',
     badge_anticheat: 'Anti-Triche',
     badge_posts_count: '20 Postes',
-    btn_sql_export: 'Base SQL & Export',
     btn_logout: 'Déconnexion',
     logging_out: 'Déconnexion en cours...',
 
     // Top Stats & Grid
     matrix_badge: 'MATRICE OFFICIELLE · 20 POSTES (2x10)',
-    tablette_badge: 'TABLETTE DE CHOCOLAT · 20 POSTES (2x10)',
-    view_chocolate: 'Tablette de Chocolat',
     view_cards: 'Vue Cartes',
     rate_rule: '1M = 1 000 Ar',
     grid_title: 'GRILLE DES 20 POSTES (2x10)',
@@ -121,14 +118,11 @@ export const TRANSLATIONS = {
     badge_unlimited: '不限时',
     badge_anticheat: '防作弊',
     badge_posts_count: '20工位',
-    btn_sql_export: 'SQL数据库与导出',
     btn_logout: '安全退出',
     logging_out: '正在安全退出系统...',
 
     // Top Stats & Grid
     matrix_badge: '官方矩阵 · 20工位 (2x10)',
-    tablette_badge: '巧克力排状矩阵 · 20工位 (2x10)',
-    view_chocolate: '巧克力排矩阵',
     view_cards: '卡片视图',
     rate_rule: '1M分 = 1000阿里',
     grid_title: '20个代练工位矩阵 (2x10)',

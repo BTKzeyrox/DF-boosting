@@ -5,7 +5,6 @@ import {
   User as UserIcon,
   AlertOctagon,
   ArrowRight,
-  Database,
   Eye,
   EyeOff,
   Sun,
@@ -20,13 +19,11 @@ import { useApp } from '../context/AppContext';
 
 interface LoginViewProps {
   onLoginSuccess: (user: User) => void;
-  onOpenSqlModal: () => void;
   onOpenPosterLightbox?: (posterUrl: string) => void;
 }
 
 export const LoginView: React.FC<LoginViewProps> = ({
   onLoginSuccess,
-  onOpenSqlModal,
   onOpenPosterLightbox,
 }) => {
   const { theme, toggleTheme, lang, setLang, t } = useApp();
@@ -101,7 +98,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
           </div>
         </div>
 
-        {/* Controls: Theme Toggle + Language Switcher + SQL Status */}
+        {/* Controls: Theme Toggle + Language Switcher */}
         <div className="flex items-center gap-2.5">
           {/* Theme Toggle */}
           <button
@@ -129,34 +126,6 @@ export const LoginView: React.FC<LoginViewProps> = ({
             <Globe className="w-3.5 h-3.5 text-teal-400" />
             <span>{lang === 'fr' ? '🇨🇳 中文' : '🇫🇷 FR'}</span>
           </button>
-
-          {/* Database inspector button */}
-          <button
-            onClick={onOpenSqlModal}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-mono transition-colors cursor-pointer ${
-              isLight
-                ? 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
-                : 'bg-[#0e1724] border-slate-700/80 text-slate-300 hover:text-emerald-300'
-            }`}
-          >
-            <Database className="w-3.5 h-3.5 text-cyan-400" />
-            <span>PostgreSQL</span>
-          </button>
-
-          {/* Download ZIP Button */}
-          <a
-            href="/delta-force-boosting.zip"
-            download="delta-force-boosting.zip"
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-mono font-bold transition-all cursor-pointer ${
-              isLight
-                ? 'bg-emerald-50 hover:bg-emerald-100 border-emerald-300 text-emerald-800'
-                : 'bg-emerald-950/80 hover:bg-emerald-900 border-emerald-500/50 text-emerald-300 hover:text-white'
-            }`}
-            title="Télécharger l'archive ZIP du code source"
-          >
-            <Download className="w-3.5 h-3.5 text-emerald-400" />
-            <span>ZIP</span>
-          </a>
         </div>
       </header>
 
@@ -332,7 +301,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
         isLight ? 'border-slate-200' : 'border-slate-800/80'
       }`}>
         <div>Delta Force : Hawk Ops · 2026</div>
-        <div>1M = 1 000 Ar · Supabase</div>
+        <div>1M = 1 000 Ar</div>
       </footer>
     </div>
   );

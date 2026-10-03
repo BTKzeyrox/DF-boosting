@@ -4,7 +4,6 @@ import {
   Search,
   UserCheck,
   Calendar,
-  Database,
   LogOut,
   Clock,
   Radio,
@@ -23,7 +22,6 @@ import { db } from '../db/store';
 interface NavbarProps {
   currentUser: User;
   onLogout: () => void;
-  onOpenSqlModal: () => void;
   onOpenEmployeeCV?: (employee: User) => void;
   onOpenCalendarDate?: (dateStr: string) => void;
   onSelectClientPost?: (clientName: string) => void;
@@ -35,7 +33,6 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({
   currentUser,
   onLogout,
-  onOpenSqlModal,
   onOpenEmployeeCV,
   onOpenCalendarDate,
   onSelectClientPost,
@@ -316,7 +313,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
           </nav>
 
-          {/* Right Tools: Search / SQLite / Alert / Logout */}
+          {/* Right Tools: Search / Alert / Logout */}
           <div className="flex items-center gap-2">
             
             {/* Search Input (Desktop) */}
@@ -347,16 +344,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </div>
               )}
             </div>
-
-            {/* SQLite Local Tool */}
-            <button
-              onClick={onOpenSqlModal}
-              title="Base SQLite locale et exports"
-              className="p-2 sm:px-2.5 sm:py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg text-xs font-mono text-slate-300 hover:text-white flex items-center gap-1.5 transition-colors"
-            >
-              <Database className="w-4 h-4 text-cyan-400" />
-              <span className="hidden sm:inline">SQLite</span>
-            </button>
 
             {/* Security Alerts (Admin only) */}
             {isAdmin && unreadViolations.length > 0 && (

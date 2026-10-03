@@ -11,7 +11,6 @@ import { CalendarView } from './views/CalendarView';
 import { LightboxModal } from './components/LightboxModal';
 import { CVViewerModal } from './components/CVViewerModal';
 import { DayDetailsModal } from './components/DayDetailsModal';
-import { SqliteInspectorModal } from './components/SqliteInspectorModal';
 import { generateDeltaForcePoster } from './utils/imageUtils';
 import { Menu, Shield } from 'lucide-react';
 import { useApp } from './context/AppContext';
@@ -55,7 +54,6 @@ export default function App() {
     shifts: [],
   });
 
-  const [isSqlModalOpen, setIsSqlModalOpen] = useState(false);
 
   useEffect(() => {
     db.whenReady().then(() => {
@@ -151,7 +149,6 @@ export default function App() {
       }`}>
         <LoginView
           onLoginSuccess={handleLoginSuccess}
-          onOpenSqlModal={() => setIsSqlModalOpen(true)}
           onOpenPosterLightbox={handleOpenPoster}
         />
         <LightboxModal
@@ -164,10 +161,6 @@ export default function App() {
           clientTag={lightboxParams.clientTag}
           operatorName={lightboxParams.operatorName}
           timestamp={lightboxParams.timestamp}
-        />
-        <SqliteInspectorModal
-          isOpen={isSqlModalOpen}
-          onClose={() => setIsSqlModalOpen(false)}
         />
         <LogoutTransition />
       </div>
@@ -204,7 +197,6 @@ export default function App() {
           setActiveView(view);
         }}
         onLogout={handleLogout}
-        onOpenSqlModal={() => setIsSqlModalOpen(true)}
         onOpenEmployeeCV={handleOpenEmployeeCV}
         onOpenPosterLightbox={handleOpenPoster}
         isOpenMobile={isMobileSidebarOpen}
@@ -333,11 +325,6 @@ export default function App() {
         onOpenProofLightbox={handleOpenProofLightbox}
       />
 
-      {/* SQLITE INSPECTOR & EXPORT MODAL */}
-      <SqliteInspectorModal
-        isOpen={isSqlModalOpen}
-        onClose={() => setIsSqlModalOpen(false)}
-      />
 
       {/* LIGHTBOX MODAL - AT THE VERY BOTTOM SO IT OVERLAYS ALL OTHER MODALS WITHOUT CONFLICT */}
       <LightboxModal
