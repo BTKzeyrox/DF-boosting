@@ -142,10 +142,10 @@ export default function App() {
 
   if (!currentUser) {
     return (
-      <div className={`min-h-screen flex flex-col font-sans transition-colors duration-200 ${
+      <div className={`df-bg-login min-h-screen flex flex-col font-sans transition-colors duration-200 ${
         isLight
-          ? 'bg-slate-100 text-slate-900 selection:bg-emerald-500/20 selection:text-emerald-800'
-          : 'bg-[#070b10] text-slate-100 selection:bg-emerald-500/30 selection:text-emerald-300'
+          ? 'text-slate-900 selection:bg-emerald-500/20 selection:text-emerald-800'
+          : 'text-slate-100 selection:bg-emerald-500/30 selection:text-emerald-300'
       }`}>
         <LoginView
           onLoginSuccess={handleLoginSuccess}
@@ -179,10 +179,10 @@ export default function App() {
 
   // 3. LOGGED IN -> MODERN SIDEBAR LAYOUT
   return (
-    <div className={`min-h-screen flex flex-col font-sans transition-colors duration-200 ${
+    <div className={`df-bg-app min-h-screen flex flex-col font-sans transition-colors duration-200 ${
       isLight
-        ? 'bg-slate-100 text-slate-900 selection:bg-emerald-500/20 selection:text-emerald-800'
-        : 'bg-[#070b10] text-slate-100 selection:bg-emerald-500/30 selection:text-emerald-300'
+        ? 'text-slate-900 selection:bg-emerald-500/20 selection:text-emerald-800'
+        : 'text-slate-100 selection:bg-emerald-500/30 selection:text-emerald-300'
     }`}>
       
       {/* Modern Tactical Sidebar */}
