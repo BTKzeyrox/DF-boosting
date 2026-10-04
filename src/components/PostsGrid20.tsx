@@ -14,6 +14,9 @@ import {
   Filter,
   Check,
   Zap,
+  Hourglass,
+  CircleDot,
+  Circle,
 } from 'lucide-react';
 import { ClientContract, PostSession, User } from '../types';
 import { db } from '../db/store';
@@ -168,10 +171,10 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
               <span>Statut:</span>
             </span>
             {[
-              { id: 'all', label: 'Tous', count: contractsList.length, color: 'emerald' },
-              { id: 'pending', label: '⏳ En attente', count: pendingContracts.length, color: 'amber' },
-              { id: 'active', label: '🟢 En cours', count: activeContracts.length, color: 'cyan' },
-              { id: 'free', label: '⚪ Libres', count: freeContracts.length, color: 'slate' },
+              { id: 'all', label: 'Tous', icon: null as any, count: contractsList.length, color: 'emerald' },
+              { id: 'pending', label: 'En attente', icon: Hourglass, count: pendingContracts.length, color: 'amber' },
+              { id: 'active', label: 'En cours', icon: CircleDot, count: activeContracts.length, color: 'cyan' },
+              { id: 'free', label: 'Libres', icon: Circle, count: freeContracts.length, color: 'slate' },
             ].map(f => (
               <button
                 key={f.id}
@@ -189,7 +192,10 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
                     : 'bg-[#121c28] text-slate-300 hover:text-white border border-slate-800'
                 }`}
               >
-                <span>{f.label}</span>
+                <span className="inline-flex items-center gap-1">
+                  {f.icon && <f.icon className="w-3.5 h-3.5 shrink-0" />}
+                  {f.label}
+                </span>
                 <span
                   className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
                     filterStatus === f.id
@@ -209,16 +215,16 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="text-[10px] text-slate-400 uppercase mr-1">Shift:</span>
             {[
-              { id: 'all', label: 'Tous' },
-              { id: 'day', label: '☀️ Jour' },
-              { id: 'night', label: '🌙 Nuit' },
-              { id: 'urgent', label: '⚡ Urgent' },
+              { id: 'all', label: 'Tous', icon: null as any },
+              { id: 'day', label: 'Jour', icon: Sun },
+              { id: 'night', label: 'Nuit', icon: Moon },
+              { id: 'urgent', label: 'Urgent', icon: Zap },
             ].map(f => (
               <button
                 key={f.id}
                 type="button"
                 onClick={() => setFilterShift(f.id as any)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-mono font-semibold transition-all cursor-pointer ${
+                className={`px-2.5 py-1 rounded-lg text-xs font-mono font-semibold transition-all cursor-pointer inline-flex items-center gap-1 ${
                   filterShift === f.id
                     ? 'bg-emerald-600 text-white shadow-md'
                     : isLight
@@ -226,6 +232,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
                     : 'bg-[#121c28] text-slate-300 hover:text-white border border-slate-800'
                 }`}
               >
+                {f.icon && <f.icon className="w-3.5 h-3.5 shrink-0" />}
                 {f.label}
               </button>
             ))}
@@ -483,7 +490,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
                       </button>
                     ) : (
                       <div className="w-full py-2.5 px-2 sm:px-4 text-center leading-tight bg-amber-950/60 border border-amber-600/50 text-amber-300 text-xs font-mono rounded-xl text-center">
-                        ⏳ En attente de validation
+                        <span className="inline-flex items-center gap-1.5"><Hourglass className="w-3.5 h-3.5 shrink-0" />En attente de validation</span>
                       </div>
                     )
                   ) : isMyActive ? (

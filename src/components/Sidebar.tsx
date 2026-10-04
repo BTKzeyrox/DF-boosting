@@ -15,7 +15,7 @@ import {
   Sun,
   Moon,
   Globe,
-  Download
+  Download,
 } from 'lucide-react';
 import { User } from '../types';
 import { useApp } from '../context/AppContext';
@@ -219,7 +219,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </p>
               <div className="flex items-center gap-1 text-[10px] font-mono">
                 <span className={isAdmin ? 'text-amber-500 font-semibold' : 'text-emerald-500'}>
-                  {isAdmin ? 'ADMINISTRATEUR' : `SHIFT ${currentUser.shift === 'day' ? 'JOUR ☀️' : 'NUIT 🌙'}`}
+                  {isAdmin ? (
+                  'ADMINISTRATEUR'
+                ) : (
+                  <span className="inline-flex items-center gap-1">
+                    {currentUser.shift === 'day' ? <Sun className="w-3 h-3" /> : <Moon className="w-3 h-3" />}
+                    {currentUser.shift === 'day' ? 'SHIFT JOUR' : 'SHIFT NUIT'}
+                  </span>
+                )}
                 </span>
               </div>
             </div>

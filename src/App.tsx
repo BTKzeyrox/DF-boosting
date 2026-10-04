@@ -236,7 +236,7 @@ export default function App() {
         </header>
 
         {/* Dynamic Page Content Based on activeView */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+        <main className="flex-1 p-2 sm:p-3 lg:p-4 max-w-none w-full mx-auto">
           {currentUser.role === 'admin' ? (
             /* ================= ADMIN SEPARATED PAGES ================= */
             <>

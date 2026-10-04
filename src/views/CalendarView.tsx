@@ -11,7 +11,8 @@ import {
   Clock,
   TrendingUp,
   User as UserIcon,
-  Info
+  Info,
+  Hourglass,
 } from 'lucide-react';
 import { User, PostSession, DayStatus } from '../types';
 import { db } from '../db/store';
@@ -154,7 +155,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6 max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
+    <div className="space-y-4 sm:space-y-3 max-w-none mx-auto px-1.5 sm:px-3 lg:px-4 py-4 sm:py-6">
       
       {/* Calendar Header Card */}
       <div className="bg-[#0f1722] border border-slate-800 rounded-xl p-4 sm:p-6 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -223,23 +224,23 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
           </div>
           <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 sm:gap-4 text-[11px] sm:text-xs">
             <div className="flex items-center gap-1.5 text-emerald-400">
-              <span>✅</span>
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
               <span>Objectif Atteint</span>
             </div>
             <div className="flex items-center gap-1.5 text-cyan-400">
-              <span>⏳</span>
+              <Hourglass className="w-4 h-4 shrink-0" />
               <span>En Cours</span>
             </div>
             <div className="flex items-center gap-1.5 text-purple-400">
-              <span>🧪</span>
+              <FlaskConical className="w-4 h-4 shrink-0" />
               <span>Test / QA</span>
             </div>
             <div className="flex items-center gap-1.5 text-red-400">
-              <span>❌</span>
+              <XCircle className="w-4 h-4 shrink-0" />
               <span>Absent</span>
             </div>
             <div className="flex items-center gap-1.5 text-slate-400 col-span-2 sm:col-span-1">
-              <span>⚪</span>
+              <Circle className="w-4 h-4 shrink-0" />
               <span>Pas de Poste</span>
             </div>
           </div>
@@ -294,11 +295,11 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
 
                   {/* Status Indicator Icon */}
                   <div className="text-[11px] sm:text-sm">
-                    {dayData.status === 'objective_reached' && <span title="Objectif Reached">✅</span>}
-                    {dayData.status === 'in_progress' && <span title="En cours" className="animate-pulse">⏳</span>}
-                    {dayData.status === 'test' && <span title="Test">🧪</span>}
-                    {dayData.status === 'absent' && <span title="Absent">❌</span>}
-                    {dayData.status === 'no_post' && <span title="Pas de poste" className="opacity-30">⚪</span>}
+                    {dayData.status === 'objective_reached' && <span title="Objectif atteint"><CheckCircle2 className="w-3.5 h-3.5" /></span>}
+                    {dayData.status === 'in_progress' && <span title="En cours" className="animate-pulse"><Hourglass className="w-3.5 h-3.5" /></span>}
+                    {dayData.status === 'test' && <span title="Test"><FlaskConical className="w-3.5 h-3.5" /></span>}
+                    {dayData.status === 'absent' && <span title="Absent"><XCircle className="w-3.5 h-3.5" /></span>}
+                    {dayData.status === 'no_post' && <span title="Pas de poste" className="opacity-30"><Circle className="w-3.5 h-3.5" /></span>}
                   </div>
                 </div>
 

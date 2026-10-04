@@ -16,7 +16,10 @@ import {
   CheckCircle2,
   XCircle,
   Search,
-  ChevronRight
+  ChevronRight,
+  Sun,
+  Moon,
+  X,
 } from 'lucide-react';
 import { User, ShiftType, SalaryAdvanceRequest } from '../../types';
 import { db } from '../../db/store';
@@ -235,7 +238,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
   const pendingAdvances = advances.filter(a => a.status === 'pending');
 
   return (
-    <div className="space-y-4 sm:space-y-6 max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
+    <div className="space-y-4 sm:space-y-3 max-w-none mx-auto px-1.5 sm:px-3 lg:px-4 py-4 sm:py-6">
       
       {/* Top Header & Actions */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#0f1722] p-4 sm:p-6 rounded-xl border border-slate-800 shadow-xl">
@@ -284,7 +287,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            ☀️ Day Shift ({users.filter(u => u.role === 'employee' && u.shift === 'day' && u.status !== 'blocked').length})
+            <Sun className="w-3.5 h-3.5 inline mr-1 -mt-0.5" />Day Shift ({users.filter(u => u.role === 'employee' && u.shift === 'day' && u.status !== 'blocked').length})
           </button>
           <button
             onClick={() => setShiftFilter('night')}
@@ -294,7 +297,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            🌙 Night Shift ({users.filter(u => u.role === 'employee' && u.shift === 'night' && u.status !== 'blocked').length})
+            <Moon className="w-3.5 h-3.5 inline mr-1 -mt-0.5" />Night Shift ({users.filter(u => u.role === 'employee' && u.shift === 'night' && u.status !== 'blocked').length})
           </button>
           <button
             onClick={() => setShiftFilter('blocked')}
@@ -304,7 +307,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            🚫 Bloqués ({users.filter(u => u.role === 'employee' && u.status === 'blocked').length})
+            <Ban className="w-3.5 h-3.5 inline mr-1 -mt-0.5" />Bloqués ({users.filter(u => u.role === 'employee' && u.status === 'blocked').length})
           </button>
         </div>
 
@@ -394,7 +397,11 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                               : 'bg-indigo-950/70 border-indigo-600/40 text-indigo-300'
                           }`}
                         >
-                          {emp.shift === 'day' ? '☀️ Shift Jour (08-18)' : '🌙 Shift Nuit (20-06)'}
+                          {emp.shift === 'day' ? (
+                            <span className="inline-flex items-center gap-1"><Sun className="w-3.5 h-3.5" />Shift Jour (08-18)</span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1"><Moon className="w-3.5 h-3.5" />Shift Nuit (20-06)</span>
+                          )}
                         </span>
                       </td>
 
@@ -601,8 +608,8 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                   onChange={e => setEditShift(e.target.value as ShiftType)}
                   className="w-full bg-[#141e2a] border border-slate-700 rounded-lg p-2 text-white"
                 >
-                  <option value="day">☀️ Shift Jour (08h00 - 18h00)</option>
-                  <option value="night">🌙 Shift Nuit (20h00 - 06h00)</option>
+                  <option value="day"> Shift Jour (08h00 - 18h00)</option>
+                  <option value="night"> Shift Nuit (20h00 - 06h00)</option>
                 </select>
               </div>
 
@@ -613,10 +620,10 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                   onChange={e => setEditBadge(e.target.value as any)}
                   className="w-full bg-[#141e2a] border border-slate-700 rounded-lg p-2 text-white"
                 >
-                  <option value="Top Booster">Top Booster 🌟</option>
-                  <option value="Elite">Elite 🎯</option>
+                  <option value="Top Booster">Top Booster</option>
+                  <option value="Elite">Elite</option>
                   <option value="Standard">Standard</option>
-                  <option value="Under Watch">Under Watch ⚠️</option>
+                  <option value="Under Watch">Under Watch</option>
                 </select>
               </div>
 
@@ -713,8 +720,8 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                   onChange={e => setNewShift(e.target.value as ShiftType)}
                   className="w-full bg-[#141e2a] border border-slate-700 rounded-lg p-2 text-white"
                 >
-                  <option value="day">☀️ Day Shift (08h00 - 18h00)</option>
-                  <option value="night">🌙 Night Shift (20h00 - 06h00)</option>
+                  <option value="day"> Day Shift (08h00 - 18h00)</option>
+                  <option value="night"> Night Shift (20h00 - 06h00)</option>
                 </select>
               </div>
 
@@ -758,7 +765,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                 onClick={() => setReviewAdvanceModal(null)}
                 className="text-slate-400 hover:text-white p-1 cursor-pointer"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 

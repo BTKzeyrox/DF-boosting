@@ -22,7 +22,10 @@ import {
   MessageSquare,
   Layers,
   Target,
-  Info
+  Info,
+  Hourglass,
+  CircleDot,
+  X,
 } from 'lucide-react';
 import { User, PostSession, SecurityViolation, ClientContract, ShiftType } from '../../types';
 import { db } from '../../db/store';
@@ -240,7 +243,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     const availableBoosters = users.filter(u => u.role === 'employee' && u.status === 'active');
 
     return (
-      <div className="space-y-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="space-y-3 max-w-none mx-auto px-1.5 sm:px-3 lg:px-4 py-3">
         <PostsGrid20
           currentUser={adminUser}
           allPosts={posts}
@@ -295,18 +298,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           : 'bg-emerald-950 text-emerald-400 border border-emerald-600'
                       }`}
                     >
-                      {activeSessionForModal.status === 'pending_start'
-                        ? '⏳ En attente validation (Début)'
-                        : activeSessionForModal.status === 'pending_end'
-                        ? '⏳ En attente validation (Fin)'
-                        : '🟢 En cours'}
+                      <span className="inline-flex items-center gap-1.5">
+                        {activeSessionForModal.status === 'pending_start' || activeSessionForModal.status === 'pending_end' ? (
+                          <Hourglass className="w-3.5 h-3.5 shrink-0" />
+                        ) : (
+                          <CircleDot className="w-3.5 h-3.5 shrink-0" />
+                        )}
+                        {activeSessionForModal.status === 'pending_start'
+                          ? 'En attente validation (Début)'
+                          : activeSessionForModal.status === 'pending_end'
+                          ? 'En attente validation (Fin)'
+                          : 'En cours'}
+                      </span>
                     </span>
                   )}
                   <button
                     onClick={() => setSelectedAdminContract(null)}
                     className="text-slate-400 hover:text-white p-1 cursor-pointer rounded-lg hover:bg-slate-800 transition-colors"
                   >
-                    ✕
+                    <X className="w-4 h-4" />
                   </button>
                 </div>
               </div>
@@ -596,7 +606,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         }}
                         className="py-2.5 px-4 bg-[#142333] hover:bg-[#1a2d42] border border-cyan-800/60 text-cyan-300 font-mono text-xs rounded-xl transition-colors cursor-pointer text-center"
                       >
-                        ⚡ Ouvrir en Test Admin
+                        <Zap className="w-4 h-4 inline mr-1.5 -mt-0.5" />Ouvrir en Test Admin
                       </button>
                     </div>
                   </div>
@@ -641,7 +651,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   }
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div className="space-y-3 max-w-none mx-auto px-1.5 sm:px-3 lg:px-4 py-3">
       
       {/* HUD Top Stats Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -1166,7 +1176,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <span className="text-xs font-mono text-cyan-400">→</span>
                 </div>
                 <p className="text-xs text-slate-400 font-mono mt-1">
-                  Grille des statuts (Objectif Atteint ✅, Absent ❌, etc.) et modales détaillées au clic.
+                  Grille des statuts (Objectif Atteint, Absent, etc.) et modales détaillées au clic.
                 </p>
               </button>
             </div>
@@ -1289,7 +1299,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               onClick={() => setToastNotice(null)}
               className="text-slate-400 hover:text-white ml-2 cursor-pointer"
             >
-              ✕
+              <X className="w-4 h-4" />
             </button>
           </div>
         </div>

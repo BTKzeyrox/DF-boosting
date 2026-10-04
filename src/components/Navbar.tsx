@@ -149,7 +149,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <header className="sticky top-0 z-40 bg-[#0b1118]/95 backdrop-blur border-b border-slate-800 text-slate-100 shadow-md">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-none mx-auto px-1.5 sm:px-3 lg:px-4">
         <div className="h-16 flex items-center justify-between gap-3">
           
           {/* Brand & Role Tag */}

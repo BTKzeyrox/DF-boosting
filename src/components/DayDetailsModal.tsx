@@ -102,7 +102,7 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
               <Clock className="w-10 h-10 text-slate-600 mx-auto mb-3" />
               <p className="text-sm font-medium text-slate-300">Aucun shift de boost enregistré pour cette date</p>
               <p className="text-xs text-slate-500 font-mono mt-1">
-                Journée sans mission active ou absence signalée (⚪ Pas de Poste).
+                Journée sans mission active ou absence signalée (Pas de Poste).
               </p>
             </div>
           ) : (

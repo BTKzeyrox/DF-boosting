@@ -28,7 +28,8 @@ import {
   X,
   Shield,
   Check,
-  AlertCircle
+  AlertCircle,
+  CircleDot,
 } from 'lucide-react';
 import { User, PostSession, ShiftType, ClientContract } from '../../types';
 import { db } from '../../db/store';
@@ -442,7 +443,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
   const userAdvances = db.getAdvanceRequests().filter(a => a.employee_id === currentUser.id);
 
   return (
-    <div className="space-y-4 sm:space-y-6 max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
+    <div className="space-y-4 sm:space-y-3 max-w-none mx-auto px-1.5 sm:px-3 lg:px-4 py-4 sm:py-6">
       
       {/* Top Banner: Terminal Status */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-[#0f1722] p-4 rounded-xl border border-slate-800 shadow-xl">
@@ -463,7 +464,11 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
               <span>Poste Opérateur</span>
               <span>·</span>
               <span className={isInsideAssignedShift ? 'text-emerald-400' : 'text-amber-400 font-semibold'}>
-                {isInsideAssignedShift ? '● Fenêtre autorisée' : '⚠️ En attente ou hors fenêtre'}
+                {isInsideAssignedShift ? (
+                  <span className="inline-flex items-center gap-1"><CircleDot className="w-3 h-3" />Fenêtre autorisée</span>
+                ) : (
+                  <span className="inline-flex items-center gap-1"><AlertTriangle className="w-3 h-3" />En attente ou hors fenêtre</span>
+                )}
               </span>
             </div>
           </div>
@@ -980,10 +985,10 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
           <div className="px-4 py-2 bg-[#0c131c] border-b border-slate-800/80 flex items-center gap-2 overflow-x-auto text-[11px] font-mono shrink-0">
             <span className="text-slate-500 text-[10px] uppercase shrink-0">Réponses Rapides :</span>
             {[
-              "🎯 Objectif de score client atteint !",
-              "⚡ Début de session de boost sur le compte",
-              "📸 Capture d'écran téléversée dans le système",
-              "❓ Question sur la validation du shift"
+              "Objectif de score client atteint !",
+              "Début de session de boost sur le compte",
+              "Capture d'écran téléversée dans le système",
+              "Question sur la validation du shift"
             ].map((chip, idx) => (
               <button
                 key={idx}
@@ -1139,7 +1144,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
         <div className="fixed top-5 right-5 z-50 bg-amber-950/95 border border-amber-500 text-amber-200 px-4 py-3 rounded-xl shadow-2xl text-xs font-mono flex items-center gap-2.5 animate-in slide-in-from-top">
           <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
           <span>{occupiedPostNotice}</span>
-          <button onClick={() => setOccupiedPostNotice(null)} className="ml-2 text-amber-400 hover:text-white cursor-pointer">✕</button>
+          <button onClick={() => setOccupiedPostNotice(null)} className="ml-2 text-amber-400 hover:text-white cursor-pointer"><X className="w-4 h-4" /></button>
         </div>
       )}
 
@@ -1382,7 +1387,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                           className="absolute top-1 right-1 w-5 h-5 rounded-full bg-red-600 hover:bg-red-500 text-white flex items-center justify-center text-xs font-bold shadow transition-colors cursor-pointer"
                           title="Supprimer cette photo"
                         >
-                          ✕
+                          <X className="w-4 h-4" />
                         </button>
                       </div>
                     ))}
@@ -1431,7 +1436,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                         : 'bg-[#141e2a] border-slate-600 text-slate-300'
                     }`}
                   >
-                    ✓ Oui, identique
+                    <Check className="w-4 h-4 inline mr-1 -mt-0.5" />Oui, identique
                   </button>
                   <button
                     type="button"
@@ -1442,7 +1447,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                         : 'bg-[#141e2a] border-slate-600 text-slate-300'
                     }`}
                   >
-                    ✗ Non, différent
+                    <X className="w-4 h-4 inline mr-1 -mt-0.5" />Non, différent
                   </button>
                 </div>
 
@@ -1705,7 +1710,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                         <span>Inspecter en Plein Écran</span>
                       </div>
                       <div className="absolute bottom-2 right-2 bg-black/80 border border-cyan-500/50 px-2 py-0.5 rounded text-[10px] text-cyan-400 font-mono font-bold">
-                        ✓ Capture de fin prête (Cliquer pour zoomer)
+                        <Check className="w-4 h-4 inline mr-1 -mt-0.5" />Capture de fin prête (Cliquer pour zoomer)
                       </div>
                     </div>
 
