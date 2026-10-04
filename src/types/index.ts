@@ -12,7 +12,7 @@ export interface User {
   is_online: boolean;
   avatar_url: string;
   phone: string;
-  cv_url: string;
+  cv_url?: string;
   cv_data?: {
     rank: string;
     gameExperience: string;
@@ -117,6 +117,7 @@ export interface ClientContract {
   client_name: string;
   account_tag: string;
   game_mode: string;
+  description?: string; // Description du poste (ex: no read, no card...)
   current_rank: string;
   target_rank: string;
   initial_score: number; // Début : modifiable par l'admin seulement

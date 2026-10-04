@@ -516,7 +516,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     className="w-full p-2.5 rounded-lg text-left flex items-center gap-2 text-slate-300 hover:bg-slate-800"
                   >
                     <FileText className="w-4 h-4 text-slate-400" />
-                    <span>Mon CV / Dossier</span>
+                    <span>Mon profil</span>
                   </button>
                 )}
               </>

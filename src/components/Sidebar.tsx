@@ -1,3 +1,4 @@
+import { Avatar } from './Avatar';
 import React, { useEffect } from 'react';
 import {
   Layers,
@@ -141,9 +142,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const handleLogoutClick = () => {
-    startLogoutAnimation(() => {
-      onLogout();
-    });
+    // La confirmation et l'animation sont gérées par App
+    onLogout();
   };
 
   return (
@@ -206,11 +206,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         }`}>
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="relative shrink-0">
-              <img
-                src={currentUser.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'}
-                alt={currentUser.name}
-                className="w-8 h-8 rounded-lg object-cover border border-slate-700"
-              />
+              <Avatar src={currentUser.avatar_url} name={currentUser.name} className="w-8 h-8" />
               <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white dark:border-[#0d1624]" />
             </div>
             <div className="min-w-0">

@@ -394,6 +394,11 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
                     </div>
                   )}
 
+                  {contract.description && (
+                    <p className="mb-2 px-2 py-1.5 border-l-2 border-amber-500/70 bg-amber-500/10 text-[11px] leading-snug text-slate-200 whitespace-pre-line break-words">
+                      {contract.description}
+                    </p>
+                  )}
                   {/* 4 métriques : Départ, Actuel, Reste, Objectif */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2.5 mt-2.5 sm:mt-3.5 text-xs font-mono">
                     {/* 1. Score Départ */}

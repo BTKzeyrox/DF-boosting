@@ -28,7 +28,9 @@ import {
   X,
 } from 'lucide-react';
 import { User, PostSession, SecurityViolation, ClientContract, ShiftType } from '../../types';
+import { Avatar } from '../../components/Avatar';
 import { db } from '../../db/store';
+import { askConfirm } from '../../components/ConfirmModal';
 import { PostsGrid20 } from '../../components/PostsGrid20';
 import { formatScoreM, formatCurrencyAr } from '../../utils/formatUtils';
 import { generateDeltaForceScreenshot } from '../../utils/imageUtils';
@@ -93,6 +95,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [editGameMode, setEditGameMode] = useState('');
   const [editShift, setEditShift] = useState<ShiftType | 'any'>('any');
   const [editNotes, setEditNotes] = useState('');
+  const [editDescription, setEditDescription] = useState('');
 
   // In-app Toast Notice (no window.alert in iframe)
   const [toastNotice, setToastNotice] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -117,7 +120,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   }, []);
 
   // Handlers for post actions
-  const handleValidate = (postId: string) => {
+  const handleValidate = (postId: string, confirmed = false) => {
+    if (!confirmed) {
+      askConfirm({
+        title: 'Valider cette session ?',
+        message: "La paie sera créditée à l'employé. Cette action ne peut pas être annulée.",
+        confirmLabel: 'Valider',
+        onConfirm: () => handleValidate(postId, true),
+      });
+      return;
+    }
     const res = db.validatePost(postId);
     if (!res.success) {
       showToast(res.error || 'Erreur lors de la validation', 'error');
@@ -151,6 +163,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       initial_score: editInitialScore,
       target_score: editTargetScore,
       game_mode: editGameMode.trim(),
+      description: editDescription.trim(),
       recommended_shift: editShift,
     });
 
@@ -159,7 +172,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       db.updatePostAdmin(activeSessionForModal.id, {
         client_name: editClientName.trim(),
         account_tag: editAccountTag.trim(),
-        initial_score: editInitialScore,
         target_score: editTargetScore,
         employee_id: assignedBoosterId,
         shift_type: editShift === 'night' ? 'night' : 'day',
@@ -257,12 +269,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             setActiveSessionForModal(session || null);
             setEditClientName(contract.client_name);
             setEditAccountTag(contract.account_tag);
-            setEditInitialScore(session ? session.initial_score : contract.initial_score);
+            setEditInitialScore(contract.initial_score);
             setEditObjective(Math.max(0, contract.target_score - contract.initial_score));
             setEditGameMode(contract.game_mode);
             setEditShift(contract.recommended_shift);
             setAssignedBoosterId(session ? session.employee_id : (availableBoosters[0]?.id || ''));
             setEditNotes(session?.notes || '');
+            setEditDescription(contract.description || '');
             setAssignSuccessMsg(null);
             setAssignErrorMsg(null);
           }}
@@ -507,6 +520,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         ))}
                       </select>
                     </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-300 uppercase mb-1">Description du poste</label>
+                    <textarea
+                      value={editDescription}
+                      onChange={e => setEditDescription(e.target.value)}
+                      rows={3}
+                      placeholder="ex: no read, no card, pas de mode normal ni difficile"
+                      className="w-full bg-[#0d1622] border border-slate-600 p-2 text-white resize-y"
+                    />
                   </div>
 
                   <div>
@@ -1103,11 +1127,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   >
                     <div className="flex items-center gap-2.5">
                       <div className="relative">
-                        <img
-                          src={emp.avatar_url}
-                          alt={emp.name}
-                          className="w-8 h-8 rounded-full object-cover border border-slate-700"
-                        />
+                        <Avatar src={emp.avatar_url} name={emp.name} className="w-8 h-8" />
                         <span
                           className={`absolute bottom-0 right-0 w-2 h-2 rounded-full border border-slate-900 ${
                             emp.is_online ? 'bg-emerald-400' : 'bg-slate-600'
@@ -1131,7 +1151,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       <button
                         onClick={() => onOpenEmployeeCV(emp)}
                         className="p-1.5 hover:bg-slate-700 rounded text-slate-400 hover:text-white"
-                        title="Voir le CV"
+                        title="Voir le profil"
                       >
                         <Eye className="w-3.5 h-3.5" />
                       </button>
@@ -1150,7 +1170,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               Gestion &amp; Accès Rapides
             </h3>
             <p className="text-xs text-slate-400 font-mono mb-6">
-              Raccourcis vers la gestion d'équipe, consultations des CV et calendriers de performances mensuelles.
+              Raccourcis vers la gestion d'équipe, consultations des profils et calendriers de performances mensuelles.
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1159,7 +1179,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 className="p-4 bg-[#131c28] hover:bg-[#182333] border border-slate-700 rounded-xl text-left transition-colors group"
               >
                 <div className="font-tactical font-bold text-white text-sm group-hover:text-emerald-400 flex items-center justify-between">
-                  <span>Gestion des Opérateurs &amp; CVs</span>
+                  <span>Gestion des Opérateurs</span>
                   <span className="text-xs font-mono text-emerald-400">→</span>
                 </div>
                 <p className="text-xs text-slate-400 font-mono mt-1">

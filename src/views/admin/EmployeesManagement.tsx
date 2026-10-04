@@ -22,7 +22,9 @@ import {
   X,
 } from 'lucide-react';
 import { User, ShiftType, SalaryAdvanceRequest } from '../../types';
+import { Avatar } from '../../components/Avatar';
 import { db } from '../../db/store';
+import { askConfirm } from '../../components/ConfirmModal';
 import { useLockBodyScroll } from '../../utils/useLockBodyScroll';
 import { formatScoreM } from '../../utils/formatUtils';
 
@@ -177,17 +179,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
       shift: newShift,
       role: 'employee',
       status: 'active',
-      avatar_url: `https://images.unsplash.com/photo-${1534528741775 + Math.floor(Math.random() * 1000)}?auto=format&fit=crop&w=150&q=80`,
-      cv_url: `cv_${newUsername}.pdf`,
-      cv_data: {
-        rank: 'Non renseigné',
-        gameExperience: 'Recrutement Delta Force 2026',
-        kdRatio: '3.20 K/D',
-        hardware: 'Gaming Setup Conforme',
-        joinedDate: new Date().toISOString().split('T')[0],
-        languages: ['Malagasy', 'Français'],
-        specialty: 'Opérateur Polyvalent'
-      },
+      avatar_url: '',
       performance_badge: 'Standard',
     }, newPassword);
 
@@ -251,7 +243,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
               Gestion de l'Équipe &amp; Opérateurs Boosters
             </h2>
             <p className="text-xs text-slate-400 font-mono mt-0.5">
-              Affectation des shifts, consultation des CVs, badges de performance et surveillance des accès.
+              Affectation des shifts, consultation des profils, badges de performance et surveillance des accès.
             </p>
           </div>
         </div>
@@ -366,11 +358,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                       <td className="p-3 pl-4 sm:pl-6">
                         <div className="flex items-center gap-3">
                           <div className="relative shrink-0">
-                            <img
-                              src={emp.avatar_url}
-                              alt={emp.name}
-                              className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg object-cover border border-slate-700"
-                            />
+                            <Avatar src={emp.avatar_url} name={emp.name} className="w-8 h-8 sm:w-9 sm:h-9" />
                             <span
                               className={`absolute bottom-0 right-0 w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full border border-slate-900 ${
                                 emp.is_online ? 'bg-emerald-400' : 'bg-slate-600'
@@ -452,7 +440,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                           <button
                             onClick={() => onOpenEmployeeCV(emp)}
                             className="p-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-300 rounded transition-colors"
-                            title="Voir le CV de l'opérateur"
+                            title="Voir le profil"
                           >
                             <FileText className="w-3.5 h-3.5" />
                           </button>
@@ -468,7 +456,17 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
 
                           {/* Block/Unblock button */}
                           <button
-                            onClick={() => handleToggleBlock(emp.id)}
+                            onClick={() =>
+                              askConfirm({
+                                title: isBlocked ? `Débloquer ${emp.name} ?` : `Bloquer ${emp.name} ?`,
+                                message: isBlocked
+                                  ? "L'employé pourra de nouveau se connecter."
+                                  : "L'employé ne pourra plus se connecter tant qu'il est bloqué.",
+                                confirmLabel: isBlocked ? 'Débloquer' : 'Bloquer',
+                                danger: !isBlocked,
+                                onConfirm: () => handleToggleBlock(emp.id),
+                              })
+                            }
                             className={`p-1.5 rounded transition-colors ${
                               isBlocked
                                 ? 'bg-emerald-700 hover:bg-emerald-600 text-white'

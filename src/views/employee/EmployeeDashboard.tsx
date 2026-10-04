@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { User, PostSession, ShiftType, ClientContract } from '../../types';
 import { db } from '../../db/store';
+import { askConfirm } from '../../components/ConfirmModal';
 import { generateDeltaForcePoster } from '../../utils/imageUtils';
 import { AVAILABLE_CLIENT_CONTRACTS } from '../../db/initialData';
 import { PostsGrid20 } from '../../components/PostsGrid20';
@@ -282,7 +283,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
   };
 
   // Submit Start Form (Employee can only enter début and upload 1-4 photos)
-  const handleSubmitStartForm = (e: React.FormEvent) => {
+  const handleSubmitStartForm = (e: React.FormEvent, confirmed = false) => {
     e.preventDefault();
     setStartFormError(null);
 
@@ -292,6 +293,15 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
     }
     if (startProofPhotos.length === 0) {
       setStartFormError('Veuillez ajouter au moins 1 capture ou photo de début (1 à 4 photos autorisées).');
+      return;
+    }
+    if (!confirmed) {
+      askConfirm({
+        title: 'Envoyer la demande de début ?',
+        message: "Votre capture sera envoyée à l'administrateur pour validation.",
+        confirmLabel: 'Envoyer',
+        onConfirm: () => handleSubmitStartForm(e, true),
+      });
       return;
     }
 
@@ -326,13 +336,22 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
   };
 
   // Submit End Form with mandatory score consistency check
-  const handleSubmitEndForm = (e: React.FormEvent) => {
+  const handleSubmitEndForm = (e: React.FormEvent, confirmed = false) => {
     e.preventDefault();
     if (!activePost) return;
     setEndFormError(null);
 
     if (!endProofPreview) {
       setEndFormError('La capture d\'écran ou photo de fin de session est obligatoire.');
+      return;
+    }
+    if (!confirmed) {
+      askConfirm({
+        title: 'Terminer la session ?',
+        message: "Votre score final et votre capture seront envoyés à l'administrateur. Vous ne pourrez plus les modifier.",
+        confirmLabel: 'Terminer',
+        onConfirm: () => handleSubmitEndForm(e, true),
+      });
       return;
     }
 
@@ -367,12 +386,19 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
   // Cancel pending start post
   const handleCancelPendingStart = () => {
     if (!activePost) return;
-    if (confirm('Êtes-vous sûr de vouloir annuler ce poste avant la validation par l\'administrateur ?')) {
-      const res = db.cancelPendingStartPost(activePost.id);
-      if (!res.success) {
-        alert(res.error);
-      }
-    }
+    askConfirm({
+      title: 'Annuler ce poste ?',
+      message: "Le poste redeviendra libre. Votre demande de début sera supprimée.",
+      confirmLabel: 'Annuler le poste',
+      cancelLabel: 'Garder',
+      danger: true,
+      onConfirm: () => {
+        const res = db.cancelPendingStartPost(activePost.id);
+        if (!res.success) {
+          alert(res.error);
+        }
+      },
+    });
   };
 
   // Edit pending start post
@@ -398,11 +424,20 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
   };
 
   // Submit salary advance request
-  const handleSubmitAdvance = (e: React.FormEvent) => {
+  const handleSubmitAdvance = (e: React.FormEvent, confirmed = false) => {
     e.preventDefault();
     if (advanceAmount <= 0) return;
     if (!advanceReason.trim()) {
       alert('Veuillez indiquer le motif de l\'avance sur salaire.');
+      return;
+    }
+    if (!confirmed) {
+      askConfirm({
+        title: "Envoyer la demande d'avance ?",
+        message: 'Elle sera envoyée à l\'administrateur et déduite de votre paie si elle est acceptée.',
+        confirmLabel: 'Envoyer',
+        onConfirm: () => handleSubmitAdvance(e, true),
+      });
       return;
     }
 
@@ -1292,6 +1327,14 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                     <span className="text-[10px] text-slate-500 uppercase block">Actuel</span>
                     <span className="text-cyan-300 font-bold block">{formatScoreM(accountCurrent)}</span>
                   </div>
+                  {selectedContract?.description && (
+                    <div className="col-span-2 bg-[#0b1118] p-2 rounded-lg border border-amber-700/40">
+                      <span className="text-[10px] text-amber-400 uppercase block">Description</span>
+                      <span className="text-slate-200 block whitespace-pre-line break-words text-xs leading-snug">
+                        {selectedContract.description}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
               </div>

@@ -10,6 +10,8 @@ import { EmployeeDashboard } from './views/employee/EmployeeDashboard';
 import { CalendarView } from './views/CalendarView';
 import { LightboxModal } from './components/LightboxModal';
 import { CVViewerModal } from './components/CVViewerModal';
+import { ProfilePhotoGate } from './components/ProfilePhotoGate';
+import { ConfirmHost, askConfirm } from './components/ConfirmModal';
 import { DayDetailsModal } from './components/DayDetailsModal';
 import { generateDeltaForcePoster } from './utils/imageUtils';
 import { Menu, Shield } from 'lucide-react';
@@ -17,7 +19,7 @@ import { useApp } from './context/AppContext';
 import { LogoutTransition } from './components/LogoutTransition';
 
 export default function App() {
-  const { theme, t } = useApp();
+  const { theme, t, startLogoutAnimation } = useApp();
   const isLight = theme === 'light';
 
   const [isReady, setIsReady] = useState(false);
@@ -83,6 +85,16 @@ export default function App() {
     setCurrentUser(null);
     setIsWelcomeAnimating(false);
     setActiveView('login');
+  };
+
+  // Déconnexion avec confirmation
+  const requestLogout = () => {
+    askConfirm({
+      title: 'Se déconnecter ?',
+      message: 'Vous devrez vous reconnecter avec votre pseudo et votre mot de passe.',
+      confirmLabel: 'Se déconnecter',
+      onConfirm: () => startLogoutAnimation(handleLogout),
+    });
   };
 
   // Open Lightbox
@@ -196,7 +208,7 @@ export default function App() {
           }
           setActiveView(view);
         }}
-        onLogout={handleLogout}
+        onLogout={requestLogout}
         onOpenEmployeeCV={handleOpenEmployeeCV}
         onOpenPosterLightbox={handleOpenPoster}
         isOpenMobile={isMobileSidebarOpen}
@@ -308,7 +320,19 @@ export default function App() {
         </main>
       </div>
 
-      {/* CV VIEWER MODAL */}
+      {/* PHOTO DE PROFIL OBLIGATOIRE POUR LES EMPLOYÉS */}
+      {currentUser && currentUser.role === 'employee' && !currentUser.avatar_url && (
+        <ProfilePhotoGate
+          user={currentUser}
+          onDone={() => setCurrentUser(db.getCurrentUser())}
+          onLogout={handleLogout}
+        />
+      )}
+
+      {/* CONFIRMATIONS */}
+      <ConfirmHost />
+
+      {/* PROFILE MODAL */}
       <CVViewerModal
         isOpen={cvModalUser !== null}
         onClose={() => setCvModalUser(null)}
