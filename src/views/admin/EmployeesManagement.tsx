@@ -27,6 +27,20 @@ interface EmployeesManagementProps {
   onOpenEmployeeCV: (employee: User) => void;
 }
 
+// Téléphone : chiffres uniquement, format fixe « 261 34 12 345 67 »
+const PHONE_PREFIX = '261';
+const formatPhone = (raw: string): string => {
+  let d = (raw || '').replace(/\D/g, '');
+  if (!d.startsWith(PHONE_PREFIX)) d = PHONE_PREFIX + d.replace(/^0+/, '');
+  d = d.slice(0, 12);
+  const parts = [d.slice(0, 3), d.slice(3, 5), d.slice(5, 7), d.slice(7, 10), d.slice(10, 12)].filter(Boolean);
+  const out = parts.join(' ');
+  return d.length === 3 ? out + ' ' : out;
+};
+const phoneDigits = (v: string) => v.replace(/\D/g, '');
+const phoneIsEmpty = (v: string) => phoneDigits(v) === PHONE_PREFIX || phoneDigits(v) === '';
+const phoneIsComplete = (v: string) => phoneDigits(v).length === 12;
+
 export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
   onOpenEmployeeCV,
 }) => {
@@ -48,9 +62,8 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newName, setNewName] = useState('');
-  const [newPhone, setNewPhone] = useState('+261 34 ');
+  const [newPhone, setNewPhone] = useState('261 ');
   const [newShift, setNewShift] = useState<ShiftType>('day');
-  const [newRank, setNewRank] = useState('Diamond II');
 
   // Delete User Confirmation State
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
@@ -93,7 +106,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
   const handleOpenEdit = (user: User) => {
     setEditingUser(user);
     setEditName(user.name);
-    setEditPhone(user.phone);
+    setEditPhone(formatPhone(user.phone || ''));
     setEditShift(user.shift);
     setEditBadge(user.performance_badge);
     setEditPassword('');
@@ -102,6 +115,15 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
   const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingUser) return;
+
+    if (!phoneIsEmpty(editPhone) && !phoneIsComplete(editPhone)) {
+      alert('Téléphone incomplet. Format : 261 34 12 345 67');
+      return;
+    }
+    if (editPassword && editPassword.length < 6) {
+      alert('Le mot de passe doit avoir au moins 6 caractères.');
+      return;
+    }
 
     if (editPassword) {
       const pw = await db.setPassword(editingUser.id, editPassword);
@@ -113,7 +135,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
 
     db.updateUser(editingUser.id, {
       name: editName,
-      phone: editPhone,
+      phone: phoneIsEmpty(editPhone) ? '' : editPhone,
       shift: editShift,
       performance_badge: editBadge,
     });
@@ -124,26 +146,38 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setAddUserError(null);
-    if (!newUsername.trim() || !newName.trim() || !newPassword) {
-      setAddUserError('Veuillez renseigner tous les champs obligatoires');
+    if (!newUsername.trim()) {
+      setAddUserError('Identifiant manquant.');
+      return;
+    }
+    if (!newPassword) {
+      setAddUserError('Mot de passe manquant.');
       return;
     }
     if (newPassword.length < 6) {
       setAddUserError('Le mot de passe doit avoir au moins 6 caractères.');
       return;
     }
+    if (!newName.trim()) {
+      setAddUserError('Nom complet manquant.');
+      return;
+    }
+    if (!phoneIsEmpty(newPhone) && !phoneIsComplete(newPhone)) {
+      setAddUserError('Téléphone incomplet. Format : 261 34 12 345 67');
+      return;
+    }
 
     const created = await db.addUser({
       username: newUsername.toLowerCase().trim(),
       name: newName.trim(),
-      phone: newPhone.trim(),
+      phone: phoneIsEmpty(newPhone) ? '' : newPhone.trim(),
       shift: newShift,
       role: 'employee',
       status: 'active',
       avatar_url: `https://images.unsplash.com/photo-${1534528741775 + Math.floor(Math.random() * 1000)}?auto=format&fit=crop&w=150&q=80`,
       cv_url: `cv_${newUsername}.pdf`,
       cv_data: {
-        rank: newRank,
+        rank: 'Non renseigné',
         gameExperience: 'Recrutement Delta Force 2026',
         kdRatio: '3.20 K/D',
         hardware: 'Gaming Setup Conforme',
@@ -163,6 +197,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
     setNewUsername('');
     setNewPassword('');
     setNewName('');
+    setNewPhone('261 ');
   };
 
   const handleOpenReviewAdvance = (adv: SalaryAdvanceRequest, approve: boolean) => {
@@ -522,20 +557,6 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
 
             <form onSubmit={handleSaveEdit} className="space-y-4">
               <div>
-                <label className="block text-slate-300 uppercase mb-1">Mot de passe (6 caractères min.)</label>
-                <input
-                  type="text"
-                  value={newPassword}
-                  onChange={e => setNewPassword(e.target.value)}
-                  required
-                  minLength={6}
-                  autoComplete="off"
-                  placeholder="à communiquer à l'employé"
-                  className="w-full bg-[#141e2a] border border-slate-700 rounded-lg p-2 text-white"
-                />
-              </div>
-
-              <div>
                 <label className="block text-slate-300 uppercase mb-1">Nom Complet</label>
                 <input
                   type="text"
@@ -549,9 +570,12 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
               <div>
                 <label className="block text-slate-300 uppercase mb-1">Téléphone</label>
                 <input
-                  type="text"
+                  type="tel"
+                  inputMode="numeric"
+                  maxLength={16}
+                  placeholder="261 34 12 345 67"
                   value={editPhone}
-                  onChange={e => setEditPhone(e.target.value)}
+                  onChange={e => setEditPhone(formatPhone(e.target.value))}
                   className="w-full bg-[#141e2a] border border-slate-700 rounded-lg p-2 text-white"
                 />
               </div>
@@ -643,6 +667,18 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
               </div>
 
               <div>
+                <label className="block text-slate-300 uppercase mb-1">Mot de passe (6 caractères min.)</label>
+                <input
+                  type="text"
+                  value={newPassword}
+                  onChange={e => setNewPassword(e.target.value)}
+                  autoComplete="off"
+                  placeholder="à communiquer à l'employé"
+                  className="w-full bg-[#141e2a] border border-slate-700 rounded-lg p-2 text-white"
+                />
+              </div>
+
+              <div>
                 <label className="block text-slate-300 uppercase mb-1">Nom Complet</label>
                 <input
                   type="text"
@@ -657,9 +693,12 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
               <div>
                 <label className="block text-slate-300 uppercase mb-1">Téléphone de Contact</label>
                 <input
-                  type="text"
+                  type="tel"
+                  inputMode="numeric"
+                  maxLength={16}
+                  placeholder="261 34 12 345 67"
                   value={newPhone}
-                  onChange={e => setNewPhone(e.target.value)}
+                  onChange={e => setNewPhone(formatPhone(e.target.value))}
                   className="w-full bg-[#141e2a] border border-slate-700 rounded-lg p-2 text-white"
                 />
               </div>
@@ -674,17 +713,6 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                   <option value="day">☀️ Day Shift (08h00 - 18h00)</option>
                   <option value="night">🌙 Night Shift (20h00 - 06h00)</option>
                 </select>
-              </div>
-
-              <div>
-                <label className="block text-slate-300 uppercase mb-1">Rang Delta Force</label>
-                <input
-                  type="text"
-                  value={newRank}
-                  onChange={e => setNewRank(e.target.value)}
-                  placeholder="ex: Pinnacle Grandmaster"
-                  className="w-full bg-[#141e2a] border border-slate-700 rounded-lg p-2 text-white"
-                />
               </div>
 
               <div className="pt-2 flex justify-end gap-2">
