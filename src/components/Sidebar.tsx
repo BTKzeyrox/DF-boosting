@@ -61,7 +61,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     {
       id: 'grid',
       label: t('nav_grid'),
-      sublabel: t('nav_grid_sub'),
+      sublabel: '',
       icon: Layers,
       badge: t('badge_posts_count'),
       badgeColor: isLight
@@ -102,10 +102,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: t('nav_chat'),
       sublabel: t('nav_chat_sub'),
       icon: MessageSquare,
-      badge: t('badge_unlimited'),
-      badgeColor: isLight
-        ? 'bg-cyan-100 text-cyan-800 border-cyan-300'
-        : 'bg-cyan-950 text-cyan-300 border-cyan-500/40',
     },
     {
       id: 'calendar',
@@ -127,12 +123,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           },
         ]
       : []),
-    {
-      id: 'poster',
-      label: t('nav_poster'),
-      sublabel: t('nav_poster_sub'),
-      icon: Image,
-    },
   ];
 
   const handleItemClick = (id: string) => {
@@ -169,7 +159,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Sidebar Container */}
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-40 w-72 h-screen max-h-screen border-r flex flex-col justify-between transition-transform duration-300 ease-in-out overscroll-contain lg:translate-x-0 ${
+        className={`fixed top-0 bottom-0 left-0 z-40 w-72 h-[100dvh] max-h-[100dvh] overflow-y-auto border-r flex flex-col justify-between transition-transform duration-300 ease-in-out overscroll-contain lg:translate-x-0 ${
           isLight
             ? 'bg-white border-slate-200 text-slate-800 shadow-xl'
             : 'bg-[#090f17] border-slate-800/80 text-slate-100'
@@ -194,17 +184,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <span className="font-tactical font-black text-base tracking-wider bg-gradient-to-r from-emerald-500 to-teal-500 bg-clip-text text-transparent">
                   DELTA FORCE
                 </span>
-                <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${
-                  isLight
-                    ? 'bg-cyan-50 text-cyan-700 border-cyan-200'
-                    : 'bg-cyan-950/80 text-cyan-400 border-cyan-800/60'
-                }`}>
-                  HAWK OPS
-                </span>
               </div>
-              <p className="text-[10px] opacity-60 font-mono tracking-tight">
-                {t('brand_sub')}
-              </p>
             </div>
           </div>
 
@@ -253,12 +233,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* 3. SCROLLABLE NAVIGATION AREA (flex-1 min-h-0 overflow-y-auto overscroll-contain) */}
-        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-3 space-y-1">
-          <div className={`px-3 pb-2 text-[10px] font-mono uppercase tracking-wider font-semibold sticky top-0 py-1 z-10 ${
-            isLight ? 'bg-white/95 text-slate-400' : 'bg-[#090f17]/95 text-slate-400'
-          }`}>
-            {t('menu_operational')}
-          </div>
+        <div className="flex-1 min-h-[9rem] overflow-y-auto overscroll-contain p-3 space-y-1">
 
           <nav className="space-y-1">
             {navItems.map(item => {
@@ -295,9 +270,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       <div className="text-xs font-tactical font-bold tracking-wide truncate">
                         {item.label}
                       </div>
-                      <div className="text-[10px] opacity-60 font-mono truncate">
-                        {item.sublabel}
-                      </div>
+                      {item.sublabel && (
+                        <div className="text-[10px] opacity-60 font-mono truncate">
+                          {item.sublabel}
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -317,7 +294,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* 4. BOTTOM SECTION: Theme Toggle, Language Switcher & Logout */}
-        <div className={`shrink-0 p-3 border-t space-y-2 ${
+        <div className={`shrink-0 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t space-y-2 ${
           isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#0c1420] border-slate-800/80'
         }`}>
           {/* Theme & Language Controls Row */}

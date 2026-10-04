@@ -22,7 +22,7 @@ export const TRANSLATIONS = {
     nav_advances: 'Avances sur Salaire',
     nav_advances_sub: 'Demandes & acomptes Ar',
     nav_chat: 'Messagerie Directe',
-    nav_chat_sub: 'Chat local illimité',
+    nav_chat_sub: 'Chat local',
     nav_calendar: 'Calendrier des Shifts',
     nav_calendar_sub: 'Suivi mensuel & quotas',
     nav_security: 'Surveillance "Petit Malin"',

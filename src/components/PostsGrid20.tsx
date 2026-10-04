@@ -247,16 +247,16 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
               activeSessionOnThis?.status === 'pending_start' || activeSessionOnThis?.status === 'pending_end';
 
             const initialScore = activeSessionOnThis ? activeSessionOnThis.initial_score : contract.initial_score;
-            const targetScore = contract.target_score;
+            // Objectif = nombre de points à gagner (cible - départ du poste)
+            const objectiveScore = Math.max(1, contract.target_score - contract.initial_score);
             const currentScore = Number(
               activeSessionOnThis
                 ? activeSessionOnThis.final_score ?? activeSessionOnThis.current_score
                 : contract.initial_score
             ) || 0;
-            const remainingScore = Math.max(0, targetScore - currentScore);
-            const totalDiff = Math.max(1, targetScore - initialScore);
             const boostedDiff = Math.max(0, currentScore - initialScore);
-            const progressPercent = Math.min(100, Math.max(0, Math.round((boostedDiff / totalDiff) * 100)));
+            const remainingScore = Math.max(0, objectiveScore - boostedDiff);
+            const progressPercent = Math.min(100, Math.max(0, Math.round((boostedDiff / objectiveScore) * 100)));
 
             const postLabel = `#${String(contract.post_number).padStart(2, '0')}`;
             const photoCount =
@@ -323,9 +323,6 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
                             {contract.account_tag}
                           </span>
                         </div>
-                        <p className="text-[10px] sm:text-[11px] text-teal-500 font-mono mt-0.5 break-words leading-tight">
-                          {contract.game_mode}
-                        </p>
                       </div>
                     </div>
 
@@ -389,7 +386,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
                     </div>
                   )}
 
-                  {/* 4 Core Score Metrics: Départ, Actuel, Reste, Cible */}
+                  {/* 4 métriques : Départ, Actuel, Reste, Objectif */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2.5 mt-2.5 sm:mt-3.5 text-xs font-mono">
                     {/* 1. Score Départ */}
                     <div
@@ -401,7 +398,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
                       <span
                         className={`font-mono-numbers font-bold text-xs ${isLight ? 'text-slate-900' : 'text-white'}`}
                       >
-                        {formatScoreM(initialScore)} pts
+                        {formatScoreM(initialScore)}
                       </span>
                     </div>
 
@@ -413,7 +410,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
                     >
                       <span className="text-[10px] text-cyan-400 uppercase block font-semibold">Actuel</span>
                       <span className="font-mono-numbers font-bold text-xs text-cyan-400">
-                        {formatScoreM(currentScore)} pts
+                        {formatScoreM(currentScore)}
                       </span>
                     </div>
 
@@ -425,24 +422,24 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
                     >
                       <span className="text-[10px] text-amber-400 uppercase block font-semibold">Reste</span>
                       <span className="font-mono-numbers font-bold text-xs text-amber-400">
-                        {formatScoreM(remainingScore)} pts
+                        {formatScoreM(remainingScore)}
                       </span>
                     </div>
 
-                    {/* 4. Score Cible (Objectif) */}
+                    {/* 4. Objectif (points à gagner) */}
                     <div
                       className={`p-2.5 rounded-xl border ${
                         isLight ? 'bg-emerald-50/60 border-emerald-200' : 'bg-[#06140f] border-emerald-900/50'
                       }`}
                     >
-                      <span className="text-[10px] text-emerald-400 uppercase block font-semibold">Cible</span>
+                      <span className="text-[10px] text-emerald-400 uppercase block font-semibold">Objectif</span>
                       <span className="font-mono-numbers font-bold text-xs text-emerald-400">
-                        {formatScoreM(targetScore)} pts
+                        {formatScoreM(objectiveScore)}
                       </span>
                     </div>
                   </div>
 
-                  {/* Progression Bar & Shift Badge */}
+                  {/* Barre de progression */}
                   <div
                     className={`mt-3 p-2.5 rounded-xl border ${
                       isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#080d14] border-slate-800/80'
@@ -453,15 +450,6 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
                         <span>Progression :</span>
                         <strong className="text-emerald-400">{progressPercent}%</strong>
                         <span className="text-slate-500">({formatScoreM(remainingScore)} restant)</span>
-                      </span>
-                      <span
-                        className={`text-[10px] px-2 py-0.5 rounded font-mono ${
-                          contract.recommended_shift === 'night'
-                            ? 'bg-amber-950/70 text-amber-300 border border-amber-700/50'
-                            : 'bg-cyan-950/70 text-cyan-300 border border-cyan-700/50'
-                        }`}
-                      >
-                        {contract.recommended_shift === 'day' ? '☀️ Shift Jour' : '🌙 Shift Nuit'}
                       </span>
                     </div>
                     <div

@@ -103,6 +103,8 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
   const [clientName, setClientName] = useState('');
   const [accountTag, setAccountTag] = useState('');
   const [targetScore, setTargetScore] = useState<number>(25000000);
+  // Objectif = points à gagner (cible - départ du poste)
+  const [objective, setObjective] = useState<number>(0);
   const [initialScore, setInitialScore] = useState<number>(14000000);
   const [startProofPhotos, setStartProofPhotos] = useState<string[]>([]);
   const [startProofPreview, setStartProofPreview] = useState<string | null>(null);
@@ -155,6 +157,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
     setAccountTag(contract.account_tag);
     setInitialScore(contract.initial_score);
     setTargetScore(contract.target_score);
+    setObjective(Math.max(0, contract.target_score - contract.initial_score));
     setStartProofPhotos([]);
     setStartProofPreview(null);
     setStartFormError(null);
@@ -285,7 +288,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
     const contract = selectedContract;
     const finalClientName = contract ? contract.client_name : clientName;
     const finalAccountTag = contract ? contract.account_tag : accountTag;
-    const finalTargetScore = contract ? contract.target_score : targetScore;
+    const finalTargetScore = contract ? initialScore + objective : targetScore;
 
     const res = db.startPost({
       employeeId: currentUser.id,
@@ -623,12 +626,12 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                     </div>
 
                     <div className="bg-[#131c28] p-3 sm:p-4 rounded-xl border border-slate-800">
-                      <div className="text-[10px] sm:text-[11px] font-mono uppercase text-slate-400">Score Cible Client</div>
+                      <div className="text-[10px] sm:text-[11px] font-mono uppercase text-slate-400">Objectif</div>
                       <div className="text-base sm:text-xl lg:text-2xl font-black font-mono text-amber-400 mt-1 truncate">
-                        {formatScoreM(activePost.target_score)}
+                        {formatScoreM(Math.max(0, activePost.target_score - activePost.initial_score))}
                       </div>
                       <div className="text-[9px] sm:text-[10px] text-slate-500 font-mono mt-0.5">
-                        Objectif ({formatScoreM(activePost.target_score)} pts)
+                        Points à gagner
                       </div>
                     </div>
 
@@ -1254,31 +1257,21 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5 text-slate-300 font-bold uppercase text-[11px]">
                     <Shield className="w-3.5 h-3.5 text-cyan-400" />
-                    <span>Informations Compte Client (Verrouillées Admin)</span>
+                    <span>Informations Compte Client</span>
                   </div>
-                  <span className="text-[10px] text-amber-400 bg-amber-950/60 border border-amber-600/40 px-2 py-0.5 rounded">
-                    🔒 Seul l'Admin peut modifier
-                  </span>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                <div className="grid grid-cols-2 gap-2 text-xs">
                   <div className="bg-[#0b1118] p-2 rounded-lg border border-slate-800">
                     <span className="text-[10px] text-slate-500 uppercase block">Nom Client</span>
                     <span className="text-white font-bold truncate block">{clientName}</span>
                   </div>
                   <div className="bg-[#0b1118] p-2 rounded-lg border border-slate-800">
-                    <span className="text-[10px] text-slate-500 uppercase block">Identifiant / Tag</span>
-                    <span className="text-cyan-400 font-bold truncate block">{accountTag}</span>
-                  </div>
-                  <div className="bg-[#0b1118] p-2 rounded-lg border border-slate-800 col-span-2 sm:col-span-1">
-                    <span className="text-[10px] text-slate-500 uppercase block">Score Cible</span>
-                    <span className="text-emerald-400 font-bold block">{formatScoreM(targetScore)} pts</span>
+                    <span className="text-[10px] text-slate-500 uppercase block">Objectif</span>
+                    <span className="text-emerald-400 font-bold block">{formatScoreM(objective)}</span>
                   </div>
                 </div>
 
-                <p className="text-[10px] text-slate-400 leading-relaxed">
-                  L'employé ne peut pas modifier le nom du compte ou la cible. Renseignez votre score de début réel et ajoutez 1 à 4 captures d'écran ou photos caméra pour validation par l'administrateur.
-                </p>
               </div>
 
               {/* MANUAL INITIAL SCORE ENTRY */}
@@ -1286,7 +1279,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                 <label className="block text-slate-300 uppercase font-semibold flex items-center justify-between">
                   <span className="text-emerald-400 font-bold">1. Score de Début Relevé (Manuel) *</span>
                   <span className="text-cyan-400 font-mono font-bold text-sm">
-                    {formatScoreM(initialScore)} pts ({initialScore.toLocaleString()} pts)
+                    {formatScoreM(initialScore)} ({initialScore.toLocaleString()})
                   </span>
                 </label>
                 <div className="flex items-center gap-2">
@@ -1607,13 +1600,13 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                 <div>
                   <span className="text-[10px] text-slate-500 uppercase block">Score de départ</span>
                   <span className="text-white font-bold text-xs sm:text-sm">
-                    {formatScoreM(activePost.initial_score)} pts
+                    {formatScoreM(activePost.initial_score)}
                   </span>
                 </div>
                 <div className="text-right">
-                  <span className="text-[10px] text-slate-500 uppercase block">Objectif client</span>
+                  <span className="text-[10px] text-slate-500 uppercase block">Objectif</span>
                   <span className="text-cyan-400 font-bold text-xs sm:text-sm">
-                    {formatScoreM(activePost.target_score)} pts
+                    {formatScoreM(Math.max(0, activePost.target_score - activePost.initial_score))}
                   </span>
                 </div>
               </div>

@@ -176,9 +176,9 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
                         </span>
                       </div>
                       <div className="bg-[#0b1018] p-2.5 rounded-lg border border-slate-800/80">
-                        <span className="text-slate-500 text-[10px] uppercase block">Objectif Client</span>
+                        <span className="text-slate-500 text-[10px] uppercase block">Objectif</span>
                         <span className="text-cyan-300 font-bold text-sm font-mono-numbers">
-                          {formatScoreM(shift.target_score)} pts
+                          {formatScoreM(Math.max(0, shift.target_score - shift.initial_score))}
                         </span>
                       </div>
                       <div className="bg-[#0b1018] p-2.5 rounded-lg border border-slate-800/80">

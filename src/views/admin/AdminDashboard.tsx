@@ -84,7 +84,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [editClientName, setEditClientName] = useState('');
   const [editAccountTag, setEditAccountTag] = useState('');
   const [editInitialScore, setEditInitialScore] = useState<number>(0);
-  const [editTargetScore, setEditTargetScore] = useState<number>(0);
+  const [editObjective, setEditObjective] = useState<number>(0);
+  // Le score final = départ + objectif (points à gagner)
+  const editTargetScore = editInitialScore + editObjective;
   const [editGameMode, setEditGameMode] = useState('');
   const [editShift, setEditShift] = useState<ShiftType | 'any'>('any');
   const [editNotes, setEditNotes] = useState('');
@@ -134,8 +136,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setAssignErrorMsg('Le nom du compte client ne peut pas être vide.');
       return;
     }
-    if (editTargetScore <= 0) {
-      setAssignErrorMsg('Le score cible doit être supérieur à 0.');
+    if (editObjective <= 0) {
+      setAssignErrorMsg('L\'objectif doit être supérieur à 0.');
       return;
     }
 
@@ -253,7 +255,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             setEditClientName(contract.client_name);
             setEditAccountTag(contract.account_tag);
             setEditInitialScore(session ? session.initial_score : contract.initial_score);
-            setEditTargetScore(contract.target_score);
+            setEditObjective(Math.max(0, contract.target_score - contract.initial_score));
             setEditGameMode(contract.game_mode);
             setEditShift(contract.recommended_shift);
             setAssignedBoosterId(session ? session.employee_id : (availableBoosters[0]?.id || ''));
@@ -279,9 +281,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <h3 className="font-tactical font-black text-white text-base">
                       {selectedAdminContract.client_name}
                     </h3>
-                    <span className="text-[10px] font-mono text-cyan-400">
-                      {selectedAdminContract.game_mode} · {selectedAdminContract.account_tag}
-                    </span>
                   </div>
                 </div>
 
@@ -350,12 +349,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         </div>
                         <div className="bg-black/40 p-2 rounded border border-amber-800/40">
                           <span className="text-slate-400 text-[10px] block uppercase">Score Début</span>
-                          <strong className="text-emerald-400 text-xs block">{formatScoreM(activeSessionForModal.initial_score)} pts</strong>
+                          <strong className="text-emerald-400 text-xs block">{formatScoreM(activeSessionForModal.initial_score)}</strong>
                         </div>
                         <div className="bg-black/40 p-2 rounded border border-amber-800/40">
                           <span className="text-slate-400 text-[10px] block uppercase">Score Actuel / Fin</span>
                           <strong className="text-cyan-400 text-xs block">
-                            {formatScoreM(activeSessionForModal.final_score ?? activeSessionForModal.current_score)} pts
+                            {formatScoreM(activeSessionForModal.final_score ?? activeSessionForModal.current_score)}
                           </strong>
                         </div>
                         <div className="bg-black/40 p-2 rounded border border-amber-800/40">
@@ -439,7 +438,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <span className="text-[10px] text-cyan-400 font-mono">Contrôle Total Administrateur</span>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 gap-3">
                     <div>
                       <label className="block text-slate-300 uppercase mb-1">Nom Compte Client</label>
                       <input
@@ -447,15 +446,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         value={editClientName}
                         onChange={e => setEditClientName(e.target.value)}
                         className="w-full bg-[#0d1622] border border-slate-600 rounded-lg p-2 text-white font-bold"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-slate-300 uppercase mb-1">Tag / Identifiant</label>
-                      <input
-                        type="text"
-                        value={editAccountTag}
-                        onChange={e => setEditAccountTag(e.target.value)}
-                        className="w-full bg-[#0d1622] border border-slate-600 rounded-lg p-2 text-cyan-300"
                       />
                     </div>
                   </div>
@@ -473,48 +463,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         className="w-full bg-[#0d1622] border border-slate-600 rounded-lg p-2 text-emerald-400 font-bold"
                       />
                       <span className="text-[10px] text-slate-500 mt-0.5 block">
-                        {formatScoreM(editInitialScore)} pts
+                        {formatScoreM(editInitialScore)}
                       </span>
                     </div>
                     <div>
-                      <label className="block text-slate-300 uppercase mb-1">Score Cible (Objectif Client)</label>
+                      <label className="block text-slate-300 uppercase mb-1">Objectif (points à gagner)</label>
                       <input
                         type="number"
                         step="100000"
-                        value={editTargetScore}
-                        onChange={e => setEditTargetScore(Number(e.target.value))}
+                        value={editObjective}
+                        onChange={e => setEditObjective(Number(e.target.value))}
                         className="w-full bg-[#0d1622] border border-slate-600 rounded-lg p-2 text-amber-400 font-bold"
                       />
                       <span className="text-[10px] text-slate-500 mt-0.5 block">
-                        {formatScoreM(editTargetScore)} pts
+                        {formatScoreM(editObjective)}
                       </span>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div>
-                      <label className="block text-slate-300 uppercase mb-1">Mode de Jeu</label>
-                      <input
-                        type="text"
-                        value={editGameMode}
-                        onChange={e => setEditGameMode(e.target.value)}
-                        className="w-full bg-[#0d1622] border border-slate-600 rounded-lg p-2 text-white"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-slate-300 uppercase mb-1">Shift Recommandé</label>
-                      <select
-                        value={editShift}
-                        onChange={e => setEditShift(e.target.value as any)}
-                        className="w-full bg-[#0d1622] border border-slate-600 rounded-lg p-2 text-white"
-                      >
-                        <option value="day">☀️ Shift Jour (08h-18h)</option>
-                        <option value="night">🌙 Shift Nuit (20h-06h)</option>
-                        <option value="any">⚡ Shift Libre / Indifférent</option>
-                      </select>
-                    </div>
-
+                  <div className="grid grid-cols-1 gap-3">
                     <div>
                       <label className="block text-slate-300 uppercase mb-1">Booster Assigné</label>
                       <select
@@ -962,8 +929,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         <span className="text-cyan-400 font-bold">{formatScoreM(finalScore)} pts</span>
                       </div>
                       <div className="bg-[#0b1118] p-2.5 rounded-lg border border-slate-800">
-                        <span className="text-slate-500 text-[10px] block uppercase">Cible Client</span>
-                        <span className="text-amber-400 font-bold">{formatScoreM(post.target_score)} pts</span>
+                        <span className="text-slate-500 text-[10px] block uppercase">Objectif</span>
+                        <span className="text-amber-400 font-bold">{formatScoreM(post.target_score - post.initial_score)}</span>
                       </div>
                       <div className="bg-[#0b1118] p-2.5 rounded-lg border border-slate-800">
                         <span className="text-slate-500 text-[10px] block uppercase">Progression</span>
