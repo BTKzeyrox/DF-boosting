@@ -175,6 +175,8 @@ export const LoginView: React.FC<LoginViewProps> = ({
                     type="text"
                     value={username}
                     onChange={e => setUsername(e.target.value)}
+                    autoCapitalize="off" autoCorrect="off" spellCheck={false}
+                    autoComplete="username"
                     placeholder={t('username_placeholder')}
                     className={`w-full border rounded-xl pl-10 pr-3.5 py-2.5 text-xs font-mono focus:outline-none focus:border-emerald-500 transition-all ${
                       isLight
@@ -195,6 +197,8 @@ export const LoginView: React.FC<LoginViewProps> = ({
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={e => setPassword(e.target.value)}
+                    autoCapitalize="off" autoCorrect="off" spellCheck={false}
+                    autoComplete="current-password"
                     placeholder="••••••••••••"
                     className={`w-full border rounded-xl pl-10 pr-10 py-2.5 text-xs font-mono focus:outline-none focus:border-emerald-500 transition-all ${
                       isLight

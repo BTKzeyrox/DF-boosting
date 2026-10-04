@@ -586,6 +586,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                   type="text"
                   value={editPassword}
                   onChange={e => setEditPassword(e.target.value)}
+                  autoCapitalize="off" autoCorrect="off" spellCheck={false}
                   minLength={6}
                   autoComplete="off"
                   placeholder="laisser vide = inchangé"
@@ -660,6 +661,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                   type="text"
                   value={newUsername}
                   onChange={e => setNewUsername(e.target.value)}
+                  autoCapitalize="off" autoCorrect="off" spellCheck={false}
                   required
                   placeholder="ex: faniry_df"
                   className="w-full bg-[#141e2a] border border-slate-700 rounded-lg p-2 text-white"
@@ -672,6 +674,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                   type="text"
                   value={newPassword}
                   onChange={e => setNewPassword(e.target.value)}
+                  autoCapitalize="off" autoCorrect="off" spellCheck={false}
                   autoComplete="off"
                   placeholder="à communiquer à l'employé"
                   className="w-full bg-[#141e2a] border border-slate-700 rounded-lg p-2 text-white"
