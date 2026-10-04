@@ -246,13 +246,14 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
             const isPending =
               activeSessionOnThis?.status === 'pending_start' || activeSessionOnThis?.status === 'pending_end';
 
-            const initialScore = activeSessionOnThis ? activeSessionOnThis.initial_score : contract.initial_score;
+            // Début = fixé par l'admin ; Actuel = score réel du compte
+            const initialScore = contract.initial_score;
             // Objectif = nombre de points à gagner (cible - départ du poste)
             const objectiveScore = Math.max(1, contract.target_score - contract.initial_score);
             const currentScore = Number(
               activeSessionOnThis
                 ? activeSessionOnThis.final_score ?? activeSessionOnThis.current_score
-                : contract.initial_score
+                : contract.current_score ?? contract.initial_score
             ) || 0;
             const boostedDiff = Math.max(0, currentScore - initialScore);
             const remainingScore = Math.max(0, objectiveScore - boostedDiff);

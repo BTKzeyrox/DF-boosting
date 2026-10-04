@@ -119,7 +119,8 @@ export interface ClientContract {
   game_mode: string;
   current_rank: string;
   target_rank: string;
-  initial_score: number;
+  initial_score: number; // Début : modifiable par l'admin seulement
+  current_score?: number; // Actuel du compte (mis à jour à la validation d'une fin de session)
   target_score: number;
   recommended_shift: ShiftType | 'any';
   estimated_reward_ar: number;

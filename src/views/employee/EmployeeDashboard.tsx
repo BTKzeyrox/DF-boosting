@@ -105,6 +105,11 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
   const [targetScore, setTargetScore] = useState<number>(25000000);
   // Objectif = points à gagner (cible - départ du poste)
   const [objective, setObjective] = useState<number>(0);
+  // Début (admin) et Actuel du compte, affichés en lecture seule
+  const [accountStart, setAccountStart] = useState<number>(0);
+  const [accountCurrent, setAccountCurrent] = useState<number>(0);
+  // La capture montre-t-elle le même score que l'Actuel affiché ?
+  const [scoreMatches, setScoreMatches] = useState<boolean>(true);
   const [initialScore, setInitialScore] = useState<number>(14000000);
   const [startProofPhotos, setStartProofPhotos] = useState<string[]>([]);
   const [startProofPreview, setStartProofPreview] = useState<string | null>(null);
@@ -155,7 +160,11 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
     setSelectedContract(contract);
     setClientName(contract.client_name);
     setAccountTag(contract.account_tag);
-    setInitialScore(contract.initial_score);
+    const startNow = contract.current_score ?? contract.initial_score;
+    setAccountStart(contract.initial_score);
+    setAccountCurrent(startNow);
+    setScoreMatches(true);
+    setInitialScore(startNow);
     setTargetScore(contract.target_score);
     setObjective(Math.max(0, contract.target_score - contract.initial_score));
     setStartProofPhotos([]);
@@ -277,7 +286,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
     setStartFormError(null);
 
     if (initialScore <= 0) {
-      setStartFormError('Veuillez renseigner manuellement votre score de début.');
+      setStartFormError('Veuillez entrer le score réel vu sur la capture.');
       return;
     }
     if (startProofPhotos.length === 0) {
@@ -288,7 +297,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
     const contract = selectedContract;
     const finalClientName = contract ? contract.client_name : clientName;
     const finalAccountTag = contract ? contract.account_tag : accountTag;
-    const finalTargetScore = contract ? initialScore + objective : targetScore;
+    const finalTargetScore = contract ? contract.target_score : targetScore;
 
     const res = db.startPost({
       employeeId: currentUser.id,
@@ -1270,57 +1279,16 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                     <span className="text-[10px] text-slate-500 uppercase block">Objectif</span>
                     <span className="text-emerald-400 font-bold block">{formatScoreM(objective)}</span>
                   </div>
+                  <div className="bg-[#0b1118] p-2 rounded-lg border border-slate-800">
+                    <span className="text-[10px] text-slate-500 uppercase block">Début</span>
+                    <span className="text-slate-200 font-bold block">{formatScoreM(accountStart)}</span>
+                  </div>
+                  <div className="bg-[#0b1118] p-2 rounded-lg border border-slate-800">
+                    <span className="text-[10px] text-slate-500 uppercase block">Actuel</span>
+                    <span className="text-cyan-300 font-bold block">{formatScoreM(accountCurrent)}</span>
+                  </div>
                 </div>
 
-              </div>
-
-              {/* MANUAL INITIAL SCORE ENTRY */}
-              <div className="bg-[#121c27] border border-slate-700 rounded-xl p-3.5 space-y-2">
-                <label className="block text-slate-300 uppercase font-semibold flex items-center justify-between">
-                  <span className="text-emerald-400 font-bold">1. Score de Début Relevé (Manuel) *</span>
-                  <span className="text-cyan-400 font-mono font-bold text-sm">
-                    {formatScoreM(initialScore)} ({initialScore.toLocaleString()})
-                  </span>
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    step="100000"
-                    value={initialScore}
-                    onChange={e => setInitialScore(Math.max(0, Number(e.target.value)))}
-                    required
-                    className="flex-1 bg-[#141e2a] border border-slate-600 focus:border-emerald-500 rounded-lg p-2.5 text-white font-mono font-bold text-sm"
-                    placeholder="Entrez le score de début..."
-                  />
-                </div>
-
-                {/* Quick adjustments */}
-                <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                  <span className="text-[10px] text-slate-400 uppercase mr-1">Ajuster:</span>
-                  {[
-                    { label: '-1M', delta: -1000000 },
-                    { label: '+500K', delta: 500000 },
-                    { label: '+1M', delta: 1000000 },
-                    { label: '+2M', delta: 2000000 },
-                    { label: '+5M', delta: 5000000 },
-                  ].map(btn => (
-                    <button
-                      key={btn.label}
-                      type="button"
-                      onClick={() => setInitialScore(prev => Math.max(0, prev + btn.delta))}
-                      className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 font-mono text-[11px] border border-slate-700 transition-colors"
-                    >
-                      {btn.label}
-                    </button>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => selectedContract && setInitialScore(selectedContract.initial_score)}
-                    className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-amber-300 font-mono text-[11px] border border-slate-700 ml-auto"
-                  >
-                    Reset
-                  </button>
-                </div>
               </div>
 
               {/* 1 TO 4 PROOF PHOTOS UPLOAD (Camera or Screenshot Gallery) */}
@@ -1328,7 +1296,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                 <div className="flex items-center justify-between">
                   <label className="text-slate-300 uppercase font-bold flex items-center gap-1.5 text-emerald-400">
                     <Camera className="w-4 h-4" />
-                    <span>2. Captures ou Photos Caméra (1 à 4 photos) *</span>
+                    <span>1. Capture d'écran (1 à 4 photos) *</span>
                   </label>
                   <span className="text-[11px] font-mono text-amber-300 font-bold bg-amber-950/70 border border-amber-500/40 px-2 py-0.5 rounded">
                     {startProofPhotos.length} / 4 photos
@@ -1445,6 +1413,57 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                 )}
               </div>
 
+              {/* VÉRIFICATION DU SCORE SUR LA CAPTURE */}
+              <div className="bg-[#121c27] border border-slate-700 rounded-xl p-3.5 space-y-3">
+                <label className="block text-emerald-400 uppercase font-bold">
+                  2. Le score sur la capture est-il le même que l'Actuel ({formatScoreM(accountCurrent)}) ? *
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setScoreMatches(true);
+                      setInitialScore(accountCurrent);
+                    }}
+                    className={`px-2 py-2.5 rounded-xl border font-bold text-center leading-tight transition-colors ${
+                      scoreMatches
+                        ? 'bg-emerald-600 border-emerald-400 text-white'
+                        : 'bg-[#141e2a] border-slate-600 text-slate-300'
+                    }`}
+                  >
+                    ✓ Oui, identique
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setScoreMatches(false)}
+                    className={`px-2 py-2.5 rounded-xl border font-bold text-center leading-tight transition-colors ${
+                      !scoreMatches
+                        ? 'bg-amber-600 border-amber-400 text-white'
+                        : 'bg-[#141e2a] border-slate-600 text-slate-300'
+                    }`}
+                  >
+                    ✗ Non, différent
+                  </button>
+                </div>
+
+                {!scoreMatches && (
+                  <div className="space-y-1.5">
+                    <label className="block text-slate-300 uppercase font-semibold flex items-center justify-between gap-2">
+                      <span>Score réel sur la capture</span>
+                      <span className="text-cyan-400 font-bold text-sm">{formatScoreM(initialScore)}</span>
+                    </label>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      value={initialScore || ''}
+                      onChange={e => setInitialScore(Math.max(0, Number(e.target.value)))}
+                      className="w-full bg-[#141e2a] border border-slate-600 focus:border-emerald-500 rounded-lg p-2.5 text-white font-bold text-sm"
+                      placeholder="ex: 30739000 (= 30.739M)"
+                    />
+                  </div>
+                )}
+              </div>
+
               {/* Bottom Actions */}
               <div className="pt-4 border-t border-slate-800 flex flex-wrap items-center justify-between gap-3 shrink-0">
                 <div className="text-[11px] text-slate-400 font-mono">
@@ -1502,7 +1521,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
             </p>
 
             <div>
-              <label className="block text-slate-300 uppercase mb-1">Nouveau Score Initial</label>
+              <label className="block text-slate-300 uppercase mb-1">Score de départ (sur la capture)</label>
               <input
                 type="number"
                 value={editScore}

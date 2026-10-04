@@ -324,6 +324,15 @@ class DeltaForceStore {
     const oldClientName = contract.client_name;
     Object.assign(contract, updates);
 
+    // Si le Début dépasse l'Actuel du compte, l'Actuel suit le Début
+    if (
+      updates.initial_score !== undefined &&
+      contract.current_score !== undefined &&
+      contract.current_score < contract.initial_score
+    ) {
+      contract.current_score = contract.initial_score;
+    }
+
     // If target score or initial score changed, recalculate reward estimate
     if (updates.target_score !== undefined || updates.initial_score !== undefined) {
       const diff = Math.max(0, contract.target_score - contract.initial_score);
@@ -640,6 +649,12 @@ class DeltaForceStore {
 
       post.status = 'completed';
       post.calculated_ar = calculatedAr;
+
+      // L'Actuel du compte devient le score final (vu par l'employé suivant)
+      const linkedContract =
+        this.contracts.find(c => c.post_number === post.post_number) ||
+        this.contracts.find(c => c.client_name === post.client_name);
+      if (linkedContract) linkedContract.current_score = finalScore;
       post.updated_at = new Date().toISOString();
 
       if (employee) {
