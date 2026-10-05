@@ -12,6 +12,7 @@ import { LightboxModal } from './components/LightboxModal';
 import { CVViewerModal } from './components/CVViewerModal';
 import { ProfilePhotoGate } from './components/ProfilePhotoGate';
 import { ConfirmHost, askConfirm } from './components/ConfirmModal';
+import { setChineseMode } from './utils/zhTranslate';
 import { DayDetailsModal } from './components/DayDetailsModal';
 import { generateDeltaForcePoster } from './utils/imageUtils';
 import { Menu, Shield } from 'lucide-react';
@@ -19,10 +20,15 @@ import { useApp } from './context/AppContext';
 import { LogoutTransition } from './components/LogoutTransition';
 
 export default function App() {
-  const { theme, t, startLogoutAnimation } = useApp();
+  const { theme, t, startLogoutAnimation, lang } = useApp();
   const isLight = theme === 'light';
 
   const [isReady, setIsReady] = useState(false);
+
+  // Langue chinoise : traduit tous les textes affichés (aucun mot français ne reste)
+  useEffect(() => {
+    setChineseMode(lang === 'zh');
+  }, [lang]);
   const [currentUser, setCurrentUser] = useState<User | null>(db.getCurrentUser());
   const [activeView, setActiveView] = useState<string>('grid');
   const [isWelcomeAnimating, setIsWelcomeAnimating] = useState(false);

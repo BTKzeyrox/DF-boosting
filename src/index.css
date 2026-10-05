@@ -8,14 +8,14 @@
   }
 
   body {
-    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-family: 'Inter', 'Noto Sans SC', system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
     font-feature-settings: 'cv11' on, 'ss01' on;
   }
 }
 
 /* ===== Polices modernes ===== */
 .font-tactical {
-  font-family: 'Sora', 'Inter', system-ui, sans-serif;
+  font-family: 'Sora', 'Inter', 'Noto Sans SC', system-ui, 'PingFang SC', 'Microsoft YaHei', sans-serif;
   letter-spacing: 0.005em;
 }
 .font-mono,
