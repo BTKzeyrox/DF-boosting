@@ -34,7 +34,7 @@ import {
 import { User, PostSession, ShiftType, ClientContract } from '../../types';
 import { db } from '../../db/store';
 import { askConfirm } from '../../components/ConfirmModal';
-import { generateDeltaForcePoster } from '../../utils/imageUtils';
+import { generateDeltaForcePoster, compressProofImage } from '../../utils/imageUtils';
 import { AVAILABLE_CLIENT_CONTRACTS } from '../../db/initialData';
 import { PostsGrid20 } from '../../components/PostsGrid20';
 import { formatScoreM, formatCurrencyAr } from '../../utils/formatUtils';
@@ -229,30 +229,38 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
     setShowEndModal(true);
   };
 
-  // Upload proof photo handler
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, target: 'start' | 'end' | 'edit') => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // Photo de preuve : compressée (~150 Ko) puis envoyée dans Supabase Storage.
+  // Si l'envoi échoue, on garde la version compressée pour ne rien perdre.
+  const [uploadingCount, setUploadingCount] = useState(0);
+  const prepareProof = async (file: File): Promise<string | null> => {
+    setUploadingCount(c => c + 1);
+    try {
+      const small = await compressProofImage(file);
+      const url = await db.uploadFile(small);
+      return url || small;
+    } catch {
+      return null;
+    } finally {
+      setUploadingCount(c => c - 1);
+    }
+  };
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const result = event.target?.result as string;
-      if (target === 'start') {
-        setStartProofPreview(result);
-        setStartProofPhotos(prev => {
-          if (prev.length >= 4) return prev;
-          return [...prev, result];
-        });
-      }
-      if (target === 'end') setEndProofPreview(result);
-      if (target === 'edit') setEditProofPreview(result);
-    };
-    reader.readAsDataURL(file);
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, target: 'start' | 'end' | 'edit') => {
+    const file = e.target.files?.[0];
     e.target.value = '';
+    if (!file) return;
+    const result = await prepareProof(file);
+    if (!result) return;
+    if (target === 'start') {
+      setStartProofPreview(result);
+      setStartProofPhotos(prev => (prev.length >= 4 ? prev : [...prev, result]));
+    }
+    if (target === 'end') setEndProofPreview(result);
+    if (target === 'edit') setEditProofPreview(result);
   };
 
   // Multi-photo handler for 1 to 4 photos
-  const handleMultipleStartPhotos = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMultipleStartPhotos = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
@@ -263,20 +271,11 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
     }
 
     const filesToRead = Array.from(files).slice(0, availableSlots);
-    filesToRead.forEach(file => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const result = event.target?.result as string;
-        if (result) {
-          setStartProofPhotos(prev => {
-            if (prev.length >= 4) return prev;
-            return [...prev, result];
-          });
-        }
-      };
-      reader.readAsDataURL(file);
-    });
     e.target.value = '';
+    for (const file of filesToRead) {
+      const result = await prepareProof(file);
+      if (result) setStartProofPhotos(prev => (prev.length >= 4 ? prev : [...prev, result]));
+    }
   };
 
   const handleRemoveStartPhoto = (index: number) => {
@@ -287,6 +286,10 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
   const handleSubmitStartForm = (e: React.FormEvent, confirmed = false) => {
     e.preventDefault();
     setStartFormError(null);
+    if (uploadingCount > 0) {
+      setStartFormError('Photo en cours d\'envoi, patientez quelques secondes.');
+      return;
+    }
 
     if (initialScore <= 0) {
       setStartFormError('Veuillez entrer le score réel vu sur la capture.');
@@ -341,6 +344,10 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
     e.preventDefault();
     if (!activePost) return;
     setEndFormError(null);
+    if (uploadingCount > 0) {
+      setEndFormError('Photo en cours d\'envoi, patientez quelques secondes.');
+      return;
+    }
 
     if (!endProofPreview) {
       setEndFormError('La capture d\'écran ou photo de fin de session est obligatoire.');

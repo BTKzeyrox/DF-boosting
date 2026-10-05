@@ -26,8 +26,9 @@ import {
   Hourglass,
   CircleDot,
   X,
+  KeyRound,
 } from 'lucide-react';
-import { User, PostSession, SecurityViolation, ClientContract, ShiftType } from '../../types';
+import { User, PostSession, SecurityViolation, ClientContract, ShiftType, PasswordResetRequest } from '../../types';
 import { Avatar } from '../../components/Avatar';
 import { db } from '../../db/store';
 import { askConfirm } from '../../components/ConfirmModal';
@@ -67,6 +68,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [users, setUsers] = useState<User[]>(db.getUsers());
   const [posts, setPosts] = useState<PostSession[]>(db.getPosts());
   const [securityLogs, setSecurityLogs] = useState<SecurityViolation[]>(db.getSecurityLogs());
+  const [resets, setResets] = useState<PasswordResetRequest[]>(db.getPasswordResets());
 
   // Rejection modal state
   const [rejectingPostId, setRejectingPostId] = useState<string | null>(null);
@@ -116,6 +118,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setUsers(db.getUsers());
       setPosts(db.getPosts());
       setSecurityLogs(db.getSecurityLogs());
+      setResets(db.getPasswordResets());
     });
     return unsubscribe;
   }, []);
@@ -674,6 +677,54 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   return (
     <div className="space-y-3 max-w-none mx-auto px-1.5 sm:px-3 lg:px-4 py-3">
       
+      {/* URGENT : demandes de nouveau mot de passe */}
+      {resets.length > 0 && (
+        <div className="bg-[#1a0d0d] border-2 border-red-500 p-3 sm:p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <KeyRound className="w-5 h-5 text-red-400 shrink-0" />
+            <h3 className="font-tactical font-black text-white text-sm sm:text-base">
+              URGENT · {resets.length} demande{resets.length > 1 ? 's' : ''} de mot de passe
+            </h3>
+          </div>
+          {resets.map(r => (
+            <div key={r.id} className="bg-[#0f1722] border border-slate-700 p-3 flex flex-col sm:flex-row sm:items-center gap-3">
+              <div className="min-w-0 flex-1 text-xs font-mono space-y-0.5">
+                <div className="text-white font-bold text-sm break-words">{r.name} <span className="text-slate-400 font-normal">(@{r.username})</span></div>
+                <div className="text-amber-300 break-words">Téléphone : {r.phone || 'non renseigné'}</div>
+                <div className="text-slate-400">Demandé le {new Date(r.created_at).toLocaleString('fr-FR')}</div>
+              </div>
+              <div className="grid grid-cols-2 gap-2 sm:w-64 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => askConfirm({
+                    title: 'Refuser la demande ?',
+                    message: `Le mot de passe de ${r.name} ne changera pas.`,
+                    confirmLabel: 'Refuser',
+                    danger: true,
+                    onConfirm: () => void db.decidePasswordReset(r.id, false),
+                  })}
+                  className="px-3 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-red-500/60 text-red-300 text-xs font-bold cursor-pointer"
+                >
+                  Refuser
+                </button>
+                <button
+                  type="button"
+                  onClick={() => askConfirm({
+                    title: 'Valider la demande ?',
+                    message: `${r.name} pourra se connecter avec le nouveau mot de passe qu'il a choisi.`,
+                    confirmLabel: 'Valider',
+                    onConfirm: () => void db.decidePasswordReset(r.id, true),
+                  })}
+                  className="px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold cursor-pointer"
+                >
+                  Valider
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* HUD Top Stats Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         

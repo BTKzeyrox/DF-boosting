@@ -1,3 +1,13 @@
+export interface PasswordResetRequest {
+  id: string;
+  user_id: string;
+  username: string;
+  name: string;
+  phone: string;
+  status: 'pending';
+  created_at: string;
+}
+
 export type UserRole = 'admin' | 'employee';
 export type UserStatus = 'active' | 'blocked';
 export type ShiftType = 'day' | 'night';

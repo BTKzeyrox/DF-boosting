@@ -550,5 +550,18 @@
   "pending": "待处理",
   "approved": "已批准",
   "Accueil": "首页",
-  "Vue générale": "总览"
+  "Vue générale": "总览",
+  "Mot de passe oublié ?": "忘记密码？",
+  "Mot de passe oublié": "忘记密码",
+  "Entre ton pseudo.": "请输入账号。",
+  "Mot de passe : 6 caractères minimum.": "密码至少6位。",
+  "Les deux mots de passe ne sont pas identiques.": "两次输入的密码不一致。",
+  "Envoi impossible. Réessaie.": "发送失败，请重试。",
+  "Nouveau mot de passe": "新密码",
+  "Répète le mot de passe": "再次输入密码",
+  "Envoi…": "发送中…",
+  "Demande envoyée. Si ce pseudo existe, l'administrateur va la voir. Après sa validation, connecte-toi avec ton nouveau mot de passe.": "申请已发送。如果该账号存在，管理员会看到。审核通过后，请用新密码登录。",
+  "Entre ton pseudo et le nouveau mot de passe que tu veux. Il sera actif quand l'administrateur aura validé.": "请输入账号和你想要的新密码。管理员审核通过后才会生效。",
+  "Refuser la demande ?": "拒绝该申请？",
+  "Valider la demande ?": "通过该申请？"
 }

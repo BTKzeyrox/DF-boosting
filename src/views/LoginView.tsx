@@ -33,6 +33,35 @@ export const LoginView: React.FC<LoginViewProps> = ({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Mot de passe oublié
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [fgUser, setFgUser] = useState('');
+  const [fgPass, setFgPass] = useState('');
+  const [fgPass2, setFgPass2] = useState('');
+  const [fgShow, setFgShow] = useState(false);
+  const [fgBusy, setFgBusy] = useState(false);
+  const [fgError, setFgError] = useState<string | null>(null);
+  const [fgDone, setFgDone] = useState(false);
+
+  const closeForgot = () => {
+    setForgotOpen(false);
+    setFgUser(''); setFgPass(''); setFgPass2('');
+    setFgError(null); setFgDone(false); setFgShow(false);
+  };
+
+  const submitForgot = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFgError(null);
+    if (!fgUser.trim()) return setFgError('Entre ton pseudo.');
+    if (fgPass.length < 6) return setFgError('Mot de passe : 6 caractères minimum.');
+    if (fgPass !== fgPass2) return setFgError('Les deux mots de passe ne sont pas identiques.');
+    setFgBusy(true);
+    const r = await db.requestPasswordReset(fgUser.trim(), fgPass);
+    setFgBusy(false);
+    if (!r.success) return setFgError(r.error || 'Envoi impossible. Réessaie.');
+    setFgDone(true);
+  };
+
   const isLight = theme === 'light';
 
   const officialPosterUrl = generateDeltaForcePoster({
@@ -235,6 +264,14 @@ export const LoginView: React.FC<LoginViewProps> = ({
               </button>
             </form>
 
+            <button
+              type="button"
+              onClick={() => setForgotOpen(true)}
+              className="w-full mt-3 text-center text-xs font-mono text-emerald-500 hover:text-emerald-400 underline underline-offset-2 cursor-pointer"
+            >
+              Mot de passe oublié ?
+            </button>
+
           </div>
         </div>
 
@@ -307,6 +344,68 @@ export const LoginView: React.FC<LoginViewProps> = ({
         <div>Delta Force : Hawk Ops · 2026</div>
         <div>1M = 1 000 Ar</div>
       </footer>
+
+      {forgotOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 bg-black/80" onClick={closeForgot} role="dialog" aria-modal="true">
+          <div className="w-full max-w-sm bg-[#0d1624] border border-slate-600 p-5 space-y-4 text-slate-100" onClick={e => e.stopPropagation()}>
+            <h3 className="font-tactical font-bold text-base">Mot de passe oublié</h3>
+            {fgDone ? (
+              <>
+                <p className="text-sm text-slate-300 leading-relaxed">
+                  Demande envoyée. Si ce pseudo existe, l'administrateur va la voir. Après sa validation, connecte-toi avec ton nouveau mot de passe.
+                </p>
+                <button type="button" onClick={closeForgot} className="w-full px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-sm font-bold text-white cursor-pointer">
+                  Fermer
+                </button>
+              </>
+            ) : (
+              <form onSubmit={submitForgot} className="space-y-3 text-xs font-mono">
+                <p className="text-sm text-slate-300 leading-relaxed font-sans">
+                  Entre ton pseudo et le nouveau mot de passe que tu veux. Il sera actif quand l'administrateur aura validé.
+                </p>
+                {fgError && <div className="p-2.5 bg-red-950 border border-red-500/60 text-red-200 font-semibold">{fgError}</div>}
+                <div>
+                  <label className="block text-slate-300 uppercase mb-1">Pseudo</label>
+                  <input
+                    type="text" value={fgUser} onChange={e => setFgUser(e.target.value)}
+                    autoCapitalize="off" autoCorrect="off" spellCheck={false}
+                    className="w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-300 uppercase mb-1">Nouveau mot de passe</label>
+                  <div className="relative">
+                    <input
+                      type={fgShow ? 'text' : 'password'} value={fgPass} onChange={e => setFgPass(e.target.value)}
+                      autoComplete="new-password"
+                      className="w-full bg-[#141e2a] border border-slate-600 p-2.5 pr-10 text-white focus:border-emerald-500 focus:outline-none"
+                    />
+                    <button type="button" onClick={() => setFgShow(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 cursor-pointer">
+                      {fgShow ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-slate-300 uppercase mb-1">Répète le mot de passe</label>
+                  <input
+                    type={fgShow ? 'text' : 'password'} value={fgPass2} onChange={e => setFgPass2(e.target.value)}
+                    autoComplete="new-password"
+                    className="w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <button type="button" onClick={closeForgot} className="px-3 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-sm font-semibold cursor-pointer">
+                    Annuler
+                  </button>
+                  <button type="submit" disabled={fgBusy} className="px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-sm font-bold text-white cursor-pointer disabled:opacity-60">
+                    {fgBusy ? 'Envoi…' : 'Envoyer'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

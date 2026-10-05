@@ -280,3 +280,39 @@ export function compressImageToDataUrl(file: File, size = 480, quality = 0.82): 
     reader.readAsDataURL(file);
   });
 }
+
+
+// Réduit une capture/photo de preuve : 1280 px max, JPEG, autour de 150 Ko
+export function compressProofImage(file: File, maxSide = 1280, targetBytes = 150 * 1024): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Lecture impossible'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('Image invalide'));
+      img.onload = () => {
+        const ratio = Math.min(1, maxSide / Math.max(img.width, img.height));
+        const w = Math.max(1, Math.round(img.width * ratio));
+        const h = Math.max(1, Math.round(img.height * ratio));
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return reject(new Error('Canvas indisponible'));
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        let q = 0.82;
+        let out = canvas.toDataURL('image/jpeg', q);
+        // taille réelle approximative d'un data URL base64
+        while (out.length * 0.75 > targetBytes && q > 0.4) {
+          q -= 0.08;
+          out = canvas.toDataURL('image/jpeg', q);
+        }
+        resolve(out);
+      };
+      img.src = String(reader.result);
+    };
+    reader.readAsDataURL(file);
+  });
+}

@@ -6,6 +6,7 @@ import {
   ChatMessage,
   ShiftType,
   ClientContract,
+  PasswordResetRequest,
 } from '../types';
 import { AVAILABLE_CLIENT_CONTRACTS } from './initialData';
 
@@ -30,6 +31,7 @@ class DeltaForceStore {
   private securityLogs: SecurityViolation[] = [];
   private advanceRequests: SalaryAdvanceRequest[] = [];
   private messages: ChatMessage[] = [];
+  private resets: PasswordResetRequest[] = [];
   private currentUser: User | null = null;
   private listeners: Set<() => void> = new Set();
 
@@ -90,6 +92,7 @@ class DeltaForceStore {
     this.synced = this.emptySynced();
     this.since = '';
     this.dirty = false;
+    this.resets = [];
     this.currentUser = null;
   }
 
@@ -173,6 +176,15 @@ class DeltaForceStore {
       }
     }
     this.since = r.data.serverTime || this.since;
+
+    // Demandes de mot de passe oublié (admin seulement)
+    if (Array.isArray(r.data.resets)) {
+      const next = r.data.resets as PasswordResetRequest[];
+      if (JSON.stringify(next) !== JSON.stringify(this.resets)) {
+        this.resets = next;
+        changedAny = true;
+      }
+    }
 
     // Premier démarrage : l'admin remplit les 20 postes
     if (r.data.me?.role === 'admin' && this.contracts.length === 0 && (cols.contracts?.ids || []).length === 0) {
@@ -298,6 +310,32 @@ class DeltaForceStore {
 
   public getCurrentUser(): User | null {
     return this.currentUser;
+  }
+
+  // Envoie un fichier (data URL) vers Supabase Storage. Retourne le lien public, ou null si échec.
+  public async uploadFile(dataUrl: string): Promise<string | null> {
+    const r = await this.api('upload', { method: 'POST', body: JSON.stringify({ dataUrl }) });
+    return r.ok && r.data?.url ? String(r.data.url) : null;
+  }
+
+  // Mot de passe oublié (sans être connecté) : la réponse est toujours la même
+  public async requestPasswordReset(username: string, password: string): Promise<{ success: boolean; error?: string }> {
+    const r = await this.api('forgot', { method: 'POST', body: JSON.stringify({ username, password }) });
+    return r.ok ? { success: true } : { success: false, error: r.data?.error || 'Envoi impossible. Réessayez.' };
+  }
+
+  // Demandes de nouveau mot de passe en attente (admin)
+  public getPasswordResets(): PasswordResetRequest[] {
+    return [...this.resets];
+  }
+
+  public async decidePasswordReset(id: string, approve: boolean): Promise<boolean> {
+    const r = await this.api('reset-decision', { method: 'POST', body: JSON.stringify({ id, approve }) });
+    if (r.ok) {
+      this.resets = this.resets.filter(x => x.id !== id);
+      this.emit();
+    }
+    return r.ok;
   }
 
   public getUsers(): User[] {

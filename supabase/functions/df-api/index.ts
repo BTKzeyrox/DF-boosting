@@ -9,6 +9,7 @@ const T = {
   securityLogs: "df_security_logs",
   advances: "df_advances",
   messages: "df_messages",
+  settings: "df_settings",
 } as const;
 type Col = keyof typeof T;
 const COLS = Object.keys(T) as Col[];
@@ -17,6 +18,8 @@ const SB_URL = Deno.env.get("SUPABASE_URL") || "";
 const SB_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const sb = createClient(SB_URL, SB_KEY, { auth: { persistSession: false } });
 const SECRET = createHash("sha256").update("df-session:" + SB_KEY).digest("hex");
+const RESETS = "df_resets";
+const BUCKET = "df-files";
 const OPEN_STATUS = ["pending_start", "active", "pending_end"];
 const EMP_POST_TARGET = [...OPEN_STATUS, "force_released"];
 
@@ -124,7 +127,13 @@ async function state(req: any, res: any, me: any) {
     if (col === 'posts') recs = recs.map((p: any) => stripPost(p, me));
     out[col] = { changed: recs, ids: (ids || []).map((r: any) => r.id) };
   }
-  return res.json({ serverTime, me, collections: out });
+  let resets: any[] = [];
+  if (admin) {
+    const { data: rs } = await sb.from(RESETS).select('data').order('updated_at', { ascending: true });
+    resets = (rs || []).map((r: any) => ({ ...r.data, password_hash: undefined })).filter((r: any) => r.status === 'pending');
+    void maybePurge();
+  }
+  return res.json({ serverTime, me, collections: out, resets });
 }
 
 // ---------- sync (écriture) ----------
@@ -228,6 +237,97 @@ async function logout(_req: any, res: any, me: any) {
   return res.json({ ok: true });
 }
 
+
+// ---------- mot de passe oublié ----------
+async function forgot(req: any, res: any) {
+  const { username, password } = req.body || {};
+  if (typeof username !== 'string' || typeof password !== 'string' || !username.trim()) {
+    return res.status(400).json({ error: 'Pseudo et nouveau mot de passe requis.' });
+  }
+  if (password.length < 6 || password.length > 100) return res.status(400).json({ error: 'Mot de passe : 6 caractères minimum.' });
+  const uname = username.trim().toLowerCase();
+  await sleep(400);
+  const { data: cred } = await sb.from('df_credentials').select('user_id').eq('username', uname).maybeSingle();
+  const user = cred ? await getUserRow(cred.user_id) : null;
+  if (user && user.role === 'employee' && user.status !== 'blocked') {
+    const id = `reset-${user.id}`;
+    const { data: ex } = await sb.from(RESETS).select('data').eq('id', id).maybeSingle();
+    if (!ex || ex.data.status !== 'pending') {
+      await sb.from(RESETS).upsert({
+        id,
+        data: {
+          id, user_id: user.id, username: uname, name: user.name, phone: user.phone || '',
+          password_hash: hashPw(password), status: 'pending', created_at: new Date().toISOString(),
+        },
+        updated_at: new Date().toISOString(),
+      });
+    }
+  }
+  // Même réponse dans tous les cas : on ne révèle pas quels pseudos existent
+  return res.json({ ok: true });
+}
+
+async function resetDecision(req: any, res: any, me: any) {
+  if (me.role !== 'admin') return res.status(403).json({ error: 'Réservé à l\'administrateur.' });
+  const { id, approve } = req.body || {};
+  if (typeof id !== 'string') return res.status(400).json({ error: 'Demande invalide.' });
+  const { data: row } = await sb.from(RESETS).select('data').eq('id', id).maybeSingle();
+  if (!row || row.data.status !== 'pending') return res.status(404).json({ error: 'Demande introuvable.' });
+  if (approve === true) {
+    await sb.from('df_credentials').update({ password_hash: row.data.password_hash, updated_at: new Date().toISOString() }).eq('user_id', row.data.user_id);
+  }
+  await sb.from(RESETS).delete().eq('id', id);
+  return res.json({ ok: true });
+}
+
+// ---------- fichiers (photos, pièces jointes) ----------
+const EXT: Record<string, string> = {
+  'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif',
+  'application/pdf': 'pdf', 'text/plain': 'txt',
+};
+async function upload(req: any, res: any, me: any) {
+  const { dataUrl } = req.body || {};
+  const m = typeof dataUrl === 'string' ? dataUrl.match(/^data:([a-z0-9.+\/-]+);base64,(.+)$/i) : null;
+  if (!m) return res.status(400).json({ error: 'Fichier invalide.' });
+  const mime = m[1].toLowerCase();
+  const ext = EXT[mime];
+  if (!ext) return res.status(400).json({ error: 'Type de fichier non accepté.' });
+  const bytes = Buffer.from(m[2], 'base64');
+  if (bytes.length > 10 * 1024 * 1024) return res.status(413).json({ error: 'Fichier trop gros (10 Mo max).' });
+  const path = `${me.id}/${Date.now()}-${randomBytes(6).toString('hex')}.${ext}`;
+  const { error } = await sb.storage.from(BUCKET).upload(path, bytes, { contentType: mime, upsert: false });
+  if (error) { console.error('upload error:', error); return res.status(500).json({ error: 'Envoi impossible.' }); }
+  const { data } = sb.storage.from(BUCKET).getPublicUrl(path);
+  return res.json({ url: data.publicUrl, path });
+}
+
+// ---------- nettoyage automatique des anciennes preuves ----------
+let lastPurge = 0;
+const pathOf = (u: string) => {
+  const i = u.indexOf(`/object/public/${BUCKET}/`);
+  return i >= 0 ? decodeURIComponent(u.slice(i + `/object/public/${BUCKET}/`.length)) : '';
+};
+async function maybePurge() {
+  if (Date.now() - lastPurge < 6 * 3600 * 1000) return;
+  lastPurge = Date.now();
+  try {
+    const { data: st } = await sb.from(T.settings).select('data').eq('id', 'general').maybeSingle();
+    const days = Math.max(1, Number(st?.data?.retention_days) || 30);
+    const cutoff = new Date(Date.now() - days * 24 * 3600 * 1000).toISOString();
+    const { data: rows } = await sb.from(T.posts).select('id,data')
+      .lt('updated_at', cutoff).in('data->>status', ['completed', 'rejected', 'force_released']).limit(40);
+    for (const r of rows || []) {
+      const p = r.data;
+      if (p.proofs_purged) continue;
+      const urls: string[] = [p.start_proof_url, p.end_proof_url, ...(p.start_proof_urls || []), ...(p.end_proof_urls || [])].filter(Boolean);
+      const paths = urls.map(pathOf).filter(Boolean);
+      if (paths.length) await sb.storage.from(BUCKET).remove(paths);
+      const next = { ...p, start_proof_url: '', end_proof_url: '', start_proof_urls: [], end_proof_urls: [], proofs_purged: true };
+      await sb.from(T.posts).upsert({ id: r.id, data: next, updated_at: new Date().toISOString() });
+    }
+  } catch (e) { console.error('purge error:', e); }
+}
+
 // ---------- routeur ----------
 Deno.serve(async (request: Request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: CORS });
@@ -253,6 +353,7 @@ Deno.serve(async (request: Request) => {
   };
   try {
     if (action === "login" && req.method === "POST") return await login(req, res);
+    if (action === "forgot" && req.method === "POST") return await forgot(req, res);
     const me = await authenticate(req);
     if (!me) return res.status(401).json({ error: "Session expirée. Reconnectez-vous." });
     if (action === "state" && req.method === "GET") return await state(req, res, me);
@@ -260,6 +361,8 @@ Deno.serve(async (request: Request) => {
     if (action === "create-user" && req.method === "POST") return await createUser(req, res, me);
     if (action === "set-password" && req.method === "POST") return await setPassword(req, res, me);
     if (action === "logout" && req.method === "POST") return await logout(req, res, me);
+    if (action === "reset-decision" && req.method === "POST") return await resetDecision(req, res, me);
+    if (action === "upload" && req.method === "POST") return await upload(req, res, me);
     return res.status(404).json({ error: "Route inconnue." });
   } catch (e) {
     console.error("API error:", e);
