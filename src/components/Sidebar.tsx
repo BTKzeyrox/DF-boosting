@@ -11,6 +11,8 @@ import {
   Image,
   LogOut,
   Home,
+  Settings,
+  Swords,
   UserCheck,
   Shield,
   X,
@@ -31,6 +33,9 @@ interface SidebarProps {
   onOpenPosterLightbox?: () => void;
   isOpenMobile?: boolean;
   onCloseMobile?: () => void;
+  canSwitchMode?: boolean; // vrai pour l'admin : peut passer en mode booster
+  boosterMode?: boolean;
+  onToggleBoosterMode?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -42,6 +47,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenPosterLightbox,
   isOpenMobile = false,
   onCloseMobile,
+  canSwitchMode = false,
+  boosterMode = false,
+  onToggleBoosterMode,
 }) => {
   const { theme, toggleTheme, lang, setLang, t, startLogoutAnimation } = useApp();
   const isAdmin = currentUser.role === 'admin';
@@ -132,6 +140,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
             badgeColor: isLight
               ? 'bg-red-100 text-red-800 border-red-300'
               : 'bg-red-950 text-red-300 border-red-500/40',
+          },
+          {
+            id: 'settings',
+            label: 'Réglages',
+            sublabel: 'Prix, shifts, règles',
+            icon: Settings,
           },
         ]
       : []),
@@ -350,6 +364,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <span>{lang === 'fr' ? '🇨🇳 中文' : '🇫🇷 FR'}</span>
             </button>
           </div>
+
+          {canSwitchMode && onToggleBoosterMode && (
+            <button
+              type="button"
+              onClick={() => {
+                onToggleBoosterMode();
+                if (onCloseMobile) onCloseMobile();
+              }}
+              className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-xs font-tactical font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                boosterMode
+                  ? 'bg-amber-600 hover:bg-amber-500 border-amber-400 text-white'
+                  : 'bg-[#101b27] hover:bg-[#142333] border-emerald-700/60 text-emerald-300'
+              }`}
+            >
+              <Swords className="w-3.5 h-3.5" />
+              <span>{boosterMode ? 'Retour admin' : 'Mode booster'}</span>
+            </button>
+          )}
 
           {/* Déconnexion Button with smooth animated exit */}
           <button

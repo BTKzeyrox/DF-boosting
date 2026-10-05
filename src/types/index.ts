@@ -8,6 +8,19 @@ export interface PasswordResetRequest {
   created_at: string;
 }
 
+export interface AppSettings {
+  id: 'general';
+  price_per_million: number; // Ar pour 1M de score
+  day_shift_start: string; // HH:MM
+  day_shift_end: string;
+  night_shift_start: string;
+  night_shift_end: string;
+  late_tolerance_min: number;
+  retention_days: number;
+  rules: string;
+  post_types: string[];
+}
+
 export type UserRole = 'admin' | 'employee';
 export type UserStatus = 'active' | 'blocked';
 export type ShiftType = 'day' | 'night';
@@ -128,6 +141,7 @@ export interface ClientContract {
   account_tag: string;
   game_mode: string;
   description?: string; // Description du poste (ex: no read, no card...)
+  post_type?: string; // Type de poste (ex: NO R/C, YES R/C, RED 9CASE)
   current_rank: string;
   target_rank: string;
   initial_score: number; // Début : modifiable par l'admin seulement

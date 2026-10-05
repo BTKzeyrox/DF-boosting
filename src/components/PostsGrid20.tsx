@@ -53,6 +53,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
   const [filterShift, setFilterShift] = useState<'all' | 'day' | 'night' | 'urgent'>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'active' | 'free'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'number' | 'rest_desc' | 'obj_asc' | 'obj_desc'>('number');
 
   const isLight = theme === 'light';
 
@@ -119,8 +120,33 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
     return true;
   });
 
+  // Reste et Objectif d'un poste (mêmes formules que sur la carte)
+  const restOf = (c: ClientContract) => {
+    const session = allPosts.find(
+      p => p.client_name === c.client_name && (p.status === 'active' || p.status === 'pending_start' || p.status === 'pending_end')
+    );
+    const objective = Math.max(1, c.target_score - c.initial_score);
+    const current = Number(session ? session.final_score ?? session.current_score : c.current_score ?? c.initial_score) || 0;
+    return Math.max(0, objective - Math.max(0, current - c.initial_score));
+  };
+  const objectiveOf = (c: ClientContract) => Math.max(1, c.target_score - c.initial_score);
+  const sortedContracts = [...filteredContracts].sort((a, b) => {
+    if (sortBy === 'rest_desc') return restOf(b) - restOf(a) || a.post_number - b.post_number;
+    if (sortBy === 'obj_asc') return objectiveOf(a) - objectiveOf(b) || a.post_number - b.post_number;
+    if (sortBy === 'obj_desc') return objectiveOf(b) - objectiveOf(a) || a.post_number - b.post_number;
+    return a.post_number - b.post_number;
+  });
+  const settings = db.getSettings();
+  const isAdminView = currentUser.role === 'admin';
+
   return (
     <div className="space-y-4 animate-in fade-in duration-300">
+      {!isAdminView && settings.rules.trim() && (
+        <div className="border-l-4 border-amber-500 bg-amber-500/10 px-3 py-2 text-xs leading-relaxed whitespace-pre-line break-words text-slate-200">
+          <strong className="block text-amber-400 font-mono uppercase mb-0.5">Règles</strong>
+          {settings.rules}
+        </div>
+      )}
       {/* Control Bar: Search, Shift Filter, Status Filter & View Mode Switcher */}
       <div
         className={`border rounded-xl p-3 sm:p-4 shadow-lg transition-colors ${
@@ -211,6 +237,23 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
             ))}
           </div>
 
+          {/* Tri */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[10px] text-slate-400 uppercase mr-1">Tri:</span>
+            <select
+              value={sortBy}
+              onChange={e => setSortBy(e.target.value as any)}
+              className={`px-2 py-1 rounded-lg text-xs font-mono font-semibold cursor-pointer border focus:outline-none focus:border-emerald-500 ${
+                isLight ? 'bg-slate-100 text-slate-700 border-slate-200' : 'bg-[#121c28] text-slate-200 border-slate-700'
+              }`}
+            >
+              <option value="number">Numéro du poste</option>
+              <option value="rest_desc">Reste : plus → moins</option>
+              <option value="obj_asc">Objectif : petit → grand</option>
+              <option value="obj_desc">Objectif : grand → petit</option>
+            </select>
+          </div>
+
           {/* Shift Filter */}
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="text-[10px] text-slate-400 uppercase mr-1">Shift:</span>
@@ -242,7 +285,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
 
       {/* Cartes des postes (2 colonnes) */}
         <div className="grid grid-cols-2 gap-2.5 sm:gap-4">
-          {filteredContracts.map(contract => {
+          {sortedContracts.map(contract => {
             const isMyActive = activePost?.client_name === contract.client_name;
             const activeSessionOnThis = allPosts.find(
               p =>
@@ -293,6 +336,31 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
               >
                 {/* Card Header: Post Number & Status */}
                 <div>
+                  {/* Type de poste : l'admin le change ici, le booster le voit */}
+                  {isAdminView ? (
+                    <select
+                      value={contract.post_type || ''}
+                      onClick={e => e.stopPropagation()}
+                      onChange={e => db.updateContract(contract.id, { post_type: e.target.value })}
+                      className={`mb-2 w-full px-2 py-1 text-[11px] font-mono font-bold border cursor-pointer focus:outline-none focus:border-emerald-500 ${
+                        isLight ? 'bg-slate-100 text-emerald-700 border-slate-300' : 'bg-[#0a1017] text-emerald-300 border-emerald-500/40'
+                      }`}
+                    >
+                      <option value="">Type de poste : aucun</option>
+                      {contract.post_type && !settings.post_types.includes(contract.post_type) && (
+                        <option value={contract.post_type}>{contract.post_type}</option>
+                      )}
+                      {settings.post_types.map(t => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    contract.post_type && (
+                      <span className="inline-block mb-2 px-2 py-0.5 text-[11px] font-mono font-bold bg-emerald-950 text-emerald-300 border border-emerald-500/40">
+                        {contract.post_type}
+                      </span>
+                    )
+                  )}
                   <div
                     className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pb-2.5 sm:pb-3 border-b ${
                       isLight ? 'border-slate-100' : 'border-slate-800/80'

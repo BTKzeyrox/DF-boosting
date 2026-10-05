@@ -7,12 +7,26 @@ import {
   ShiftType,
   ClientContract,
   PasswordResetRequest,
+  AppSettings,
 } from '../types';
 import { AVAILABLE_CLIENT_CONTRACTS } from './initialData';
 
 const TOKEN_KEY = 'df_session_token_v2';
 const API_BASE = 'https://ljorjzrxkxqacmmkmqdx.supabase.co/functions/v1/df-api';
-const COLS = ['users', 'posts', 'contracts', 'securityLogs', 'advances', 'messages'] as const;
+const COLS = ['users', 'posts', 'contracts', 'securityLogs', 'advances', 'messages', 'settings'] as const;
+
+export const DEFAULT_SETTINGS: AppSettings = {
+  id: 'general',
+  price_per_million: 1000,
+  day_shift_start: '08:00',
+  day_shift_end: '18:00',
+  night_shift_start: '20:00',
+  night_shift_end: '06:00',
+  late_tolerance_min: 15,
+  retention_days: 30,
+  rules: '',
+  post_types: ['NO R/C', 'YES R/C', 'RED 9CASE'],
+};
 type Col = (typeof COLS)[number];
 
 const SORTERS: Partial<Record<Col, (a: any, b: any) => number>> = {
@@ -31,6 +45,7 @@ class DeltaForceStore {
   private securityLogs: SecurityViolation[] = [];
   private advanceRequests: SalaryAdvanceRequest[] = [];
   private messages: ChatMessage[] = [];
+  private settings: AppSettings[] = [];
   private resets: PasswordResetRequest[] = [];
   private currentUser: User | null = null;
   private listeners: Set<() => void> = new Set();
@@ -61,7 +76,7 @@ class DeltaForceStore {
   private emptySynced(): Record<Col, Map<string, string>> {
     return {
       users: new Map(), posts: new Map(), contracts: new Map(),
-      securityLogs: new Map(), advances: new Map(), messages: new Map(),
+      securityLogs: new Map(), advances: new Map(), messages: new Map(), settings: new Map(),
     };
   }
 
@@ -73,6 +88,7 @@ class DeltaForceStore {
       case 'securityLogs': return this.securityLogs;
       case 'advances': return this.advanceRequests;
       case 'messages': return this.messages;
+      case 'settings': return this.settings;
     }
   }
 
@@ -84,6 +100,7 @@ class DeltaForceStore {
       case 'securityLogs': this.securityLogs = value; break;
       case 'advances': this.advanceRequests = value; break;
       case 'messages': this.messages = value; break;
+      case 'settings': this.settings = value; break;
     }
   }
 
@@ -312,6 +329,18 @@ class DeltaForceStore {
     return this.currentUser;
   }
 
+  // Réglages généraux (valeurs par défaut si l'admin n'a rien changé)
+  public getSettings(): AppSettings {
+    return { ...DEFAULT_SETTINGS, ...(this.settings[0] || {}), id: 'general' };
+  }
+
+  // Admin : enregistre les réglages (le serveur refuse tout autre utilisateur)
+  public updateSettings(patch: Partial<AppSettings>): void {
+    const next: AppSettings = { ...this.getSettings(), ...patch, id: 'general' };
+    this.settings = [next];
+    this.notify();
+  }
+
   // Envoie un fichier (data URL) vers Supabase Storage. Retourne le lien public, ou null si échec.
   public async uploadFile(dataUrl: string): Promise<string | null> {
     const r = await this.api('upload', { method: 'POST', body: JSON.stringify({ dataUrl }) });
@@ -377,7 +406,7 @@ class DeltaForceStore {
     // If target score or initial score changed, recalculate reward estimate
     if (updates.target_score !== undefined || updates.initial_score !== undefined) {
       const diff = Math.max(0, contract.target_score - contract.initial_score);
-      contract.estimated_reward_ar = Math.round((diff / 1000000) * 1000);
+      contract.estimated_reward_ar = Math.round((diff / 1000000) * this.getSettings().price_per_million);
     }
 
     // Sync any active or pending post on this contract
@@ -686,7 +715,7 @@ class DeltaForceStore {
       const finalScore = post.final_score ?? post.current_score;
       const scoreGained = Math.max(0, finalScore - post.initial_score);
       // Automated payroll formula: 1M score = 1,000 Ar
-      const calculatedAr = Math.round((scoreGained / 1000000) * 1000);
+      const calculatedAr = Math.round((scoreGained / 1000000) * this.getSettings().price_per_million);
 
       post.status = 'completed';
       post.calculated_ar = calculatedAr;

@@ -8,6 +8,7 @@ import { AdminDashboard } from './views/admin/AdminDashboard';
 import { EmployeesManagement } from './views/admin/EmployeesManagement';
 import { EmployeeDashboard } from './views/employee/EmployeeDashboard';
 import { CalendarView } from './views/CalendarView';
+import { SettingsView } from './views/admin/SettingsView';
 import { LightboxModal } from './components/LightboxModal';
 import { CVViewerModal } from './components/CVViewerModal';
 import { ProfilePhotoGate } from './components/ProfilePhotoGate';
@@ -33,6 +34,8 @@ export default function App() {
   const [activeView, setActiveView] = useState<string>('grid');
   const [isWelcomeAnimating, setIsWelcomeAnimating] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  // Admin : peut jouer son propre rôle de booster, puis revenir en admin
+  const [boosterMode, setBoosterMode] = useState(false);
 
   // Modals state
   const [lightboxParams, setLightboxParams] = useState<{
@@ -89,6 +92,7 @@ export default function App() {
   };
 
   const handleLogout = () => {
+    setBoosterMode(false);
     db.logout();
     setCurrentUser(null);
     setIsWelcomeAnimating(false);
@@ -197,6 +201,14 @@ export default function App() {
     );
   }
 
+  // Utilisateur « vu » par l'interface : en mode booster, l'admin est traité comme un booster
+  const realIsAdmin = currentUser.role === 'admin';
+  const viewUser: User = realIsAdmin && boosterMode ? { ...currentUser, role: 'employee' } : currentUser;
+  const toggleBoosterMode = () => {
+    setBoosterMode(v => !v);
+    setActiveView(boosterMode ? 'dashboard' : 'grid');
+  };
+
   // 3. LOGGED IN -> MODERN SIDEBAR LAYOUT
   return (
     <div className={`df-bg-app min-h-screen flex flex-col font-sans transition-colors duration-200 ${
@@ -207,7 +219,10 @@ export default function App() {
       
       {/* Modern Tactical Sidebar */}
       <Sidebar
-        currentUser={currentUser}
+        currentUser={viewUser}
+        canSwitchMode={realIsAdmin}
+        boosterMode={boosterMode}
+        onToggleBoosterMode={toggleBoosterMode}
         activeView={activeView}
         onNavigate={view => {
           if (view === 'profile') {
@@ -257,26 +272,28 @@ export default function App() {
 
         {/* Dynamic Page Content Based on activeView */}
         <main className="flex-1 p-2 sm:p-3 lg:p-4 max-w-none w-full mx-auto">
-          {currentUser.role === 'admin' ? (
+          {viewUser.role === 'admin' ? (
             /* ================= ADMIN SEPARATED PAGES ================= */
             <>
-              {activeView === 'employees' ? (
+              {activeView === 'settings' ? (
+                <SettingsView />
+              ) : activeView === 'employees' ? (
                 <EmployeesManagement onOpenEmployeeCV={handleOpenEmployeeCV} />
               ) : activeView === 'calendar' ? (
                 <CalendarView
-                  currentUser={currentUser}
+                  currentUser={viewUser}
                   onSelectDay={handleSelectDay}
                 />
               ) : activeView === 'chat' ? (
                 <EmployeeDashboard
-                  currentUser={currentUser}
+                  currentUser={viewUser}
                   onOpenProofLightbox={handleOpenProofLightbox}
                   activeSubTab="chat"
                   onNavigateTab={tab => setActiveView(tab)}
                 />
               ) : activeView === 'poster' ? (
                 <EmployeeDashboard
-                  currentUser={currentUser}
+                  currentUser={viewUser}
                   onOpenProofLightbox={handleOpenProofLightbox}
                   activeSubTab="poster"
                   onNavigateTab={tab => setActiveView(tab)}
@@ -284,7 +301,7 @@ export default function App() {
               ) : (
                 /* Default Admin Views: 'grid' (20 postes 2x10), 'active-post' (sessions), 'dashboard', 'security' */
                 <AdminDashboard
-                  currentUser={currentUser}
+                  currentUser={viewUser}
                   onOpenProofLightbox={handleOpenProofLightbox}
                   onOpenEmployeeCV={handleOpenEmployeeCV}
                   onNavigateToEmployees={() => setActiveView('employees')}
@@ -292,7 +309,7 @@ export default function App() {
                   activeSubTab={
                     activeView === 'grid'
                       ? 'grid'
-                      : activeView === 'active-post'
+                      : activeView === 'active-post' || activeView === 'sessions'
                       ? 'sessions'
                       : activeView === 'security'
                       ? 'security'
@@ -307,13 +324,13 @@ export default function App() {
             <>
               {activeView === 'calendar' ? (
                 <CalendarView
-                  currentUser={currentUser}
+                  currentUser={viewUser}
                   onSelectDay={handleSelectDay}
                 />
               ) : (
                 /* Employee Dashboard managing sub-pages: 'grid' (20 postes 2x10), 'active-post', 'advances', 'chat', 'poster' */
                 <EmployeeDashboard
-                  currentUser={currentUser}
+                  currentUser={viewUser}
                   onOpenProofLightbox={handleOpenProofLightbox}
                   activeSubTab={
                     activeView === 'advances' || activeView === 'chat' || activeView === 'active-post' || activeView === 'poster'

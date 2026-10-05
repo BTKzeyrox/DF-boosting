@@ -725,65 +725,67 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
       )}
 
-      {/* HUD Top Stats Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        
-        {/* Total Boosted Score */}
-        <div className="bg-[#0f1722] border border-slate-800 rounded-xl p-4 shadow-xl">
-          <div className="flex items-center justify-between text-slate-400 text-xs font-mono uppercase">
-            <span>Score Total Boosté</span>
-            <TrendingUp className="w-4 h-4 text-emerald-400" />
-          </div>
-          <div className="text-2xl font-black font-mono text-emerald-400 mt-1">
-            {formatScoreM(totalScoreBoosted)}
-          </div>
-          <div className="text-[10px] text-slate-500 font-mono mt-1">
-            {formatScoreM(totalScoreBoosted)} pts validés
-          </div>
-        </div>
+      {/* Cartes d'accueil cliquables */}
+      {(() => {
+        const today = new Date().toISOString().split('T')[0];
+        const doneToday = posts.filter(p => p.status === 'completed' && p.date === today);
+        const scoreToday = doneToday.reduce(
+          (acc, p) => acc + Math.max(0, (p.final_score ?? p.current_score ?? 0) - (p.initial_score || 0)),
+          0
+        );
+        const price = db.getSettings().price_per_million;
+        const cardCls =
+          'text-left bg-[#0f1722] border border-slate-800 hover:border-emerald-500/60 rounded-xl p-4 shadow-xl transition-colors cursor-pointer w-full';
+        return (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+            <button type="button" onClick={() => onNavigateToEmployees && onNavigateToEmployees()} className={cardCls}>
+              <div className="flex items-center justify-between text-slate-400 text-xs font-mono uppercase">
+                <span>Boosters en ligne</span>
+                <Radio className="w-4 h-4 text-cyan-400 animate-pulse" />
+              </div>
+              <div className="text-2xl font-black font-mono text-cyan-400 mt-1">
+                {onlineEmployees.length}{' '}
+                <span className="text-sm font-normal text-slate-400">/ {users.filter(u => u.role === 'employee').length}</span>
+              </div>
+              <div className="text-[10px] text-slate-500 font-mono mt-1">Voir les boosters</div>
+            </button>
 
-        {/* Total Payroll in Ar (1M = 1,000 Ar) */}
-        <div className="bg-[#0f1722] border border-slate-800 rounded-xl p-4 shadow-xl">
-          <div className="flex items-center justify-between text-slate-400 text-xs font-mono uppercase">
-            <span>Payroll Cumulé</span>
-            <DollarSign className="w-4 h-4 text-amber-400" />
-          </div>
-          <div className="text-2xl font-black font-mono text-amber-400 mt-1">
-            {formatCurrencyAr(totalPayrollDistributedAr)}
-          </div>
-          <div className="text-[10px] text-slate-500 font-mono mt-1">
-            1M = 1 000 Ar
-          </div>
-        </div>
+            <button type="button" onClick={() => onNavigateTab && onNavigateTab('active-post')} className={cardCls}>
+              <div className="flex items-center justify-between text-slate-400 text-xs font-mono uppercase">
+                <span>Validations en attente</span>
+                <Clock className="w-4 h-4 text-amber-400" />
+              </div>
+              <div className={`text-2xl font-black font-mono mt-1 ${pendingSubmissions.length > 0 ? 'text-amber-400' : 'text-white'}`}>
+                {pendingSubmissions.length}
+              </div>
+              <div className="text-[10px] text-slate-400 font-mono mt-1">
+                {pendingSubmissions.filter(p => p.status === 'pending_start').length} débuts ·{' '}
+                {pendingSubmissions.filter(p => p.status === 'pending_end').length} fins
+              </div>
+            </button>
 
-        {/* Connected Boosters */}
-        <div className="bg-[#0f1722] border border-slate-800 rounded-xl p-4 shadow-xl">
-          <div className="flex items-center justify-between text-slate-400 text-xs font-mono uppercase">
-            <span>Opérateurs En Ligne</span>
-            <Radio className="w-4 h-4 text-cyan-400 animate-pulse" />
-          </div>
-          <div className="text-2xl font-black font-mono text-cyan-400 mt-1">
-            {onlineEmployees.length} <span className="text-sm font-normal text-slate-400">/ {users.filter(u => u.role === 'employee').length}</span>
-          </div>
-          <div className="text-[10px] text-emerald-400 font-mono mt-1">
-            is_online = 1 actifs
-          </div>
-        </div>
+            <button type="button" onClick={() => onNavigateToCalendar && onNavigateToCalendar()} className={cardCls}>
+              <div className="flex items-center justify-between text-slate-400 text-xs font-mono uppercase">
+                <span>Score du jour</span>
+                <TrendingUp className="w-4 h-4 text-emerald-400" />
+              </div>
+              <div className="text-2xl font-black font-mono text-emerald-400 mt-1">{formatScoreM(scoreToday)}</div>
+              <div className="text-[10px] text-slate-500 font-mono mt-1">
+                {formatCurrencyAr(Math.round((scoreToday / 1000000) * price))} · 1M = {price.toLocaleString('fr-FR')} Ar
+              </div>
+            </button>
 
-        {/* Pending Submissions */}
-        <div className="bg-[#0f1722] border border-slate-800 rounded-xl p-4 shadow-xl">
-          <div className="flex items-center justify-between text-slate-400 text-xs font-mono uppercase">
-            <span>Soumissions en Attente</span>
-            <Clock className="w-4 h-4 text-amber-400" />
+            <button type="button" onClick={() => onNavigateToCalendar && onNavigateToCalendar()} className={cardCls}>
+              <div className="flex items-center justify-between text-slate-400 text-xs font-mono uppercase">
+                <span>Shifts complets</span>
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              </div>
+              <div className="text-2xl font-black font-mono text-white mt-1">{doneToday.length}</div>
+              <div className="text-[10px] text-slate-500 font-mono mt-1">Sessions finies aujourd'hui</div>
+            </button>
           </div>
-          <div className="text-2xl font-black font-mono text-white mt-1">
-            {pendingSubmissions.length}
-          </div>
-          <div className="text-[10px] text-slate-400 font-mono mt-1">
-            {pendingSubmissions.filter(p => p.status === 'pending_start').length} débuts · {pendingSubmissions.filter(p => p.status === 'pending_end').length} fins
-          </div>
-        </div>
-      </div>
+        );
+      })()}
 
       {/* SECTION 1: ADMIN ALERT BOX ("Petit Malin" Security Log) */}
       <div className={`rounded-xl border shadow-2xl overflow-hidden transition-all duration-300 ${
@@ -904,7 +906,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               Panneau de Validation des Soumissions (Start &amp; End Forms)
             </h3>
             <p className="text-xs text-slate-400 font-mono">
-              Vérification des preuves de captures de jeu et calcul automatisé du payroll (1M score = 1,000 Ar).
+              Vérification des preuves de captures de jeu et calcul automatisé du payroll (prix du 1M dans Réglages).
             </p>
           </div>
 
