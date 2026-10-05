@@ -342,6 +342,22 @@ class DeltaForceStore {
   }
 
   // Réglages généraux (valeurs par défaut si l'admin n'a rien changé)
+  // Admin : supprime les sessions et avances de démonstration, puis recalcule les totaux des boosters
+  public removeDemoData(): number {
+    const before = this.posts.length + this.advanceRequests.length;
+    this.posts = this.posts.filter(p => !p.demo);
+    this.advanceRequests = this.advanceRequests.filter(a => !a.demo);
+    this.users.forEach(u => {
+      if (u.role !== 'employee') return;
+      const done = this.posts.filter(p => p.employee_id === u.id && p.status === 'completed');
+      u.total_score_boosted = done.reduce((a, p) => a + Math.max(0, (p.final_score ?? p.current_score) - p.initial_score), 0);
+      u.total_earnings_ar = done.reduce((a, p) => a + (p.calculated_ar || 0), 0);
+      u.pending_advance_ar = this.advanceRequests.filter(a => a.employee_id === u.id && a.status === 'pending').reduce((x, a) => x + a.amount_ar, 0);
+    });
+    this.notify();
+    return before - (this.posts.length + this.advanceRequests.length);
+  }
+
   public getSettings(): AppSettings {
     return { ...DEFAULT_SETTINGS, ...(this.settings[0] || {}), id: 'general' };
   }

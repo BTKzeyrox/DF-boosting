@@ -12,7 +12,8 @@ for (const [k, v] of entries) lookup.set(k.toLowerCase().replace(/\u2019/g, "'")
 
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const keys = Array.from(lookup.keys()).sort((a, b) => b.length - a.length);
-const PHRASES = new RegExp(`(?<![\\p{L}\\p{N}])(?:${keys.map(escapeRe).join('|')})(?![\\p{L}\\p{N}])`, 'giu');
+// Sans lookbehind (non supporté par les anciens iPhone / Android) : le séparateur avant est capturé puis remis
+const PHRASES = new RegExp(`(^|[^\\p{L}\\p{N}])(${keys.map(escapeRe).join('|')})(?![\\p{L}\\p{N}])`, 'giu');
 const MONTH_RE = MONTHS.join('|');
 
 export function translateText(input: string): string {
@@ -29,7 +30,7 @@ export function translateText(input: string): string {
   s = s.replace(new RegExp(`(${MONTH_RE})\\s+(\\d{4})`, 'gi'), (_m, mo, y) => `${y}年${monthNum(mo)}月`);
   // compteurs
   s = s.replace(/(\d+)\s+shifts?(\(s\))?/gi, '$1 个班次');
-  s = s.replace(PHRASES, m => lookup.get(m.toLowerCase().replace(/\u2019/g, "'")) ?? m);
+  s = s.replace(PHRASES, (_m, pre: string, w: string) => pre + (lookup.get(w.toLowerCase().replace(/\u2019/g, "'")) ?? w));
   return lead + s + trail;
 }
 

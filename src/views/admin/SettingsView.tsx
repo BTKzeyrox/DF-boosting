@@ -3,6 +3,7 @@ import { Settings, Plus, X, Save } from 'lucide-react';
 import { db } from '../../db/store';
 import { AppSettings } from '../../types';
 import { ScoreInput } from '../../components/ScoreInput';
+import { askConfirm } from '../../components/ConfirmModal';
 
 const inputCls = 'w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white font-mono text-sm focus:border-emerald-500 focus:outline-none';
 const labelCls = 'block text-slate-300 uppercase text-xs font-mono mb-1';
@@ -11,6 +12,7 @@ export const SettingsView: React.FC = () => {
   const [s, setS] = useState<AppSettings>(db.getSettings());
   const [newType, setNewType] = useState('');
   const [saved, setSaved] = useState(false);
+  const [demoMsg, setDemoMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Si les réglages changent ailleurs (autre appareil), on les recharge tant qu'on n'a rien modifié
@@ -140,6 +142,32 @@ export const SettingsView: React.FC = () => {
           <input type="number" min={1} value={s.retention_days} onChange={e => set('retention_days', Number(e.target.value))} className={inputCls} />
           <p className="text-[11px] text-slate-500 mt-1">Après ce délai, les photos des sessions terminées sont supprimées automatiquement.</p>
         </div>
+      </section>
+
+      <section className="bg-[#0f1722] border border-red-900/60 p-4 space-y-3">
+        <h3 className="font-tactical font-bold text-white">Données de démonstration</h3>
+        <p className="text-[11px] text-slate-400 leading-relaxed">
+          Les sessions et les demandes d'avance de démonstration comptent dans la paie et les totaux. Les comptes des boosters ne sont pas supprimés.
+        </p>
+        <button
+          type="button"
+          onClick={() =>
+            askConfirm({
+              title: 'Supprimer les données de démonstration ?',
+              message: 'Toutes les sessions et avances de démonstration seront supprimées. Cette action ne peut pas être annulée.',
+              confirmLabel: 'Supprimer',
+              danger: true,
+              onConfirm: () => {
+                const n = db.removeDemoData();
+                setDemoMsg(n > 0 ? `${n} éléments de démonstration supprimés.` : 'Aucune donnée de démonstration à supprimer.');
+              },
+            })
+          }
+          className="w-full px-4 py-2.5 bg-red-950/60 hover:bg-red-900 border border-red-800 text-red-200 font-semibold text-sm"
+        >
+          Supprimer les données de démonstration
+        </button>
+        {demoMsg && <div className="text-sm text-emerald-300">{demoMsg}</div>}
       </section>
 
       <button type="button" onClick={save} className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm cursor-pointer">

@@ -8,6 +8,7 @@ import {
   Circle,
   FlaskConical,
   Hourglass,
+  Clock,
   Search,
   Sun,
   Moon,
@@ -20,7 +21,7 @@ import {
   HandCoins,
   X,
 } from 'lucide-react';
-import { User, PostSession, DayStatus, SalaryAdvanceRequest } from '../types';
+import { User, PostSession, DayStatus, SalaryAdvanceRequest, AppSettings } from '../types';
 import { db } from '../db/store';
 import { formatScoreM } from '../utils/formatUtils';
 import { Avatar } from '../components/Avatar';
@@ -42,6 +43,7 @@ const todayStr = () => {
 
 const STATUS_META: Record<DayStatus, { label: string; color: string }> = {
   objective_reached: { label: 'Objectif atteint', color: 'text-emerald-400' },
+  late: { label: 'En retard', color: 'text-amber-400' },
   in_progress: { label: 'En cours', color: 'text-cyan-400' },
   test: { label: 'Test / QA', color: 'text-purple-400' },
   absent: { label: 'Absent', color: 'text-red-400' },
@@ -52,28 +54,42 @@ const StatusIcon: React.FC<{ status: DayStatus; className?: string }> = ({ statu
   const c = `${className} shrink-0`;
   if (status === 'objective_reached') return <CheckCircle2 className={c} />;
   if (status === 'in_progress') return <Hourglass className={c} />;
+  if (status === 'late') return <Clock className={c} />;
   if (status === 'test') return <FlaskConical className={c} />;
   if (status === 'absent') return <XCircle className={c} />;
   return <Circle className={c} />;
 };
 
+const toMin = (hhmm: string) => {
+  const [h, m] = (hhmm || '0:0').split(':').map(Number);
+  return (h || 0) * 60 + (m || 0);
+};
+
+// Une session est en retard si elle démarre plus tard que l'heure du shift + la tolérance (Réglages)
+function isLate(s: PostSession, cfg: AppSettings): boolean {
+  const base = s.shift_type === 'night' ? cfg.night_shift_start : cfg.day_shift_start;
+  const diff = toMin(s.start_time) - toMin(base);
+  return diff > cfg.late_tolerance_min && diff < 12 * 60;
+}
+
 // Statut d'un jour pour un booster
-function dayStatus(shifts: PostSession[], dateStr: string, firstActivity: string | null, today: string): DayStatus {
+function dayStatus(shifts: PostSession[], dateStr: string, firstActivity: string | null, today: string, cfg: AppSettings): DayStatus {
   if (shifts.length > 0) {
     const hasInProgress = shifts.some(s => s.status === 'active' || s.status === 'pending_start' || s.status === 'pending_end');
     const isTest = shifts.some(s => s.client_name.toLowerCase().includes('test') || s.account_tag.toLowerCase().includes('qa'));
     const allCompleted = shifts.every(s => s.status === 'completed');
     const reached = shifts.some(s => s.status === 'completed' && (s.final_score ?? s.current_score) >= s.target_score);
+    const worked = shifts.filter(s => s.status !== 'rejected' && s.status !== 'force_released');
     if (isTest) return 'test';
     if (hasInProgress) return 'in_progress';
+    if (worked.length > 0 && worked.some(s => isLate(s, cfg))) return 'late';
     if (reached || allCompleted) return 'objective_reached';
     return 'absent';
   }
-  // Jour passé, en semaine, depuis la première activité, sans aucune session = absence
+  // Jour passé (lundi à samedi, dimanche = repos) depuis la première activité, sans aucune session = absence
   if (firstActivity && dateStr >= firstActivity && dateStr < today) {
     const [y, m, d] = dateStr.split('-').map(Number);
-    const dow = new Date(y, m - 1, d).getDay();
-    if (dow !== 0 && dow !== 6) return 'absent';
+    if (new Date(y, m - 1, d).getDay() !== 0) return 'absent';
   }
   return 'no_post';
 }
@@ -106,6 +122,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
   const daysShort = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 
   const today = todayStr();
+  const cfg = db.getSettings();
   const monthPrefix = `${year}-${pad(month + 1)}-`;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const startDow = (new Date(year, month, 1).getDay() + 6) % 7;
@@ -140,7 +157,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
       const dateStr = toDateStr(year, month, i + 1);
       const allShifts = mine.filter(p => p.date === dateStr);
       const shifts = clientFilter === 'all' ? allShifts : allShifts.filter(p => p.client_name === clientFilter);
-      const status = dayStatus(allShifts, dateStr, firstActivity[boosterId] || null, today);
+      const status = dayStatus(allShifts, dateStr, firstActivity[boosterId] || null, today, cfg);
       const gained = shifts.reduce((acc, s) => acc + Math.max(0, (s.final_score ?? s.current_score) - s.initial_score), 0);
       return { day: i + 1, dateStr, shifts, status, gained };
     });
@@ -182,9 +199,16 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
     const myAdv = advances.filter(a => a.employee_id === activeId && a.request_date.startsWith(monthPrefix));
     const advApproved = myAdv.filter(a => a.status === 'approved').reduce((s, a) => s + a.amount_ar, 0);
     const advPending = myAdv.filter(a => a.status === 'pending').reduce((s, a) => s + a.amount_ar, 0);
-    const absences = buildDays(activeId).filter(d => d.status === 'absent').length;
+    const monthDays = buildDays(activeId);
+    const absences = monthDays.filter(d => d.status === 'absent').length;
+    const lateDays = monthDays.filter(d => d.status === 'late').length;
+    const workedDays = monthDays.filter(d => ['objective_reached', 'late', 'in_progress', 'test'].includes(d.status)).length;
+    const expectedDays = workedDays + absences;
     return {
       absences,
+      lateDays,
+      workedDays,
+      expectedDays,
       sessions: monthPosts.length,
       validated: completed.length,
       inProgress: inProgress.length,
@@ -196,7 +220,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
       net: pay - advApproved,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeId, posts, advances, year, month, clientFilter]);
+  }, [activeId, posts, advances, year, month, clientFilter, cfg]);
 
   const ar = (n: number) => `${Math.round(n).toLocaleString('fr-FR').replace(/[\u202f\u00a0]/g, ' ')} Ar`;
 
@@ -263,7 +287,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
                 <div className="text-[10px] uppercase text-slate-400 font-semibold mb-1">Statut du mois</div>
                 <div className="flex flex-wrap gap-1.5">
                   <button onClick={() => setStatusFilter('all')} className={pill(statusFilter === 'all')}>Tous</button>
-                  {(['objective_reached', 'absent', 'in_progress', 'test'] as DayStatus[]).map(s => (
+                  {(['objective_reached', 'late', 'absent', 'in_progress', 'test'] as DayStatus[]).map(s => (
                     <button key={s} onClick={() => setStatusFilter(s)} className={`${pill(statusFilter === s)} inline-flex items-center gap-1`}>
                       <StatusIcon status={s} className="w-3.5 h-3.5" /> {STATUS_META[s].label}
                     </button>
@@ -363,6 +387,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
               <div className="text-[11px] uppercase text-slate-400 font-bold mb-1.5">Résumé de {monthNames[month].toLowerCase()} {year}</div>
               <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2">
                 <Stat icon={<CalendarX className="w-3.5 h-3.5 text-red-400" />} label="Jours d'absence" value={`${summary.absences}`} tone={summary.absences > 0 ? 'text-red-300' : 'text-white'} />
+                <Stat icon={<Clock className="w-3.5 h-3.5 text-amber-400" />} label="Retards" value={`${summary.lateDays}`} tone={summary.lateDays > 0 ? 'text-amber-300' : 'text-white'} />
+                <Stat icon={<CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />} label="Jours travaillés" value={`${summary.workedDays} / ${summary.expectedDays}`} />
                 <Stat icon={<ListChecks className="w-3.5 h-3.5 text-cyan-400" />} label="Sessions" value={`${summary.sessions} (${summary.validated} validées${summary.inProgress ? `, ${summary.inProgress} en cours` : ''})`} />
                 <Stat icon={<Target className="w-3.5 h-3.5 text-emerald-400" />} label="Objectifs atteints" value={`${summary.reached}`} tone="text-emerald-300" />
                 <Stat icon={<TrendingUp className="w-3.5 h-3.5 text-cyan-400" />} label="Score gagné" value={formatScoreM(summary.gained)} tone="text-cyan-300" />

@@ -96,6 +96,7 @@ export interface PostSession {
   rejection_reason?: string;
   calculated_ar?: number; // 1M score = 1,000 Ar
   notes?: string;
+  demo?: boolean; // donnée de démonstration (supprimable dans Réglages)
   created_at: string;
   updated_at: string;
 }
@@ -134,6 +135,7 @@ export interface SalaryAdvanceRequest {
   request_date: string;
   status: AdvanceStatus;
   admin_notes?: string;
+  demo?: boolean;
 }
 
 export interface ChatMessage {
@@ -168,7 +170,7 @@ export interface ClientContract {
   region_server: string;
 }
 
-export type DayStatus = 'objective_reached' | 'absent' | 'no_post' | 'test' | 'in_progress';
+export type DayStatus = 'objective_reached' | 'late' | 'absent' | 'no_post' | 'test' | 'in_progress';
 
 export interface DayCalendarRecord {
   date: string; // YYYY-MM-DD
