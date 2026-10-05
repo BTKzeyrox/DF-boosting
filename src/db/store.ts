@@ -8,6 +8,7 @@ import {
   ClientContract,
   PasswordResetRequest,
   AppSettings,
+  ProfileChangeRequest,
 } from '../types';
 import { AVAILABLE_CLIENT_CONTRACTS } from './initialData';
 
@@ -47,6 +48,7 @@ class DeltaForceStore {
   private messages: ChatMessage[] = [];
   private settings: AppSettings[] = [];
   private resets: PasswordResetRequest[] = [];
+  private profileRequests: ProfileChangeRequest[] = [];
   private currentUser: User | null = null;
   private listeners: Set<() => void> = new Set();
 
@@ -110,6 +112,7 @@ class DeltaForceStore {
     this.since = '';
     this.dirty = false;
     this.resets = [];
+    this.profileRequests = [];
     this.currentUser = null;
   }
 
@@ -193,6 +196,15 @@ class DeltaForceStore {
       }
     }
     this.since = r.data.serverTime || this.since;
+
+    // Demandes de modification de profil (admin : toutes ; booster : la sienne)
+    if (Array.isArray(r.data.profileRequests)) {
+      const nextPr = r.data.profileRequests as ProfileChangeRequest[];
+      if (JSON.stringify(nextPr) !== JSON.stringify(this.profileRequests)) {
+        this.profileRequests = nextPr;
+        changedAny = true;
+      }
+    }
 
     // Demandes de mot de passe oublié (admin seulement)
     if (Array.isArray(r.data.resets)) {
@@ -351,6 +363,31 @@ class DeltaForceStore {
   public async requestPasswordReset(username: string, password: string): Promise<{ success: boolean; error?: string }> {
     const r = await this.api('forgot', { method: 'POST', body: JSON.stringify({ username, password }) });
     return r.ok ? { success: true } : { success: false, error: r.data?.error || 'Envoi impossible. Réessayez.' };
+  }
+
+  public getProfileRequests(): ProfileChangeRequest[] {
+    return [...this.profileRequests];
+  }
+
+  // Booster : propose de nouvelles infos de profil (validation admin obligatoire)
+  public async submitProfileRequest(p: { name: string; username: string; phone: string; avatarUrl?: string }): Promise<{ success: boolean; error?: string }> {
+    const r = await this.api('profile-request', {
+      method: 'POST',
+      body: JSON.stringify({ name: p.name, username: p.username, phone: p.phone, avatar_url: p.avatarUrl || '' }),
+    });
+    if (r.ok) await this.pull(true);
+    return r.ok ? { success: true } : { success: false, error: r.data?.error || 'Envoi impossible.' };
+  }
+
+  public async decideProfileRequest(id: string, approve: boolean): Promise<{ success: boolean; error?: string }> {
+    const r = await this.api('profile-decision', { method: 'POST', body: JSON.stringify({ id, approve }) });
+    if (r.ok) {
+      this.profileRequests = this.profileRequests.filter(x => x.id !== id);
+      this.since = '';
+      await this.pull(true);
+      this.emit();
+    }
+    return r.ok ? { success: true } : { success: false, error: r.data?.error || 'Erreur.' };
   }
 
   // Demandes de nouveau mot de passe en attente (admin)
@@ -886,21 +923,27 @@ class DeltaForceStore {
     senderId: string;
     message: string;
     recipientId?: string;
+    attachmentUrl?: string;
+    attachmentName?: string;
+    attachmentKind?: 'image' | 'file';
   }): { success: boolean } {
     const sender = this.users.find(u => u.id === params.senderId);
-    if (!sender || !params.message.trim()) return { success: false };
+    if (!sender || (!params.message.trim() && !params.attachmentUrl)) return { success: false };
 
     const now = new Date();
     const timeStr = `${now.toISOString().split('T')[0]} ${now.toTimeString().split(' ')[0]}`;
 
     const newMsg: ChatMessage = {
-      id: `msg-${Date.now()}`,
+      id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       sender_id: sender.id,
       sender_name: sender.name,
       sender_role: sender.role,
       recipient_id: params.recipientId || 'all',
       message: params.message.trim(),
       timestamp: timeStr,
+      ...(params.attachmentUrl
+        ? { attachment_url: params.attachmentUrl, attachment_name: params.attachmentName || 'fichier', attachment_kind: params.attachmentKind || 'file' }
+        : {}),
     };
 
     this.messages.push(newMsg);

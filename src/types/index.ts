@@ -21,6 +21,18 @@ export interface AppSettings {
   post_types: string[];
 }
 
+export interface ProfileChangeRequest {
+  id: string;
+  user_id: string;
+  status: 'pending';
+  created_at: string;
+  old: { name: string; username: string; phone: string; avatar_url: string };
+  name: string;
+  username: string;
+  phone: string;
+  avatar_url: string;
+}
+
 export type UserRole = 'admin' | 'employee';
 export type UserStatus = 'active' | 'blocked';
 export type ShiftType = 'day' | 'night';
@@ -132,6 +144,9 @@ export interface ChatMessage {
   recipient_id?: string; // or 'all' / 'admin'
   message: string;
   timestamp: string;
+  attachment_url?: string;
+  attachment_name?: string;
+  attachment_kind?: 'image' | 'file';
 }
 
 export interface ClientContract {

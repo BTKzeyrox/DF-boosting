@@ -9,6 +9,7 @@ import { EmployeesManagement } from './views/admin/EmployeesManagement';
 import { EmployeeDashboard } from './views/employee/EmployeeDashboard';
 import { CalendarView } from './views/CalendarView';
 import { SettingsView } from './views/admin/SettingsView';
+import { ChatView } from './components/ChatView';
 import { LightboxModal } from './components/LightboxModal';
 import { CVViewerModal } from './components/CVViewerModal';
 import { ProfilePhotoGate } from './components/ProfilePhotoGate';
@@ -285,12 +286,7 @@ export default function App() {
                   onSelectDay={handleSelectDay}
                 />
               ) : activeView === 'chat' ? (
-                <EmployeeDashboard
-                  currentUser={viewUser}
-                  onOpenProofLightbox={handleOpenProofLightbox}
-                  activeSubTab="chat"
-                  onNavigateTab={tab => setActiveView(tab)}
-                />
+                <ChatView currentUser={viewUser} />
               ) : activeView === 'poster' ? (
                 <EmployeeDashboard
                   currentUser={viewUser}
@@ -327,6 +323,8 @@ export default function App() {
                   currentUser={viewUser}
                   onSelectDay={handleSelectDay}
                 />
+              ) : activeView === 'chat' ? (
+                <ChatView currentUser={viewUser} />
               ) : (
                 /* Employee Dashboard managing sub-pages: 'grid' (20 postes 2x10), 'active-post', 'advances', 'chat', 'poster' */
                 <EmployeeDashboard

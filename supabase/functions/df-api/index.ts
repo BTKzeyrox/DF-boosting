@@ -19,6 +19,7 @@ const SB_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const sb = createClient(SB_URL, SB_KEY, { auth: { persistSession: false } });
 const SECRET = createHash("sha256").update("df-session:" + SB_KEY).digest("hex");
 const RESETS = "df_resets";
+const PROFILE_REQ = "df_profile_requests";
 const BUCKET = "df-files";
 const OPEN_STATUS = ["pending_start", "active", "pending_end"];
 const EMP_POST_TARGET = [...OPEN_STATUS, "force_released"];
@@ -133,7 +134,9 @@ async function state(req: any, res: any, me: any) {
     resets = (rs || []).map((r: any) => ({ ...r.data, password_hash: undefined })).filter((r: any) => r.status === 'pending');
     void maybePurge();
   }
-  return res.json({ serverTime, me, collections: out, resets });
+  const { data: prs } = await sb.from(PROFILE_REQ).select('data').order('updated_at', { ascending: true });
+  const profileRequests = (prs || []).map((r: any) => r.data).filter((r: any) => r.status === 'pending' && (admin || r.user_id === me.id));
+  return res.json({ serverTime, me, collections: out, resets, profileRequests });
 }
 
 // ---------- sync (écriture) ----------
@@ -161,7 +164,9 @@ async function sync(req: any, res: any, me: any) {
           ok = rec.id === me.id && !!existing;
           if (ok) {
             toSave = { ...existing };
-            for (const k of ['is_online', 'avatar_url', 'phone', 'pending_advance_ar']) if (k in rec) toSave[k] = rec[k];
+            for (const k of ['is_online', 'pending_advance_ar']) if (k in rec) toSave[k] = rec[k];
+            // Première photo (obligatoire à l'arrivée) : directe. Ensuite : demande validée par l'admin.
+            if ('avatar_url' in rec && !existing.avatar_url) toSave.avatar_url = rec.avatar_url;
           }
         } else if (col === 'posts') {
           ok = rec.employee_id === me.id && EMP_POST_TARGET.includes(rec.status) &&
@@ -170,7 +175,12 @@ async function sync(req: any, res: any, me: any) {
         } else if (col === 'advances') {
           ok = !existing && rec.employee_id === me.id && rec.status === 'pending';
         } else if (col === 'messages') {
-          ok = !existing && rec.sender_id === me.id;
+          ok = !existing && rec.sender_id === me.id && typeof rec.message === 'string' && rec.message.length <= 4000;
+          if (ok && rec.recipient_id && rec.recipient_id !== 'all') {
+            const target = await getUserRow(rec.recipient_id);
+            ok = !!target && target.role === 'admin';
+          }
+          if (ok && rec.attachment_url && !isBucketUrl(rec.attachment_url)) ok = false;
         } else if (col === 'securityLogs') {
           ok = !existing && rec.employee_id === me.id;
         }
@@ -237,6 +247,67 @@ async function logout(_req: any, res: any, me: any) {
   return res.json({ ok: true });
 }
 
+
+const isBucketUrl = (u: unknown) =>
+  typeof u === 'string' && u.startsWith(`${SB_URL}/storage/v1/object/public/${BUCKET}/`);
+
+// ---------- modification de profil (validée par l'admin) ----------
+async function profileRequest(req: any, res: any, me: any) {
+  if (me.role === 'admin') return res.status(403).json({ error: 'Réservé aux boosters.' });
+  const { name, username, phone, avatar_url } = req.body || {};
+  const nm = String(name || '').trim();
+  const un = String(username || '').trim().toLowerCase();
+  const ph = String(phone || '').trim();
+  if (nm.length < 2 || nm.length > 60) return res.status(400).json({ error: 'Nom : 2 à 60 caractères.' });
+  if (!/^[a-z0-9_.-]{3,30}$/.test(un)) return res.status(400).json({ error: 'Pseudo invalide (3 à 30 lettres/chiffres).' });
+  if (ph.length > 30) return res.status(400).json({ error: 'Téléphone trop long.' });
+  if (avatar_url && !isBucketUrl(avatar_url)) return res.status(400).json({ error: 'Photo invalide.' });
+  const newAvatar = avatar_url || me.avatar_url || '';
+  if (nm === me.name && un === me.username && ph === (me.phone || '') && newAvatar === (me.avatar_url || '')) {
+    return res.status(400).json({ error: 'Aucun changement.' });
+  }
+  if (un !== me.username) {
+    const { data: dup } = await sb.from('df_credentials').select('user_id').eq('username', un).maybeSingle();
+    if (dup && dup.user_id !== me.id) return res.status(409).json({ error: 'Ce pseudo existe déjà.' });
+    const { data: pend } = await sb.from(PROFILE_REQ).select('id').eq('data->>username', un).neq('id', `pr-${me.id}`).limit(1);
+    if (pend && pend.length) return res.status(409).json({ error: 'Ce pseudo existe déjà.' });
+  }
+  const id = `pr-${me.id}`;
+  await sb.from(PROFILE_REQ).upsert({
+    id,
+    data: {
+      id, user_id: me.id, status: 'pending', created_at: new Date().toISOString(),
+      old: { name: me.name, username: me.username, phone: me.phone || '', avatar_url: me.avatar_url || '' },
+      name: nm, username: un, phone: ph, avatar_url: newAvatar,
+    },
+    updated_at: new Date().toISOString(),
+  });
+  return res.json({ ok: true });
+}
+
+async function profileDecision(req: any, res: any, me: any) {
+  if (me.role !== 'admin') return res.status(403).json({ error: 'Réservé à l\'administrateur.' });
+  const { id, approve } = req.body || {};
+  if (typeof id !== 'string') return res.status(400).json({ error: 'Demande invalide.' });
+  const { data: row } = await sb.from(PROFILE_REQ).select('data').eq('id', id).maybeSingle();
+  if (!row || row.data.status !== 'pending') return res.status(404).json({ error: 'Demande introuvable.' });
+  const r = row.data;
+  if (approve === true) {
+    const user = await getUserRow(r.user_id);
+    if (!user) { await sb.from(PROFILE_REQ).delete().eq('id', id); return res.status(404).json({ error: 'Compte introuvable.' }); }
+    if (r.username !== user.username) {
+      const { data: dup } = await sb.from('df_credentials').select('user_id').eq('username', r.username).maybeSingle();
+      if (dup && dup.user_id !== user.id) return res.status(409).json({ error: 'Ce pseudo est déjà pris par un autre compte.' });
+      await sb.from('df_credentials').update({ username: r.username, updated_at: new Date().toISOString() }).eq('user_id', user.id);
+    }
+    const nameChanged = r.name !== user.name;
+    const next = { ...user, name: r.name, username: r.username, phone: r.phone, avatar_url: r.avatar_url };
+    await sb.from(T.users).upsert({ id: user.id, data: next, updated_at: new Date().toISOString() });
+    if (nameChanged) await sb.rpc('df_rename_employee', { uid: user.id, new_name: r.name });
+  }
+  await sb.from(PROFILE_REQ).delete().eq('id', id);
+  return res.json({ ok: true });
+}
 
 // ---------- mot de passe oublié ----------
 async function forgot(req: any, res: any) {
@@ -363,6 +434,8 @@ Deno.serve(async (request: Request) => {
     if (action === "logout" && req.method === "POST") return await logout(req, res, me);
     if (action === "reset-decision" && req.method === "POST") return await resetDecision(req, res, me);
     if (action === "upload" && req.method === "POST") return await upload(req, res, me);
+    if (action === "profile-request" && req.method === "POST") return await profileRequest(req, res, me);
+    if (action === "profile-decision" && req.method === "POST") return await profileDecision(req, res, me);
     return res.status(404).json({ error: "Route inconnue." });
   } catch (e) {
     console.error("API error:", e);

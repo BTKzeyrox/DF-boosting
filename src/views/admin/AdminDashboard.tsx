@@ -28,7 +28,7 @@ import {
   X,
   KeyRound,
 } from 'lucide-react';
-import { User, PostSession, SecurityViolation, ClientContract, ShiftType, PasswordResetRequest } from '../../types';
+import { User, PostSession, SecurityViolation, ClientContract, ShiftType, PasswordResetRequest, ProfileChangeRequest } from '../../types';
 import { Avatar } from '../../components/Avatar';
 import { db } from '../../db/store';
 import { askConfirm } from '../../components/ConfirmModal';
@@ -69,6 +69,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [posts, setPosts] = useState<PostSession[]>(db.getPosts());
   const [securityLogs, setSecurityLogs] = useState<SecurityViolation[]>(db.getSecurityLogs());
   const [resets, setResets] = useState<PasswordResetRequest[]>(db.getPasswordResets());
+  const [profileReqs, setProfileReqs] = useState<ProfileChangeRequest[]>(db.getProfileRequests());
+  const [profileErr, setProfileErr] = useState<string | null>(null);
 
   // Rejection modal state
   const [rejectingPostId, setRejectingPostId] = useState<string | null>(null);
@@ -119,6 +121,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setPosts(db.getPosts());
       setSecurityLogs(db.getSecurityLogs());
       setResets(db.getPasswordResets());
+      setProfileReqs(db.getProfileRequests());
     });
     return unsubscribe;
   }, []);
@@ -722,6 +725,77 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Modifications de profil à valider */}
+      {profileReqs.length > 0 && (
+        <div className="bg-[#1a150a] border-2 border-amber-500 p-3 sm:p-4 space-y-3">
+          <h3 className="font-tactical font-black text-white text-sm sm:text-base">
+            {profileReqs.length} modification{profileReqs.length > 1 ? 's' : ''} de profil à valider
+          </h3>
+          {profileErr && <div className="p-2 bg-red-950 border border-red-500/60 text-red-200 text-xs font-semibold">{profileErr}</div>}
+          {profileReqs.map(r => {
+            const rows: { label: string; from: string; to: string }[] = [];
+            if (r.name !== r.old.name) rows.push({ label: 'Nom', from: r.old.name, to: r.name });
+            if (r.username !== r.old.username) rows.push({ label: 'Pseudo', from: `@${r.old.username}`, to: `@${r.username}` });
+            if (r.phone !== r.old.phone) rows.push({ label: 'Téléphone', from: r.old.phone || 'vide', to: r.phone || 'vide' });
+            const photoChanged = r.avatar_url !== r.old.avatar_url;
+            return (
+              <div key={r.id} className="bg-[#0f1722] border border-slate-700 p-3 flex flex-col sm:flex-row sm:items-center gap-3">
+                <div className="min-w-0 flex-1 text-xs font-mono space-y-1">
+                  <div className="text-white font-bold text-sm break-words">{r.old.name} <span className="text-slate-400 font-normal">(@{r.old.username})</span></div>
+                  {rows.map(x => (
+                    <div key={x.label} className="break-words">
+                      <span className="text-slate-400">{x.label} : </span>
+                      <span className="text-red-300 line-through">{x.from}</span>
+                      <span className="text-slate-400"> → </span>
+                      <span className="text-emerald-300 font-bold">{x.to}</span>
+                    </div>
+                  ))}
+                  {photoChanged && (
+                    <div className="flex items-center gap-2 text-slate-300">
+                      <span>Photo :</span>
+                      {r.old.avatar_url && <Avatar src={r.old.avatar_url} name={r.old.name} className="w-10 h-10" />}
+                      <span className="text-slate-400">→</span>
+                      <Avatar src={r.avatar_url} name={r.name} className="w-10 h-10" />
+                    </div>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-2 sm:w-64 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => askConfirm({
+                      title: 'Refuser la modification ?',
+                      message: `Le profil de ${r.old.name} ne changera pas.`,
+                      confirmLabel: 'Refuser',
+                      danger: true,
+                      onConfirm: () => { setProfileErr(null); void db.decideProfileRequest(r.id, false); },
+                    })}
+                    className="px-3 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-red-500/60 text-red-300 text-xs font-bold cursor-pointer"
+                  >
+                    Refuser
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => askConfirm({
+                      title: 'Valider la modification ?',
+                      message: `Le profil de ${r.old.name} sera mis à jour.`,
+                      confirmLabel: 'Valider',
+                      onConfirm: async () => {
+                        setProfileErr(null);
+                        const res = await db.decideProfileRequest(r.id, true);
+                        if (!res.success) setProfileErr(res.error || 'Erreur.');
+                      },
+                    })}
+                    className="px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold cursor-pointer"
+                  >
+                    Valider
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
