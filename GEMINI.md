@@ -2,6 +2,8 @@
 
 Avant toute action sur ce repo, lis **entièrement** le fichier `AI_STUDIO.md` (à la racine). Il décrit le projet, l'architecture (Vercel + Supabase), les règles INTERDITES et la méthode de travail.
 
+Ensuite lis aussi `HANDOVER.md` (état du projet, travail restant, pièges connus).
+
 Règles minimales :
 1. Ne remets pas Firebase, Express, `server.ts`, `api/`, ni de variables d'environnement.
 2. Travaille sur la branche `studio`, jamais sur `main`.

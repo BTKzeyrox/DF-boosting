@@ -6,6 +6,8 @@ Application de gestion d'équipe de boosting Delta Force : 20 postes (grille 2x1
 
 > **Assistant IA (AI Studio, etc.) : lis d'abord [AI_STUDIO.md](AI_STUDIO.md) en entier avant toute action.**
 
+> **Reprise du projet : lis aussi [HANDOVER.md](HANDOVER.md).**
+
 ## Connexion
 Pseudo + mot de passe (pas d'email). L'admin crée les employés (pseudo + mot de passe) depuis la page Employés.
 
