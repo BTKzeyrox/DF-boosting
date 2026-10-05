@@ -39,6 +39,7 @@ import { AVAILABLE_CLIENT_CONTRACTS } from '../../db/initialData';
 import { PostsGrid20 } from '../../components/PostsGrid20';
 import { formatScoreM, formatCurrencyAr } from '../../utils/formatUtils';
 import { useLockBodyScroll } from '../../utils/useLockBodyScroll';
+import { ScoreInput } from '../../components/ScoreInput';
 
 interface EmployeeDashboardProps {
   currentUser: User;
@@ -1500,11 +1501,9 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                       <span>Score réel sur la capture</span>
                       <span className="text-cyan-400 font-bold text-sm">{formatScoreM(initialScore)}</span>
                     </label>
-                    <input
-                      type="number"
-                      inputMode="numeric"
-                      value={initialScore || ''}
-                      onChange={e => setInitialScore(Math.max(0, Number(e.target.value)))}
+                    <ScoreInput
+                      value={initialScore}
+                      onChange={n => setInitialScore(Math.max(0, n))}
                       className="w-full bg-[#141e2a] border border-slate-600 focus:border-emerald-500 rounded-lg p-2.5 text-white font-bold text-sm"
                       placeholder="ex: 30739000 (= 30.739M)"
                     />
@@ -1570,10 +1569,9 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
 
             <div>
               <label className="block text-slate-300 uppercase mb-1">Score de départ (sur la capture)</label>
-              <input
-                type="number"
+              <ScoreInput
                 value={editScore}
-                onChange={e => setEditScore(Number(e.target.value))}
+                onChange={setEditScore}
                 className="w-full bg-[#141e2a] border border-slate-700 rounded-lg p-2 text-white font-bold"
               />
             </div>
@@ -1682,11 +1680,9 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                 <label className="block text-slate-300 uppercase mb-1">
                   Score Final Atteint (Obligatoire)
                 </label>
-                <input
-                  type="number"
-                  step="100000"
+                <ScoreInput
                   value={finalScoreInput}
-                  onChange={e => setFinalScoreInput(Number(e.target.value))}
+                  onChange={setFinalScoreInput}
                   required
                   className="w-full bg-[#141e2a] border border-slate-700 rounded-lg p-2 text-emerald-400 font-bold text-base focus:border-emerald-500 focus:outline-none"
                 />

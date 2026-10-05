@@ -83,7 +83,9 @@ export default function App() {
   const handleLoginSuccess = (user: User) => {
     setCurrentUser(user);
     setIsWelcomeAnimating(true);
-    setActiveView('grid'); // Default view is the 20-post 2x10 grid!
+    // Accueil d'abord : admin = vue générale, booster = grille des postes. Menu fermé.
+    setActiveView(user.role === 'admin' ? 'dashboard' : 'grid');
+    setIsMobileSidebarOpen(false);
   };
 
   const handleLogout = () => {

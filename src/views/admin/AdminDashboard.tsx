@@ -35,6 +35,7 @@ import { PostsGrid20 } from '../../components/PostsGrid20';
 import { formatScoreM, formatCurrencyAr } from '../../utils/formatUtils';
 import { generateDeltaForceScreenshot } from '../../utils/imageUtils';
 import { useLockBodyScroll } from '../../utils/useLockBodyScroll';
+import { ScoreInput } from '../../components/ScoreInput';
 
 interface AdminDashboardProps {
   currentUser?: User;
@@ -478,11 +479,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       <label className="block text-slate-300 uppercase mb-1">
                         Score de Début (Départ Relevé)
                       </label>
-                      <input
-                        type="number"
-                        step="100000"
+                      <ScoreInput
                         value={editInitialScore}
-                        onChange={e => setEditInitialScore(Number(e.target.value))}
+                        onChange={setEditInitialScore}
                         className="w-full bg-[#0d1622] border border-slate-600 rounded-lg p-2 text-emerald-400 font-bold"
                       />
                       <span className="text-[10px] text-slate-500 mt-0.5 block">
@@ -491,11 +490,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     </div>
                     <div>
                       <label className="block text-slate-300 uppercase mb-1">Objectif (points à gagner)</label>
-                      <input
-                        type="number"
-                        step="100000"
+                      <ScoreInput
                         value={editObjective}
-                        onChange={e => setEditObjective(Number(e.target.value))}
+                        onChange={setEditObjective}
                         className="w-full bg-[#0d1622] border border-slate-600 rounded-lg p-2 text-amber-400 font-bold"
                       />
                       <span className="text-[10px] text-slate-500 mt-0.5 block">

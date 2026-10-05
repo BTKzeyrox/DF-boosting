@@ -10,6 +10,7 @@ import {
   ShieldAlert,
   Image,
   LogOut,
+  Home,
   UserCheck,
   Shield,
   X,
@@ -59,6 +60,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   // Bilingual Navigation Items
   const navItems = [
+    ...(isAdmin
+      ? [
+          {
+            id: 'dashboard',
+            label: 'Accueil',
+            sublabel: 'Vue générale',
+            icon: Home,
+          },
+        ]
+      : []),
     {
       id: 'grid',
       label: t('nav_grid'),

@@ -139,8 +139,11 @@ class DeltaForceStore {
   // Récupère les changements du serveur. Retourne true si la session est valide.
   private async pull(force = false): Promise<boolean> {
     if (!this.token) return false;
+    const tokenAtStart = this.token;
     const r = await this.api(`state?since=${encodeURIComponent(this.since)}`);
     if (!r.ok) return false;
+    // Déconnecté (ou reconnecté autrement) pendant la requête : on ignore la réponse
+    if (this.token !== tokenAtStart) return false;
     if (!force && (this.dirty || this.syncing)) return true; // changements locaux en attente : on ignore ce tour
 
     const cols = r.data.collections || {};
