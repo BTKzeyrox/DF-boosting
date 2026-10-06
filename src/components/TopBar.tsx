@@ -3,6 +3,7 @@ import { Bell, Menu, Search, Shield, Users, Gamepad2, Calendar, FileText } from 
 import { User } from '../types';
 import { db } from '../db/store';
 import { buildNotifications, markSeen, unreadCount, getSeen } from '../utils/notifications';
+import { beepIfEnabled } from '../utils/notifSound';
 
 interface TopBarProps {
   currentUser: User;
@@ -90,6 +91,14 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
   const notifs = buildNotifications(currentUser);
   const count = unreadCount(currentUser, notifs);
   const seen = getSeen(currentUser);
+  // Bip court quand une NOUVELLE notification arrive (jamais au chargement de la page)
+  const knownIds = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    const ids = new Set(notifs.map(n => n.id));
+    if (knownIds.current && notifs.some(n => !knownIds.current!.has(n.id))) beepIfEnabled();
+    knownIds.current = ids;
+  }, [notifs.map(n => n.id).join('|')]);
+
   const toggleBell = () => setBellOpen(v => !v);
   // Booster : les notifications passent en « vu » à la fermeture de la fenêtre
   const wasOpen = useRef(false);

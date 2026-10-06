@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { User } from '../types';
 import { countPending } from '../utils/pendingCount';
+import { useSoundPrefs } from '../utils/notifSound';
 import { useApp } from '../context/AppContext';
 
 interface SidebarProps {
@@ -52,6 +53,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onToggleBoosterMode,
 }) => {
   const { theme, toggleTheme, lang, setLang, t, startLogoutAnimation } = useApp();
+  const [sound, setSound] = useSoundPrefs();
   const isAdmin = currentUser.role === 'admin';
   const isLight = theme === 'light';
 
@@ -373,6 +375,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <span>{lang === 'fr' ? '🇨🇳 中文' : '🇫🇷 FR'}</span>
             </button>
           </div>
+
+          {!isAdmin && (
+            <button
+              type="button"
+              onClick={() => setSound({ ...sound, on: !sound.on })}
+              className={`w-full flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-lg text-[11px] font-mono border transition-colors cursor-pointer ${
+                isLight ? 'bg-white hover:bg-slate-100 border-slate-200 text-slate-700' : 'bg-[#101b27] hover:bg-[#142333] border-slate-700 text-slate-300'
+              }`}
+              title="Son des notifications"
+            >
+              <span>{sound.on ? '🔔 Son activé' : '🔕 Son coupé'}</span>
+            </button>
+          )}
 
           {canSwitchMode && onToggleBoosterMode && (
             <button

@@ -4,11 +4,14 @@ import { db } from '../../db/store';
 import { AppSettings } from '../../types';
 import { ScoreInput } from '../../components/ScoreInput';
 import { askConfirm } from '../../components/ConfirmModal';
+import { useSoundPrefs, playBeep, unlockSound } from '../../utils/notifSound';
 
 const inputCls = 'w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white font-mono text-sm focus:border-emerald-500 focus:outline-none';
 const labelCls = 'block text-slate-300 uppercase text-xs font-mono mb-1';
 
 export const SettingsView: React.FC = () => {
+  const [sound, setSound] = useSoundPrefs();
+  const [soundMsg, setSoundMsg] = useState('');
   const [s, setS] = useState<AppSettings>(db.getSettings());
   const [newType, setNewType] = useState('');
   const [saved, setSaved] = useState(false);
@@ -142,6 +145,30 @@ export const SettingsView: React.FC = () => {
           <input type="number" min={1} value={s.retention_days} onChange={e => set('retention_days', Number(e.target.value))} className={inputCls} />
           <p className="text-[11px] text-slate-500 mt-1">Après ce délai, les photos des sessions terminées sont supprimées automatiquement.</p>
         </div>
+      </section>
+
+      <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3">
+        <h3 className="font-tactical font-bold text-white">Son des notifications</h3>
+        <p className="text-[11px] text-slate-400">Un bip court à chaque nouvelle notification. Réglé sur cet appareil, enregistré tout de suite.</p>
+        <label className="flex items-center gap-2.5 text-sm text-slate-200 cursor-pointer">
+          <input type="checkbox" checked={sound.on} onChange={e => setSound({ ...sound, on: e.target.checked })} className="w-4 h-4 accent-emerald-500" />
+          Son activé
+        </label>
+        <div className={sound.on ? '' : 'opacity-40 pointer-events-none'}>
+          <label className={labelCls}>Volume</label>
+          <input type="range" min={1} max={10} step={1} value={Math.round(sound.volume * 10)} onChange={e => setSound({ ...sound, volume: Number(e.target.value) / 10 })} className="w-full accent-emerald-500" />
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            unlockSound();
+            setTimeout(() => setSoundMsg(playBeep(sound.volume) ? '' : "Le navigateur bloque le son : touche l'écran puis réessaie."), 60);
+          }}
+          className="px-3 py-2 border border-slate-600 text-slate-200 text-xs font-mono hover:border-emerald-500 cursor-pointer"
+        >
+          Tester le son
+        </button>
+        {soundMsg && <p className="text-[11px] text-amber-300">{soundMsg}</p>}
       </section>
 
       <section className="bg-[#0f1722] border border-red-900/60 p-4 space-y-3">
