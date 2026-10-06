@@ -421,8 +421,8 @@ class DeltaForceStore {
     return r.ok ? { success: true } : { success: false, error: r.data?.error || 'Envoi impossible.' };
   }
 
-  public async decideProfileRequest(id: string, approve: boolean): Promise<{ success: boolean; error?: string }> {
-    const r = await this.api('profile-decision', { method: 'POST', body: JSON.stringify({ id, approve }) });
+  public async decideProfileRequest(id: string, approve: boolean, reason?: string): Promise<{ success: boolean; error?: string }> {
+    const r = await this.api('profile-decision', { method: 'POST', body: JSON.stringify({ id, approve, reason }) });
     if (r.ok) {
       this.profileRequests = this.profileRequests.filter(x => x.id !== id);
       this.since = '';
@@ -443,8 +443,8 @@ class DeltaForceStore {
     return [...this.signups];
   }
 
-  public async decideSignup(id: string, approve: boolean): Promise<{ success: boolean; error?: string }> {
-    const r = await this.api('signup-decision', { method: 'POST', body: JSON.stringify({ id, approve }) });
+  public async decideSignup(id: string, approve: boolean, reason?: string): Promise<{ success: boolean; error?: string }> {
+    const r = await this.api('signup-decision', { method: 'POST', body: JSON.stringify({ id, approve, reason }) });
     if (r.ok || r.status === 409 || r.status === 404) {
       this.signups = this.signups.filter(x => x.id !== id);
       this.since = '';
@@ -458,8 +458,8 @@ class DeltaForceStore {
     return [...this.resets];
   }
 
-  public async decidePasswordReset(id: string, approve: boolean): Promise<boolean> {
-    const r = await this.api('reset-decision', { method: 'POST', body: JSON.stringify({ id, approve }) });
+  public async decidePasswordReset(id: string, approve: boolean, reason?: string): Promise<boolean> {
+    const r = await this.api('reset-decision', { method: 'POST', body: JSON.stringify({ id, approve, reason }) });
     if (r.ok) {
       this.resets = this.resets.filter(x => x.id !== id);
       this.emit();

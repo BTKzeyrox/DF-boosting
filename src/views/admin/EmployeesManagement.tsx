@@ -202,13 +202,14 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
       amount: adv.amount_ar,
       employeeName: adv.employee_name,
     });
-    setAdvanceNotes(approve ? 'Validé par l\'administrateur' : 'Solde d\'heures insuffisant ou avance récente non régularisée');
+    setAdvanceNotes(approve ? 'Validé par l\'administrateur' : '');
   };
 
   const handleConfirmReviewAdvance = (e: React.FormEvent) => {
     e.preventDefault();
     if (!reviewAdvanceModal) return;
-    db.reviewAdvanceRequest(reviewAdvanceModal.advanceId, reviewAdvanceModal.approve, advanceNotes || undefined);
+    if (!reviewAdvanceModal.approve && advanceNotes.trim().length < 3) return;
+    db.reviewAdvanceRequest(reviewAdvanceModal.advanceId, reviewAdvanceModal.approve, advanceNotes.trim() || undefined);
     setReviewAdvanceModal(null);
   };
 
@@ -782,7 +783,8 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                   value={advanceNotes}
                   onChange={e => setAdvanceNotes(e.target.value)}
                   required={!reviewAdvanceModal.approve}
-                  placeholder={reviewAdvanceModal.approve ? 'Ajouter une note...' : 'Indiquer la raison du rejet...'}
+                  placeholder={reviewAdvanceModal.approve ? 'Ajouter une note...' : 'Écris la raison du refus'}
+                  minLength={reviewAdvanceModal.approve ? undefined : 3}
                   className="w-full bg-[#141e2a] border border-slate-700 rounded-xl p-2.5 text-white focus:outline-none focus:border-emerald-500"
                 />
               </div>

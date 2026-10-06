@@ -14,6 +14,7 @@ import { LightboxModal } from './components/LightboxModal';
 import { CVViewerModal } from './components/CVViewerModal';
 import { ProfilePhotoGate } from './components/ProfilePhotoGate';
 import { ConfirmHost, askConfirm } from './components/ConfirmModal';
+import { ReasonHost } from './components/ReasonModal';
 import { setChineseMode } from './utils/zhTranslate';
 import { DayDetailsModal } from './components/DayDetailsModal';
 import { Menu, Shield } from 'lucide-react';
@@ -334,6 +335,7 @@ export default function App() {
 
       {/* CONFIRMATIONS */}
       <ConfirmHost />
+      <ReasonHost />
 
       {/* PROFILE MODAL */}
       <CVViewerModal

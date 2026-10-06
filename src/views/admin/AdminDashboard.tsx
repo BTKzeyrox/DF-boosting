@@ -33,6 +33,7 @@ import { User, PostSession, SecurityViolation, ClientContract, ShiftType, Passwo
 import { Avatar } from '../../components/Avatar';
 import { db } from '../../db/store';
 import { askConfirm } from '../../components/ConfirmModal';
+import { askReason } from '../../components/ReasonModal';
 import { PostsGrid20 } from '../../components/PostsGrid20';
 import { formatScoreM, formatCurrencyAr } from '../../utils/formatUtils';
 import { generateDeltaForceScreenshot } from '../../utils/imageUtils';
@@ -71,7 +72,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [securityLogs, setSecurityLogs] = useState<SecurityViolation[]>(db.getSecurityLogs());
   const [resets, setResets] = useState<PasswordResetRequest[]>(db.getPasswordResets());
   const [signups, setSignups] = useState<SignupRequest[]>(db.getSignupRequests());
-  const [profileReqs, setProfileReqs] = useState<ProfileChangeRequest[]>(db.getProfileRequests());
+  const [profileReqs, setProfileReqs] = useState<ProfileChangeRequest[]>(db.getProfileRequests().filter(x => x.status === 'pending'));
   const [profileErr, setProfileErr] = useState<string | null>(null);
 
   // Rejection modal state
@@ -124,7 +125,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setSecurityLogs(db.getSecurityLogs());
       setResets(db.getPasswordResets());
       setSignups(db.getSignupRequests());
-      setProfileReqs(db.getProfileRequests());
+      setProfileReqs(db.getProfileRequests().filter(x => x.status === 'pending'));
     });
     return unsubscribe;
   }, []);
@@ -703,12 +704,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <div className="grid grid-cols-2 gap-2 sm:w-64 shrink-0">
                 <button
                   type="button"
-                  onClick={() => askConfirm({
+                  onClick={() => askReason({
                     title: "Refuser l'inscription ?",
-                    message: `La demande de ${r.name} sera supprimée.`,
-                    confirmLabel: 'Refuser',
-                    danger: true,
-                    onConfirm: () => void db.decideSignup(r.id, false),
+                    message: `${r.name} verra ce motif quand il essaiera de se connecter.`,
+                    onSubmit: reason => void db.decideSignup(r.id, false, reason),
                   })}
                   className="px-3 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-red-500/60 text-red-300 text-xs font-bold cursor-pointer"
                 >
@@ -751,12 +750,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <div className="grid grid-cols-2 gap-2 sm:w-64 shrink-0">
                 <button
                   type="button"
-                  onClick={() => askConfirm({
+                  onClick={() => askReason({
                     title: 'Refuser la demande ?',
-                    message: `Le mot de passe de ${r.name} ne changera pas.`,
-                    confirmLabel: 'Refuser',
-                    danger: true,
-                    onConfirm: () => void db.decidePasswordReset(r.id, false),
+                    message: `Le mot de passe de ${r.name} ne changera pas. Il verra ce motif quand il essaiera de se connecter.`,
+                    onSubmit: reason => void db.decidePasswordReset(r.id, false, reason),
                   })}
                   className="px-3 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-red-500/60 text-red-300 text-xs font-bold cursor-pointer"
                 >
@@ -817,12 +814,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <div className="grid grid-cols-2 gap-2 sm:w-64 shrink-0">
                   <button
                     type="button"
-                    onClick={() => askConfirm({
+                    onClick={() => askReason({
                       title: 'Refuser la modification ?',
-                      message: `Le profil de ${r.old.name} ne changera pas.`,
-                      confirmLabel: 'Refuser',
-                      danger: true,
-                      onConfirm: () => { setProfileErr(null); void db.decideProfileRequest(r.id, false); },
+                      message: `Le profil de ${r.old.name} ne changera pas. Il verra ce motif dans son profil.`,
+                      onSubmit: reason => { setProfileErr(null); void db.decideProfileRequest(r.id, false, reason); },
                     })}
                     className="px-3 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-red-500/60 text-red-300 text-xs font-bold cursor-pointer"
                   >

@@ -44,7 +44,9 @@ export const CVViewerModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, us
   const live = db.getUsers().find(u => u.id === user.id) || user;
   const isSelfBooster = !!me && me.id === live.id && me.role === 'employee';
   const canEdit = !!me && me.role === 'admin';
-  const pending = isSelfBooster ? db.getProfileRequests().find(r => r.user_id === live.id) : undefined;
+  const myReq = isSelfBooster ? db.getProfileRequests().find(r => r.user_id === live.id) : undefined;
+  const pending = myReq && myReq.status === 'pending' ? myReq : undefined;
+  const refused = myReq && myReq.status === 'rejected' ? myReq : undefined;
 
   const pickForRequest = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -150,6 +152,11 @@ export const CVViewerModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, us
 
         {isSelfBooster && (
           <div className="space-y-2">
+            {refused && !pending && (
+              <div className="p-2.5 bg-red-950/70 border border-red-500/50 text-red-200 text-xs leading-relaxed">
+                Modification refusée : {refused.reason || 'sans motif'}
+              </div>
+            )}
             {pending && (
               <div className="p-2.5 bg-amber-950/70 border border-amber-500/50 text-amber-200 text-xs leading-relaxed">
                 Modification en attente de validation par l'administrateur : {pending.name} · @{pending.username}

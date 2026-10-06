@@ -24,7 +24,8 @@ export interface AppSettings {
 export interface ProfileChangeRequest {
   id: string;
   user_id: string;
-  status: 'pending';
+  status: 'pending' | 'rejected';
+  reason?: string; // motif du refus (visible par le booster)
   created_at: string;
   old: { name: string; username: string; phone: string; avatar_url: string };
   name: string;

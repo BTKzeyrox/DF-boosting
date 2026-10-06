@@ -62,6 +62,9 @@ const verify = (tok: string): { uid: string; exp: number } | null => {
 
 // ---------- helpers ----------
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
+// Motif de refus : obligatoire (3 à 300 caractères), montré ensuite à la personne concernée
+const reasonOf = (b: any) => String(b?.reason || '').trim().slice(0, 300);
+const REASON_ERR = 'Écris un motif de refus (3 caractères minimum).';
 const getUserRow = async (id: string) => {
   const { data } = await sb.from(T.users).select('data').eq('id', id).maybeSingle();
   return data?.data as any | null;
@@ -76,6 +79,29 @@ const authenticate = async (req: any) => {
 };
 
 // ---------- login ----------
+// Si le pseudo + mot de passe correspondent à une demande d'inscription ou de nouveau mot de passe,
+// on explique l'état de la demande (seulement si le mot de passe saisi est bien celui de la demande).
+const authNotice = async (uname: string, password: string): Promise<string | null> => {
+  try {
+    const { data: su } = await sb.from(SIGNUPS).select('data').eq('id', `signup-${uname}`).maybeSingle();
+    const sg = su?.data;
+    if (sg && sg.password_hash && checkPw(password, sg.password_hash)) {
+      if (sg.status === 'pending') return "Ton inscription est en attente de validation par l'administrateur.";
+      if (sg.status === 'rejected') return `Inscription refusée : ${sg.reason || 'sans motif'}`;
+    }
+    const { data: c } = await sb.from('df_credentials').select('user_id').eq('username', uname).maybeSingle();
+    if (c) {
+      const { data: rs } = await sb.from(RESETS).select('data').eq('id', `reset-${c.user_id}`).maybeSingle();
+      const r = rs?.data;
+      if (r && r.password_hash && checkPw(password, r.password_hash)) {
+        if (r.status === 'pending') return 'Ton changement de mot de passe est en attente de validation. En attendant, utilise ton ancien mot de passe.';
+        if (r.status === 'rejected') return `Changement de mot de passe refusé : ${r.reason || 'sans motif'}. Utilise ton ancien mot de passe.`;
+      }
+    }
+  } catch (e) { console.error('notice error:', e); }
+  return null;
+};
+
 async function login(req: any, res: any) {
   const { username, password } = req.body || {};
   if (typeof username !== 'string' || typeof password !== 'string' || !username.trim() || !password) {
@@ -87,7 +113,8 @@ async function login(req: any, res: any) {
   const { data: cred } = await sb.from('df_credentials').select('*').eq('username', uname).maybeSingle();
   if (!cred || !checkPw(password, cred.password_hash)) {
     await sleep(500);
-    return res.status(401).json({ error: 'Pseudo ou mot de passe incorrect.' });
+    const notice = await authNotice(uname, password);
+    return res.status(401).json({ error: notice || 'Pseudo ou mot de passe incorrect.' });
   }
   const user = await getUserRow(cred.user_id);
   if (!user) return res.status(401).json({ error: 'Compte introuvable.' });
@@ -141,7 +168,7 @@ async function state(req: any, res: any, me: any) {
     signups = (sg || []).map((r: any) => ({ ...r.data, password_hash: undefined })).filter((r: any) => r.status === 'pending');
   }
   const { data: prs } = await sb.from(PROFILE_REQ).select('data').order('updated_at', { ascending: true });
-  const profileRequests = (prs || []).map((r: any) => r.data).filter((r: any) => r.status === 'pending' && (admin || r.user_id === me.id));
+  const profileRequests = (prs || []).map((r: any) => r.data).filter((r: any) => (admin ? r.status === 'pending' : r.user_id === me.id && (r.status === 'pending' || r.status === 'rejected')));
   return res.json({ serverTime, me, collections: out, resets, signups, profileRequests });
 }
 
@@ -275,7 +302,7 @@ async function profileRequest(req: any, res: any, me: any) {
   if (un !== me.username) {
     const { data: dup } = await sb.from('df_credentials').select('user_id').eq('username', un).maybeSingle();
     if (dup && dup.user_id !== me.id) return res.status(409).json({ error: 'Ce pseudo existe déjà.' });
-    const { data: pend } = await sb.from(PROFILE_REQ).select('id').eq('data->>username', un).neq('id', `pr-${me.id}`).limit(1);
+    const { data: pend } = await sb.from(PROFILE_REQ).select('id').eq('data->>username', un).eq('data->>status', 'pending').neq('id', `pr-${me.id}`).limit(1);
     if (pend && pend.length) return res.status(409).json({ error: 'Ce pseudo existe déjà.' });
   }
   const id = `pr-${me.id}`;
@@ -295,6 +322,7 @@ async function profileDecision(req: any, res: any, me: any) {
   if (me.role !== 'admin') return res.status(403).json({ error: 'Réservé à l\'administrateur.' });
   const { id, approve } = req.body || {};
   if (typeof id !== 'string') return res.status(400).json({ error: 'Demande invalide.' });
+  if (approve !== true && reasonOf(req.body).length < 3) return res.status(400).json({ error: REASON_ERR });
   const { data: row } = await sb.from(PROFILE_REQ).select('data').eq('id', id).maybeSingle();
   if (!row || row.data.status !== 'pending') return res.status(404).json({ error: 'Demande introuvable.' });
   const r = row.data;
@@ -311,7 +339,11 @@ async function profileDecision(req: any, res: any, me: any) {
     await sb.from(T.users).upsert({ id: user.id, data: next, updated_at: new Date().toISOString() });
     if (nameChanged) await sb.rpc('df_rename_employee', { uid: user.id, new_name: r.name });
   }
-  await sb.from(PROFILE_REQ).delete().eq('id', id);
+  if (approve === true) await sb.from(PROFILE_REQ).delete().eq('id', id);
+  else {
+    const now = new Date().toISOString();
+    await sb.from(PROFILE_REQ).upsert({ id, data: { ...r, status: 'rejected', reason: reasonOf(req.body), decided_at: now }, updated_at: now });
+  }
   return res.json({ ok: true });
 }
 
@@ -348,12 +380,17 @@ async function resetDecision(req: any, res: any, me: any) {
   if (me.role !== 'admin') return res.status(403).json({ error: 'Réservé à l\'administrateur.' });
   const { id, approve } = req.body || {};
   if (typeof id !== 'string') return res.status(400).json({ error: 'Demande invalide.' });
+  if (approve !== true && reasonOf(req.body).length < 3) return res.status(400).json({ error: REASON_ERR });
   const { data: row } = await sb.from(RESETS).select('data').eq('id', id).maybeSingle();
   if (!row || row.data.status !== 'pending') return res.status(404).json({ error: 'Demande introuvable.' });
   if (approve === true) {
     await sb.from('df_credentials').update({ password_hash: row.data.password_hash, updated_at: new Date().toISOString() }).eq('user_id', row.data.user_id);
   }
-  await sb.from(RESETS).delete().eq('id', id);
+  if (approve === true) await sb.from(RESETS).delete().eq('id', id);
+  else {
+    const now = new Date().toISOString();
+    await sb.from(RESETS).upsert({ id, data: { ...row.data, status: 'rejected', reason: reasonOf(req.body), decided_at: now }, updated_at: now });
+  }
   return res.json({ ok: true });
 }
 
@@ -392,6 +429,7 @@ async function signupDecision(req: any, res: any, me: any) {
   if (me.role !== 'admin') return res.status(403).json({ error: 'Réservé à l\'administrateur.' });
   const { id, approve } = req.body || {};
   if (typeof id !== 'string') return res.status(400).json({ error: 'Demande invalide.' });
+  if (approve !== true && reasonOf(req.body).length < 3) return res.status(400).json({ error: REASON_ERR });
   const { data: row } = await sb.from(SIGNUPS).select('data').eq('id', id).maybeSingle();
   if (!row || row.data.status !== 'pending') return res.status(404).json({ error: 'Demande introuvable.' });
   const r = row.data;
@@ -411,7 +449,11 @@ async function signupDecision(req: any, res: any, me: any) {
     await sb.from(T.users).upsert({ id: uid, data: rec, updated_at: new Date().toISOString() });
     await sb.from('df_credentials').insert({ user_id: uid, username: r.username, password_hash: r.password_hash });
   }
-  await sb.from(SIGNUPS).delete().eq('id', id);
+  if (approve === true) await sb.from(SIGNUPS).delete().eq('id', id);
+  else {
+    const now = new Date().toISOString();
+    await sb.from(SIGNUPS).upsert({ id, data: { ...r, status: 'rejected', reason: reasonOf(req.body), decided_at: now }, updated_at: now });
+  }
   return res.json({ ok: true });
 }
 
@@ -449,6 +491,8 @@ async function maybePurge() {
     const { data: st } = await sb.from(T.settings).select('data').eq('id', 'general').maybeSingle();
     const days = Math.max(1, Number(st?.data?.retention_days) || 30);
     const cutoff = new Date(Date.now() - days * 24 * 3600 * 1000).toISOString();
+    const old30 = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
+    for (const tb of [SIGNUPS, RESETS, PROFILE_REQ]) await sb.from(tb).delete().eq('data->>status', 'rejected').lt('updated_at', old30);
     const { data: rows } = await sb.from(T.posts).select('id,data')
       .lt('updated_at', cutoff).in('data->>status', ['completed', 'rejected', 'force_released']).limit(40);
     for (const r of rows || []) {
