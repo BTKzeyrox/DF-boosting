@@ -60,6 +60,8 @@ class DeltaForceStore {
   private synced: Record<Col, Map<string, string>> = this.emptySynced();
   private dirty = false;
   private syncing = false;
+  private mutationSeq = 0; // +1 à chaque modification locale : sert à ignorer une réponse serveur devenue périmée
+  private onVisible: (() => void) | null = null;
   private syncTimer: ReturnType<typeof setTimeout> | null = null;
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private readyPromise: Promise<void>;
@@ -155,22 +157,33 @@ class DeltaForceStore {
       if (typeof document !== 'undefined' && document.hidden) return;
       void this.pull();
     }, 5000);
+    // Retour sur l'onglet (ou l'appli) : on recharge tout de suite, sans attendre 5 s
+    if (typeof document !== 'undefined') {
+      this.onVisible = () => { if (!document.hidden) void this.pull(); };
+      document.addEventListener('visibilitychange', this.onVisible);
+    }
   }
 
   private stopPolling() {
     if (this.pollTimer) clearInterval(this.pollTimer);
     this.pollTimer = null;
+    if (this.onVisible && typeof document !== 'undefined') document.removeEventListener('visibilitychange', this.onVisible);
+    this.onVisible = null;
   }
 
   // Récupère les changements du serveur. Retourne true si la session est valide.
   private async pull(force = false): Promise<boolean> {
     if (!this.token) return false;
     const tokenAtStart = this.token;
+    const seqAtStart = this.mutationSeq;
     const r = await this.api(`state?since=${encodeURIComponent(this.since)}`);
     if (!r.ok) return false;
     // Déconnecté (ou reconnecté autrement) pendant la requête : on ignore la réponse
     if (this.token !== tokenAtStart) return false;
     if (!force && (this.dirty || this.syncing)) return true; // changements locaux en attente : on ignore ce tour
+    // Une modification locale (ex. avance envoyée) a eu lieu pendant la requête : la réponse est périmée,
+    // elle ne contient pas encore la nouvelle ligne et la ferait disparaître. On attend le prochain tour.
+    if (!force && this.mutationSeq !== seqAtStart) return true;
 
     const cols = r.data.collections || {};
     let changedAny = false;
@@ -257,6 +270,7 @@ class DeltaForceStore {
 
   // Appelé après chaque modification locale : envoie au serveur après un court délai
   private notify() {
+    this.mutationSeq++;
     if (this.token) {
       this.dirty = true;
       if (this.syncTimer) clearTimeout(this.syncTimer);
