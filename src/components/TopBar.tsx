@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Bell, Menu, Search, Shield, Users, Gamepad2, Calendar, FileText } from 'lucide-react';
 import { User } from '../types';
+import { useApp } from '../context/AppContext';
 import { db } from '../db/store';
 import { buildNotifications, markSeen, unreadCount, getSeen } from '../utils/notifications';
 import { beepIfEnabled } from '../utils/notifSound';
@@ -27,6 +28,7 @@ const norm = (s: string) => (s || '').toLowerCase().normalize('NFD').replace(/[\
 // Barre du haut fixe (clair) : recherche globale + cloche
 export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavigate, onOpenEmployeeCV }) => {
   const isAdmin = currentUser.role === 'admin';
+  const L = useApp().theme === 'light';
   const [, force] = useState(0);
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
@@ -112,14 +114,14 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
   const icon = (k: Hit['kind']) => (k === 'booster' ? Users : k === 'poste' || k === 'compte' ? Gamepad2 : k === 'date' ? Calendar : FileText);
 
   return (
-    <header className="sticky top-0 z-30 bg-white border-b border-slate-200 text-slate-800 shadow-sm">
+    <header className={`sticky top-0 z-30 ${L ? 'bg-white' : 'bg-[#0a111a]'} border-b ${L ? 'border-slate-200' : 'border-slate-800'} ${L ? 'text-slate-800' : 'text-slate-100'} shadow-sm`}>
       <div className="h-14 px-2.5 sm:px-4 flex items-center gap-2.5 sm:gap-4">
-        <button onClick={onOpenMenu} title="Ouvrir le menu" className="lg:hidden p-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 cursor-pointer">
-          <Menu className="w-5 h-5 text-emerald-600" />
+        <button onClick={onOpenMenu} title="Ouvrir le menu" className={`lg:hidden p-2 rounded-xl border ${L ? 'border-slate-200' : 'border-slate-700'} ${L ? 'bg-slate-50' : 'bg-[#111a26]'} ${L ? 'text-slate-700' : 'text-slate-300'} cursor-pointer`}>
+          <Menu className={`w-5 h-5 ${L ? 'text-emerald-600' : 'text-emerald-500'}`} />
         </button>
         <div className="flex items-center gap-1.5 shrink-0 lg:hidden">
-          <Shield className="w-4 h-4 text-emerald-600" />
-          <span className="font-tactical font-black text-sm tracking-wider text-emerald-700 hidden min-[420px]:inline">DELTA FORCE</span>
+          <Shield className={`w-4 h-4 ${L ? 'text-emerald-600' : 'text-emerald-500'}`} />
+          <span className={`font-tactical font-black text-sm tracking-wider ${L ? 'text-emerald-700' : 'text-emerald-400'} hidden min-[420px]:inline`}>DELTA FORCE</span>
         </div>
 
         <div ref={box} className="relative flex-1 max-w-xl">
@@ -130,21 +132,21 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
             onFocus={() => setOpen(true)}
             onKeyDown={e => { if (e.key === 'Enter' && hits[0]) pick(hits[0]); if (e.key === 'Escape') setOpen(false); }}
             placeholder={isAdmin ? 'Rechercher un poste, booster, compte, page…' : 'Rechercher un poste, une page…'}
-            className="w-full h-9 pl-9 pr-3 rounded-lg bg-slate-100 border border-slate-200 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 focus:bg-white"
+            className={`w-full h-9 pl-9 pr-3 rounded-lg ${L ? 'bg-slate-100' : 'bg-[#111a26]'} border ${L ? 'border-slate-200' : 'border-slate-700'} text-sm ${L ? 'text-slate-800' : 'text-slate-100'} placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 ${L ? 'focus:bg-white' : 'focus:bg-[#0f1722]'}`}
           />
           {open && q.trim() && (
-            <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden z-40">
+            <div className={`absolute left-0 right-0 top-full mt-1 ${L ? 'bg-white' : 'bg-[#0f1722]'} border ${L ? 'border-slate-200' : 'border-slate-700'} rounded-lg shadow-xl overflow-hidden z-40`}>
               {hits.length === 0 ? (
-                <div className="px-3 py-2.5 text-sm text-slate-500">Aucun résultat.</div>
+                <div className={`px-3 py-2.5 text-sm ${L ? 'text-slate-500' : 'text-slate-400'}`}>Aucun résultat.</div>
               ) : (
                 hits.map(h => {
                   const I = icon(h.kind);
                   return (
-                    <button key={h.id} onClick={() => pick(h)} className="w-full text-left px-3 py-2 flex items-center gap-2.5 hover:bg-emerald-50 cursor-pointer">
-                      <I className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <button key={h.id} onClick={() => pick(h)} className={`w-full text-left px-3 py-2 flex items-center gap-2.5 ${L ? 'hover:bg-emerald-50' : 'hover:bg-emerald-950/40'} cursor-pointer`}>
+                      <I className={`w-4 h-4 ${L ? 'text-emerald-600' : 'text-emerald-500'} shrink-0`} />
                       <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-semibold text-slate-800 truncate">{h.title}</span>
-                        <span className="block text-xs text-slate-500 truncate">{h.sub}</span>
+                        <span className={`block text-sm font-semibold ${L ? 'text-slate-800' : 'text-slate-100'} truncate`}>{h.title}</span>
+                        <span className={`block text-xs ${L ? 'text-slate-500' : 'text-slate-400'} truncate`}>{h.sub}</span>
                       </span>
                       <span className="text-[10px] font-mono text-slate-400 uppercase shrink-0">{KIND_LABEL[h.kind]}</span>
                     </button>
@@ -159,7 +161,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
           <button
             onClick={toggleBell}
             title="Notifications"
-            className="relative p-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 hover:bg-emerald-50 cursor-pointer"
+            className={`relative p-2 rounded-xl border ${L ? 'border-slate-200' : 'border-slate-700'} ${L ? 'bg-slate-50' : 'bg-[#111a26]'} ${L ? 'text-slate-700' : 'text-slate-300'} ${L ? 'hover:bg-emerald-50' : 'hover:bg-emerald-950/40'} cursor-pointer`}
           >
             <Bell className="w-5 h-5" />
             {count > 0 && (
@@ -169,22 +171,22 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
             )}
           </button>
           {bellOpen && (
-            <div className="absolute right-0 top-full mt-1.5 w-[min(92vw,22rem)] bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden z-40">
-              <div className="px-3 py-2 border-b border-slate-100 text-sm font-bold text-slate-800">Notifications</div>
+            <div className={`absolute right-0 top-full mt-1.5 w-[min(92vw,22rem)] ${L ? 'bg-white' : 'bg-[#0f1722]'} border ${L ? 'border-slate-200' : 'border-slate-700'} rounded-lg shadow-xl overflow-hidden z-40`}>
+              <div className={`px-3 py-2 border-b ${L ? 'border-slate-100' : 'border-slate-800'} text-sm font-bold ${L ? 'text-slate-800' : 'text-slate-100'}`}>Notifications</div>
               <div className="max-h-[60vh] overflow-y-auto">
                 {notifs.length === 0 ? (
-                  <div className="px-3 py-4 text-sm text-slate-500">Rien de nouveau.</div>
+                  <div className={`px-3 py-4 text-sm ${L ? 'text-slate-500' : 'text-slate-400'}`}>Rien de nouveau.</div>
                 ) : (
                   notifs.slice(0, 30).map(n => (
                     <button
                       key={n.id}
                       onClick={() => { setBellOpen(false); onNavigate(n.view); }}
-                      className="w-full text-left px-3 py-2.5 flex items-start gap-2.5 hover:bg-emerald-50 border-b border-slate-50 cursor-pointer"
+                      className={`w-full text-left px-3 py-2.5 flex items-start gap-2.5 ${L ? 'hover:bg-emerald-50' : 'hover:bg-emerald-950/40'} border-b ${L ? 'border-slate-50' : 'border-slate-800'} cursor-pointer`}
                     >
                       <span className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${n.tone === 'urgent' ? 'bg-red-500' : n.tone === 'bad' ? 'bg-orange-500' : n.tone === 'ok' ? 'bg-emerald-500' : 'bg-amber-400'}`} />
                       <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-semibold text-slate-800 truncate">{n.title}</span>
-                        {n.sub && <span className="block text-xs text-slate-500 break-words">{n.sub}</span>}
+                        <span className={`block text-sm font-semibold ${L ? 'text-slate-800' : 'text-slate-100'} truncate`}>{n.title}</span>
+                        {n.sub && <span className={`block text-xs ${L ? 'text-slate-500' : 'text-slate-400'} break-words`}>{n.sub}</span>}
                       </span>
                       {!isAdmin && !seen.includes(n.id) && <span className="text-[10px] font-bold text-red-600 shrink-0">NEUF</span>}
                     </button>
