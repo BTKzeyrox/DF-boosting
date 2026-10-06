@@ -11,6 +11,7 @@ import {
   Image,
   LogOut,
   Home,
+  ClipboardCheck,
   Settings,
   Swords,
   UserCheck,
@@ -22,6 +23,7 @@ import {
   Download,
 } from 'lucide-react';
 import { User } from '../types';
+import { countPending } from '../utils/pendingCount';
 import { useApp } from '../context/AppContext';
 
 interface SidebarProps {
@@ -73,6 +75,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
             label: 'Accueil',
             sublabel: 'Vue générale',
             icon: Home,
+          },
+          {
+            id: 'validations',
+            label: 'Validations',
+            sublabel: 'Tout ce qui attend',
+            icon: ClipboardCheck,
+            badge: countPending().total > 0 ? String(countPending().total) : undefined,
+            badgeColor: isLight
+              ? 'bg-amber-100 text-amber-800 border-amber-300'
+              : 'bg-amber-950 text-amber-300 border-amber-500/40',
           },
         ]
       : []),

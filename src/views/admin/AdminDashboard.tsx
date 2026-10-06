@@ -34,6 +34,7 @@ import { Avatar } from '../../components/Avatar';
 import { db } from '../../db/store';
 import { askConfirm } from '../../components/ConfirmModal';
 import { askReason } from '../../components/ReasonModal';
+import { countPending } from '../../utils/pendingCount';
 import { PostsGrid20 } from '../../components/PostsGrid20';
 import { formatScoreM, formatCurrencyAr } from '../../utils/formatUtils';
 import { generateDeltaForceScreenshot } from '../../utils/imageUtils';
@@ -54,7 +55,7 @@ interface AdminDashboardProps {
   onOpenEmployeeCV?: (employee: User) => void;
   onNavigateToEmployees?: () => void;
   onNavigateToCalendar?: () => void;
-  activeSubTab?: 'grid' | 'dashboard' | 'sessions' | 'security' | 'advances' | 'chat';
+  activeSubTab?: 'grid' | 'dashboard' | 'sessions' | 'security' | 'advances' | 'chat' | 'validations';
   onNavigateTab?: (tab: string) => void;
 }
 
@@ -74,6 +75,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [signups, setSignups] = useState<SignupRequest[]>(db.getSignupRequests());
   const [profileReqs, setProfileReqs] = useState<ProfileChangeRequest[]>(db.getProfileRequests().filter(x => x.status === 'pending'));
   const [profileErr, setProfileErr] = useState<string | null>(null);
+  const [advances, setAdvances] = useState(db.getAdvanceRequests());
+  const [valFilter, setValFilter] = useState<'all' | 'starts' | 'ends' | 'advances' | 'signups' | 'resets' | 'profiles'>('all');
 
   // Rejection modal state
   const [rejectingPostId, setRejectingPostId] = useState<string | null>(null);
@@ -126,6 +129,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setResets(db.getPasswordResets());
       setSignups(db.getSignupRequests());
       setProfileReqs(db.getProfileRequests().filter(x => x.status === 'pending'));
+      setAdvances(db.getAdvanceRequests());
     });
     return unsubscribe;
   }, []);
@@ -251,7 +255,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const pendingSubmissions = posts.filter(
     p => p.status === 'pending_start' || p.status === 'pending_end'
   );
+  const isValidations = activeSubTab === 'validations';
+  const pend = countPending();
+  const pendingAdvances = advances.filter(a => a.status === 'pending');
+  const showSubs = valFilter === 'all' || valFilter === 'starts' || valFilter === 'ends';
   const filteredSubmissions = pendingSubmissions.filter(p => {
+    if (isValidations) {
+      if (valFilter === 'starts') return p.status === 'pending_start';
+      if (valFilter === 'ends') return p.status === 'pending_end';
+      return true;
+    }
     if (submissionFilter === 'all') return true;
     return p.status === submissionFilter;
   });
@@ -684,8 +697,44 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   return (
     <div className="space-y-3 max-w-none mx-auto px-1.5 sm:px-3 lg:px-4 py-3">
       
+      {isValidations && (
+        <div className="bg-[#0f1722] border border-slate-800 rounded-xl p-3 sm:p-4 space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="font-tactical font-black text-white text-base sm:text-lg">Validations</h2>
+            <span className={`text-xs font-mono font-bold ${pend.total > 0 ? 'text-amber-400' : 'text-slate-400'}`}>{pend.total} en attente</span>
+          </div>
+          <div className="flex flex-wrap gap-1.5 text-xs font-mono">
+            {([
+              ['all', 'Tout', pend.total],
+              ['starts', 'Débuts', pend.starts],
+              ['ends', 'Fins', pend.ends],
+              ['advances', 'Avances', pend.advances],
+              ['signups', 'Inscriptions', pend.signups],
+              ['resets', 'Mots de passe', pend.resets],
+              ['profiles', 'Profils', pend.profiles],
+            ] as const).map(([key, label, n]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setValFilter(key)}
+                className={`px-3 py-1.5 rounded-lg border cursor-pointer transition-colors ${
+                  valFilter === key
+                    ? 'bg-emerald-600 border-emerald-500 text-white font-bold'
+                    : 'bg-[#141e2a] border-slate-700 text-slate-300 hover:text-white'
+                }`}
+              >
+                {label} {n > 0 ? `(${n})` : ''}
+              </button>
+            ))}
+          </div>
+          {pend.total === 0 && <div className="text-sm text-slate-400 font-mono">Rien à valider.</div>}
+        </div>
+      )}
+
+      {isValidations && (
+        <>
       {/* Inscriptions de nouveaux boosters en attente */}
-      {signups.length > 0 && (
+      {(valFilter === 'all' || valFilter === 'signups') && signups.length > 0 && (
         <div className="bg-[#0d1a14] border-2 border-emerald-500 p-3 sm:p-4 space-y-3">
           <div className="flex items-center gap-2">
             <UserPlus className="w-5 h-5 text-emerald-400 shrink-0" />
@@ -732,7 +781,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       )}
 
       {/* URGENT : demandes de nouveau mot de passe */}
-      {resets.length > 0 && (
+      {(valFilter === 'all' || valFilter === 'resets') && resets.length > 0 && (
         <div className="bg-[#1a0d0d] border-2 border-red-500 p-3 sm:p-4 space-y-3">
           <div className="flex items-center gap-2">
             <KeyRound className="w-5 h-5 text-red-400 shrink-0" />
@@ -778,7 +827,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       )}
 
       {/* Modifications de profil à valider */}
-      {profileReqs.length > 0 && (
+      {(valFilter === 'all' || valFilter === 'profiles') && profileReqs.length > 0 && (
         <div className="bg-[#1a150a] border-2 border-amber-500 p-3 sm:p-4 space-y-3">
           <h3 className="font-tactical font-black text-white text-sm sm:text-base">
             {profileReqs.length} modification{profileReqs.length > 1 ? 's' : ''} de profil à valider
@@ -846,6 +895,55 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
       )}
 
+        </>
+      )}
+
+      {isValidations && (valFilter === 'all' || valFilter === 'advances') && pendingAdvances.length > 0 && (
+        <div className="bg-[#1a150a] border-2 border-amber-500 p-3 sm:p-4 space-y-3">
+          <h3 className="font-tactical font-black text-white text-sm sm:text-base flex items-center gap-2">
+            <DollarSign className="w-5 h-5 text-amber-400 shrink-0" />
+            {pendingAdvances.length} avance{pendingAdvances.length > 1 ? 's' : ''} en attente
+          </h3>
+          {pendingAdvances.map(a => (
+            <div key={a.id} className="bg-[#0f1722] border border-slate-700 p-3 flex flex-col sm:flex-row sm:items-center gap-3">
+              <div className="min-w-0 flex-1 text-xs font-mono space-y-0.5">
+                <div className="text-white font-bold text-sm break-words">{a.employee_name}</div>
+                <div className="text-amber-300 font-bold">{formatCurrencyAr(a.amount_ar)}</div>
+                <div className="text-slate-300 break-words">{a.reason}</div>
+                <div className="text-slate-400">Demandé le {a.request_date}</div>
+              </div>
+              <div className="grid grid-cols-2 gap-2 sm:w-64 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => askReason({
+                    title: "Refuser l'avance ?",
+                    message: `${a.employee_name} verra ce motif.`,
+                    onSubmit: reason => { db.reviewAdvanceRequest(a.id, false, reason); },
+                  })}
+                  className="px-3 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-red-500/60 text-red-300 text-xs font-bold cursor-pointer"
+                >
+                  Refuser
+                </button>
+                <button
+                  type="button"
+                  onClick={() => askConfirm({
+                    title: "Accepter l'avance ?",
+                    message: `${formatCurrencyAr(a.amount_ar)} pour ${a.employee_name}.`,
+                    confirmLabel: 'Accepter',
+                    onConfirm: () => { db.reviewAdvanceRequest(a.id, true, "Validé par l'administrateur"); },
+                  })}
+                  className="px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold cursor-pointer"
+                >
+                  Accepter
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {!isValidations && (
+        <>
       {/* Cartes d'accueil cliquables */}
       {(() => {
         const today = new Date().toISOString().split('T')[0];
@@ -871,17 +969,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <div className="text-[10px] text-slate-500 font-mono mt-1">Voir les boosters</div>
             </button>
 
-            <button type="button" onClick={() => onNavigateTab && onNavigateTab('active-post')} className={cardCls}>
+            <button type="button" onClick={() => onNavigateTab && onNavigateTab('validations')} className={cardCls}>
               <div className="flex items-center justify-between text-slate-400 text-xs font-mono uppercase">
                 <span>Validations en attente</span>
                 <Clock className="w-4 h-4 text-amber-400" />
               </div>
-              <div className={`text-2xl font-black font-mono mt-1 ${pendingSubmissions.length > 0 ? 'text-amber-400' : 'text-white'}`}>
-                {pendingSubmissions.length}
+              <div className={`text-2xl font-black font-mono mt-1 ${pend.total > 0 ? 'text-amber-400' : 'text-white'}`}>
+                {pend.total}
               </div>
               <div className="text-[10px] text-slate-400 font-mono mt-1">
-                {pendingSubmissions.filter(p => p.status === 'pending_start').length} débuts ·{' '}
-                {pendingSubmissions.filter(p => p.status === 'pending_end').length} fins
+                {pend.starts} débuts · {pend.ends} fins · {pend.advances} avances
               </div>
             </button>
 
@@ -1018,6 +1115,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
       </div>
 
+        </>
+      )}
+
+      {isValidations && showSubs && (
+        <>
       {/* SECTION 2: SUBMISSIONS REVIEW PANEL */}
       <div className="bg-[#0f1722] border border-slate-800 rounded-xl shadow-xl overflow-hidden">
         <div className="bg-[#121c27] px-6 py-4 border-b border-slate-800 flex flex-wrap items-center justify-between gap-4">
@@ -1268,6 +1370,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
       </div>
 
+        </>
+      )}
+
+      {!isValidations && (
+        <>
       {/* SECTION 3: CONNECTED EMPLOYEES & LIVE FEED */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
@@ -1379,6 +1486,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
         </div>
       </div>
+
+        </>
+      )}
 
       {/* REJECT MODAL */}
       {rejectingPostId && (

@@ -290,6 +290,8 @@ export default function App() {
                       ? 'sessions'
                       : activeView === 'security'
                       ? 'security'
+                      : activeView === 'validations'
+                      ? 'validations'
                       : 'dashboard'
                   }
                   onNavigateTab={tab => setActiveView(tab)}

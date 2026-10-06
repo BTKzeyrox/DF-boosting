@@ -652,5 +652,18 @@
 "Accepter": "通过",
 "Shift souhaité :": "期望班次：",
 "Ce pseudo existe déjà. La demande a été supprimée.": "此账号已存在，申请已删除。",
-"Demande introuvable.": "未找到该申请。"
+"Demande introuvable.": "未找到该申请。",
+"Validations": "待审核",
+"Tout ce qui attend": "所有待处理",
+"Tout": "全部",
+"Débuts": "开始",
+"Fins": "结束",
+"Avances": "预支",
+"Inscriptions": "注册",
+"Mots de passe": "密码",
+"Profils": "资料",
+"Rien à valider.": "没有待审核事项。",
+"Refuser l'avance ?": "拒绝预支？",
+"Accepter l'avance ?": "接受预支？",
+"en attente": "待处理"
 }
