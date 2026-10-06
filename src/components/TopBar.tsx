@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Bell, Menu, Search, Shield, Users, Gamepad2, Calendar, FileText } from 'lucide-react';
 import { User } from '../types';
 import { db } from '../db/store';
-import { countPending } from '../utils/pendingCount';
+import { buildNotifications, markSeen, unreadCount, getSeen } from '../utils/notifications';
 
 interface TopBarProps {
   currentUser: User;
@@ -29,11 +29,16 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
   const [, force] = useState(0);
   const [q, setQ] = useState('');
   const [open, setOpen] = useState(false);
+  const [bellOpen, setBellOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
+  const bellBox = useRef<HTMLDivElement>(null);
 
   useEffect(() => db.subscribe(() => force(n => n + 1)), []);
   useEffect(() => {
-    const away = (e: MouseEvent) => { if (box.current && !box.current.contains(e.target as Node)) setOpen(false); };
+    const away = (e: MouseEvent) => {
+      if (box.current && !box.current.contains(e.target as Node)) setOpen(false);
+      if (bellBox.current && !bellBox.current.contains(e.target as Node)) setBellOpen(false);
+    };
     document.addEventListener('mousedown', away);
     return () => document.removeEventListener('mousedown', away);
   }, []);
@@ -82,7 +87,19 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
   }, [q, isAdmin, pages, home, onNavigate, onOpenEmployeeCV, db.getContracts().length, db.getUsers().length]);
 
   const pick = (h: Hit) => { setOpen(false); setQ(''); h.go(); };
-  const count = isAdmin ? countPending().total + db.getSecurityLogs().filter(l => !l.resolved).length : 0;
+  const notifs = buildNotifications(currentUser);
+  const count = unreadCount(currentUser, notifs);
+  const seen = getSeen(currentUser);
+  const toggleBell = () => setBellOpen(v => !v);
+  // Booster : les notifications passent en « vu » à la fermeture de la fenêtre
+  const wasOpen = useRef(false);
+  useEffect(() => {
+    if (wasOpen.current && !bellOpen && !isAdmin) {
+      markSeen(currentUser, buildNotifications(currentUser).map(n => n.id));
+      force(n => n + 1);
+    }
+    wasOpen.current = bellOpen;
+  }, [bellOpen]);
   const icon = (k: Hit['kind']) => (k === 'booster' ? Users : k === 'poste' || k === 'compte' ? Gamepad2 : k === 'date' ? Calendar : FileText);
 
   return (
@@ -129,11 +146,11 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
           )}
         </div>
 
-        {isAdmin && (
+        <div ref={bellBox} className="relative shrink-0">
           <button
-            onClick={() => onNavigate('validations')}
+            onClick={toggleBell}
             title="Notifications"
-            className="relative p-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 hover:bg-emerald-50 cursor-pointer shrink-0"
+            className="relative p-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 hover:bg-emerald-50 cursor-pointer"
           >
             <Bell className="w-5 h-5" />
             {count > 0 && (
@@ -142,7 +159,32 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
               </span>
             )}
           </button>
-        )}
+          {bellOpen && (
+            <div className="absolute right-0 top-full mt-1.5 w-[min(92vw,22rem)] bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden z-40">
+              <div className="px-3 py-2 border-b border-slate-100 text-sm font-bold text-slate-800">Notifications</div>
+              <div className="max-h-[60vh] overflow-y-auto">
+                {notifs.length === 0 ? (
+                  <div className="px-3 py-4 text-sm text-slate-500">Rien de nouveau.</div>
+                ) : (
+                  notifs.slice(0, 30).map(n => (
+                    <button
+                      key={n.id}
+                      onClick={() => { setBellOpen(false); onNavigate(n.view); }}
+                      className="w-full text-left px-3 py-2.5 flex items-start gap-2.5 hover:bg-emerald-50 border-b border-slate-50 cursor-pointer"
+                    >
+                      <span className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${n.tone === 'urgent' ? 'bg-red-500' : n.tone === 'bad' ? 'bg-orange-500' : n.tone === 'ok' ? 'bg-emerald-500' : 'bg-amber-400'}`} />
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-semibold text-slate-800 truncate">{n.title}</span>
+                        {n.sub && <span className="block text-xs text-slate-500 break-words">{n.sub}</span>}
+                      </span>
+                      {!isAdmin && !seen.includes(n.id) && <span className="text-[10px] font-bold text-red-600 shrink-0">NEUF</span>}
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );
