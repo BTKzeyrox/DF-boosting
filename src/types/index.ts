@@ -188,3 +188,14 @@ export interface SearchResultItem {
   employeeId?: string;
   clientName?: string;
 }
+
+// Demande d'inscription d'un nouveau booster (validée par l'admin)
+export interface SignupRequest {
+  id: string;
+  name: string;
+  username: string;
+  phone: string;
+  shift: ShiftType;
+  status: 'pending';
+  created_at: string;
+}

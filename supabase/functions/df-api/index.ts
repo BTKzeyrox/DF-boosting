@@ -19,6 +19,7 @@ const SB_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const sb = createClient(SB_URL, SB_KEY, { auth: { persistSession: false } });
 const SECRET = createHash("sha256").update("df-session:" + SB_KEY).digest("hex");
 const RESETS = "df_resets";
+const SIGNUPS = "df_signups";
 const PROFILE_REQ = "df_profile_requests";
 const BUCKET = "df-files";
 const OPEN_STATUS = ["pending_start", "active", "pending_end"];
@@ -134,9 +135,14 @@ async function state(req: any, res: any, me: any) {
     resets = (rs || []).map((r: any) => ({ ...r.data, password_hash: undefined })).filter((r: any) => r.status === 'pending');
     void maybePurge();
   }
+  let signups: any[] = [];
+  if (admin) {
+    const { data: sg } = await sb.from(SIGNUPS).select('data').order('updated_at', { ascending: true });
+    signups = (sg || []).map((r: any) => ({ ...r.data, password_hash: undefined })).filter((r: any) => r.status === 'pending');
+  }
   const { data: prs } = await sb.from(PROFILE_REQ).select('data').order('updated_at', { ascending: true });
   const profileRequests = (prs || []).map((r: any) => r.data).filter((r: any) => r.status === 'pending' && (admin || r.user_id === me.id));
-  return res.json({ serverTime, me, collections: out, resets, profileRequests });
+  return res.json({ serverTime, me, collections: out, resets, signups, profileRequests });
 }
 
 // ---------- sync (écriture) ----------
@@ -351,6 +357,64 @@ async function resetDecision(req: any, res: any, me: any) {
   return res.json({ ok: true });
 }
 
+// ---------- inscription (validation par l'admin) ----------
+async function signup(req: any, res: any) {
+  const b = req.body || {};
+  const name = String(b.name || '').trim();
+  const uname = String(b.username || '').trim().toLowerCase();
+  const password = String(b.password || '');
+  const phone = String(b.phone || '').trim();
+  const shift = b.shift === 'night' ? 'night' : 'day';
+  if (name.length < 2 || name.length > 60) return res.status(400).json({ error: 'Nom complet invalide (2 à 60 caractères).' });
+  if (!/^[a-z0-9_.-]{3,30}$/.test(uname)) return res.status(400).json({ error: 'Pseudo invalide (3 à 30 lettres ou chiffres, sans espace).' });
+  if (password.length < 6 || password.length > 100) return res.status(400).json({ error: 'Mot de passe : 6 caractères minimum.' });
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length > 3 && digits.length !== 12) return res.status(400).json({ error: 'Téléphone incomplet. Format : 261 34 12 345 67' });
+  const phoneClean = digits.length === 12 ? `${digits.slice(0, 3)} ${digits.slice(3, 5)} ${digits.slice(5, 7)} ${digits.slice(7, 10)} ${digits.slice(10, 12)}` : '';
+  await sleep(400);
+  const { data: cred } = await sb.from('df_credentials').select('user_id').eq('username', uname).maybeSingle();
+  if (cred) return res.status(409).json({ error: "Ce pseudo n'est pas disponible. Choisissez-en un autre." });
+  const { data: pend } = await sb.from(SIGNUPS).select('data');
+  const pending = (pend || []).map((r: any) => r.data).filter((r: any) => r.status === 'pending');
+  if (pending.length >= 50) return res.status(429).json({ error: 'Trop de demandes en attente. Réessayez plus tard.' });
+  if (pending.some((r: any) => r.username === uname)) return res.status(409).json({ error: "Ce pseudo n'est pas disponible. Choisissez-en un autre." });
+  if (phoneClean && pending.some((r: any) => r.phone === phoneClean)) return res.status(409).json({ error: 'Une demande avec ce numéro est déjà en attente.' });
+  const id = `signup-${uname}`;
+  await sb.from(SIGNUPS).upsert({
+    id,
+    data: { id, name, username: uname, phone: phoneClean, shift, password_hash: hashPw(password), status: 'pending', created_at: new Date().toISOString() },
+    updated_at: new Date().toISOString(),
+  });
+  return res.json({ ok: true });
+}
+
+async function signupDecision(req: any, res: any, me: any) {
+  if (me.role !== 'admin') return res.status(403).json({ error: 'Réservé à l\'administrateur.' });
+  const { id, approve } = req.body || {};
+  if (typeof id !== 'string') return res.status(400).json({ error: 'Demande invalide.' });
+  const { data: row } = await sb.from(SIGNUPS).select('data').eq('id', id).maybeSingle();
+  if (!row || row.data.status !== 'pending') return res.status(404).json({ error: 'Demande introuvable.' });
+  const r = row.data;
+  if (approve === true) {
+    const { data: dup } = await sb.from('df_credentials').select('user_id').eq('username', r.username).maybeSingle();
+    if (dup) {
+      await sb.from(SIGNUPS).delete().eq('id', id);
+      return res.status(409).json({ error: 'Ce pseudo existe déjà. La demande a été supprimée.' });
+    }
+    const uid = `user-emp-${Date.now()}`;
+    const rec = {
+      id: uid, name: r.name, username: r.username, phone: r.phone || '', role: 'employee', status: 'active',
+      shift: r.shift === 'night' ? 'night' : 'day', is_online: false, avatar_url: '', performance_badge: 'Standard',
+      total_score_boosted: 0, total_earnings_ar: 0, pending_advance_ar: 0,
+      cv_data: { joinedDate: new Date().toISOString().slice(0, 10) },
+    };
+    await sb.from(T.users).upsert({ id: uid, data: rec, updated_at: new Date().toISOString() });
+    await sb.from('df_credentials').insert({ user_id: uid, username: r.username, password_hash: r.password_hash });
+  }
+  await sb.from(SIGNUPS).delete().eq('id', id);
+  return res.json({ ok: true });
+}
+
 // ---------- fichiers (photos, pièces jointes) ----------
 const EXT: Record<string, string> = {
   'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif',
@@ -425,6 +489,7 @@ Deno.serve(async (request: Request) => {
   try {
     if (action === "login" && req.method === "POST") return await login(req, res);
     if (action === "forgot" && req.method === "POST") return await forgot(req, res);
+    if (action === "signup" && req.method === "POST") return await signup(req, res);
     const me = await authenticate(req);
     if (!me) return res.status(401).json({ error: "Session expirée. Reconnectez-vous." });
     if (action === "state" && req.method === "GET") return await state(req, res, me);
@@ -433,6 +498,7 @@ Deno.serve(async (request: Request) => {
     if (action === "set-password" && req.method === "POST") return await setPassword(req, res, me);
     if (action === "logout" && req.method === "POST") return await logout(req, res, me);
     if (action === "reset-decision" && req.method === "POST") return await resetDecision(req, res, me);
+    if (action === "signup-decision" && req.method === "POST") return await signupDecision(req, res, me);
     if (action === "upload" && req.method === "POST") return await upload(req, res, me);
     if (action === "profile-request" && req.method === "POST") return await profileRequest(req, res, me);
     if (action === "profile-decision" && req.method === "POST") return await profileDecision(req, res, me);

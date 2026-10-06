@@ -27,8 +27,9 @@ import {
   CircleDot,
   X,
   KeyRound,
+  UserPlus,
 } from 'lucide-react';
-import { User, PostSession, SecurityViolation, ClientContract, ShiftType, PasswordResetRequest, ProfileChangeRequest } from '../../types';
+import { User, PostSession, SecurityViolation, ClientContract, ShiftType, PasswordResetRequest, ProfileChangeRequest, SignupRequest } from '../../types';
 import { Avatar } from '../../components/Avatar';
 import { db } from '../../db/store';
 import { askConfirm } from '../../components/ConfirmModal';
@@ -69,6 +70,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [posts, setPosts] = useState<PostSession[]>(db.getPosts());
   const [securityLogs, setSecurityLogs] = useState<SecurityViolation[]>(db.getSecurityLogs());
   const [resets, setResets] = useState<PasswordResetRequest[]>(db.getPasswordResets());
+  const [signups, setSignups] = useState<SignupRequest[]>(db.getSignupRequests());
   const [profileReqs, setProfileReqs] = useState<ProfileChangeRequest[]>(db.getProfileRequests());
   const [profileErr, setProfileErr] = useState<string | null>(null);
 
@@ -121,6 +123,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setPosts(db.getPosts());
       setSecurityLogs(db.getSecurityLogs());
       setResets(db.getPasswordResets());
+      setSignups(db.getSignupRequests());
       setProfileReqs(db.getProfileRequests());
     });
     return unsubscribe;
@@ -680,6 +683,55 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   return (
     <div className="space-y-3 max-w-none mx-auto px-1.5 sm:px-3 lg:px-4 py-3">
       
+      {/* Inscriptions de nouveaux boosters en attente */}
+      {signups.length > 0 && (
+        <div className="bg-[#0d1a14] border-2 border-emerald-500 p-3 sm:p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <UserPlus className="w-5 h-5 text-emerald-400 shrink-0" />
+            <h3 className="font-tactical font-black text-white text-sm sm:text-base">
+              {signups.length} inscription{signups.length > 1 ? 's' : ''} en attente
+            </h3>
+          </div>
+          {signups.map(r => (
+            <div key={r.id} className="bg-[#0f1722] border border-slate-700 p-3 flex flex-col sm:flex-row sm:items-center gap-3">
+              <div className="min-w-0 flex-1 text-xs font-mono space-y-0.5">
+                <div className="text-white font-bold text-sm break-words">{r.name} <span className="text-slate-400 font-normal">(@{r.username})</span></div>
+                <div className="text-emerald-300 break-words">Téléphone : {r.phone || 'non renseigné'}</div>
+                <div className="text-slate-300">Shift souhaité : {r.shift === 'night' ? 'Nuit' : 'Jour'}</div>
+                <div className="text-slate-400">Demandé le {new Date(r.created_at).toLocaleString('fr-FR')}</div>
+              </div>
+              <div className="grid grid-cols-2 gap-2 sm:w-64 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => askConfirm({
+                    title: "Refuser l'inscription ?",
+                    message: `La demande de ${r.name} sera supprimée.`,
+                    confirmLabel: 'Refuser',
+                    danger: true,
+                    onConfirm: () => void db.decideSignup(r.id, false),
+                  })}
+                  className="px-3 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-red-500/60 text-red-300 text-xs font-bold cursor-pointer"
+                >
+                  Refuser
+                </button>
+                <button
+                  type="button"
+                  onClick={() => askConfirm({
+                    title: "Accepter l'inscription ?",
+                    message: `${r.name} pourra se connecter avec le pseudo et le mot de passe qu'il a choisis.`,
+                    confirmLabel: 'Accepter',
+                    onConfirm: () => void db.decideSignup(r.id, true).then(res => { if (!res.success) alert(res.error); }),
+                  })}
+                  className="px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold cursor-pointer"
+                >
+                  Accepter
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* URGENT : demandes de nouveau mot de passe */}
       {resets.length > 0 && (
         <div className="bg-[#1a0d0d] border-2 border-red-500 p-3 sm:p-4 space-y-3">

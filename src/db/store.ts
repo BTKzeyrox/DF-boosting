@@ -7,6 +7,7 @@ import {
   ShiftType,
   ClientContract,
   PasswordResetRequest,
+  SignupRequest,
   AppSettings,
   ProfileChangeRequest,
 } from '../types';
@@ -48,6 +49,7 @@ class DeltaForceStore {
   private messages: ChatMessage[] = [];
   private settings: AppSettings[] = [];
   private resets: PasswordResetRequest[] = [];
+  private signups: SignupRequest[] = [];
   private profileRequests: ProfileChangeRequest[] = [];
   private currentUser: User | null = null;
   private listeners: Set<() => void> = new Set();
@@ -112,6 +114,7 @@ class DeltaForceStore {
     this.since = '';
     this.dirty = false;
     this.resets = [];
+    this.signups = [];
     this.profileRequests = [];
     this.currentUser = null;
   }
@@ -211,6 +214,15 @@ class DeltaForceStore {
       const next = r.data.resets as PasswordResetRequest[];
       if (JSON.stringify(next) !== JSON.stringify(this.resets)) {
         this.resets = next;
+        changedAny = true;
+      }
+    }
+
+    // Demandes d'inscription (admin seulement)
+    if (Array.isArray(r.data.signups)) {
+      const next = r.data.signups as SignupRequest[];
+      if (JSON.stringify(next) !== JSON.stringify(this.signups)) {
+        this.signups = next;
         changedAny = true;
       }
     }
@@ -407,6 +419,27 @@ class DeltaForceStore {
   }
 
   // Demandes de nouveau mot de passe en attente (admin)
+  // Public : un futur booster demande un compte (validation par l'admin ensuite)
+  public async requestSignup(p: { name: string; username: string; password: string; phone: string; shift: string }): Promise<{ success: boolean; error?: string }> {
+    const r = await this.api('signup', { method: 'POST', body: JSON.stringify(p) });
+    return r.ok ? { success: true } : { success: false, error: r.data?.error || 'Envoi impossible. Réessayez.' };
+  }
+
+  public getSignupRequests(): SignupRequest[] {
+    return [...this.signups];
+  }
+
+  public async decideSignup(id: string, approve: boolean): Promise<{ success: boolean; error?: string }> {
+    const r = await this.api('signup-decision', { method: 'POST', body: JSON.stringify({ id, approve }) });
+    if (r.ok || r.status === 409 || r.status === 404) {
+      this.signups = this.signups.filter(x => x.id !== id);
+      this.since = '';
+      void this.pull(true);
+      this.emit();
+    }
+    return r.ok ? { success: true } : { success: false, error: r.data?.error || 'Erreur.' };
+  }
+
   public getPasswordResets(): PasswordResetRequest[] {
     return [...this.resets];
   }

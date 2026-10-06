@@ -174,7 +174,6 @@ export default function App() {
       }`}>
         <LoginView
           onLoginSuccess={handleLoginSuccess}
-          onOpenPosterLightbox={handleOpenPoster}
         />
         <LightboxModal
           isOpen={lightboxParams.isOpen}

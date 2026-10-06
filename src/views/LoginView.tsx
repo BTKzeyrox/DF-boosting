@@ -14,17 +14,15 @@ import {
 } from 'lucide-react';
 import { db } from '../db/store';
 import { User } from '../types';
-import { generateDeltaForcePoster } from '../utils/imageUtils';
+import { formatPhone, phoneIsEmpty, phoneIsComplete } from '../utils/phoneUtils';
 import { useApp } from '../context/AppContext';
 
 interface LoginViewProps {
   onLoginSuccess: (user: User) => void;
-  onOpenPosterLightbox?: (posterUrl: string) => void;
 }
 
 export const LoginView: React.FC<LoginViewProps> = ({
   onLoginSuccess,
-  onOpenPosterLightbox,
 }) => {
   const { theme, toggleTheme, lang, setLang, t } = useApp();
   const [username, setUsername] = useState('');
@@ -62,13 +60,47 @@ export const LoginView: React.FC<LoginViewProps> = ({
     setFgDone(true);
   };
 
-  const isLight = theme === 'light';
+  // Inscription (validée ensuite par l'admin)
+  const [signupOpen, setSignupOpen] = useState(false);
+  const [sgName, setSgName] = useState('');
+  const [sgUser, setSgUser] = useState('');
+  const [sgPhone, setSgPhone] = useState('261 ');
+  const [sgShift, setSgShift] = useState<'day' | 'night'>('day');
+  const [sgPass, setSgPass] = useState('');
+  const [sgPass2, setSgPass2] = useState('');
+  const [sgShow, setSgShow] = useState(false);
+  const [sgBusy, setSgBusy] = useState(false);
+  const [sgError, setSgError] = useState<string | null>(null);
+  const [sgDone, setSgDone] = useState(false);
 
-  const officialPosterUrl = generateDeltaForcePoster({
-    title: 'DELTA FORCE // HAWK OPS',
-    season: 'SAISON COMPÉTITIVE 2026',
-    subtitle: 'OPÉRATIONS TACTIQUES DE BOOSTING & SÉCURISATION',
-  });
+  const closeSignup = () => {
+    setSignupOpen(false);
+    setSgName(''); setSgUser(''); setSgPhone('261 '); setSgShift('day');
+    setSgPass(''); setSgPass2(''); setSgError(null); setSgDone(false); setSgShow(false);
+  };
+
+  const submitSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSgError(null);
+    if (sgName.trim().length < 2) return setSgError('Nom complet manquant.');
+    if (!/^[a-z0-9_.-]{3,30}$/.test(sgUser.trim().toLowerCase())) return setSgError('Pseudo invalide (3 à 30 lettres ou chiffres, sans espace).');
+    if (!phoneIsEmpty(sgPhone) && !phoneIsComplete(sgPhone)) return setSgError('Téléphone incomplet. Format : 261 34 12 345 67');
+    if (sgPass.length < 6) return setSgError('Mot de passe : 6 caractères minimum.');
+    if (sgPass !== sgPass2) return setSgError('Les deux mots de passe ne sont pas identiques.');
+    setSgBusy(true);
+    const r = await db.requestSignup({
+      name: sgName.trim(),
+      username: sgUser.trim().toLowerCase(),
+      password: sgPass,
+      phone: phoneIsEmpty(sgPhone) ? '' : sgPhone,
+      shift: sgShift,
+    });
+    setSgBusy(false);
+    if (!r.success) return setSgError(r.error || 'Envoi impossible. Réessaie.');
+    setSgDone(true);
+  };
+
+  const isLight = theme === 'light';
 
   const handleLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -158,11 +190,11 @@ export const LoginView: React.FC<LoginViewProps> = ({
         </div>
       </header>
 
-      {/* Main Center Area: Two Columns (Form + Poster Presentation) */}
-      <div className="my-auto py-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative z-10">
+      {/* Zone centrale : formulaire de connexion */}
+      <div className="my-auto py-8 flex justify-center relative z-10">
         
         {/* Left Column: Modern Login Card */}
-        <div className="lg:col-span-6 space-y-6">
+        <div className="w-full max-w-md space-y-6">
           <div className={`border rounded-2xl p-6 sm:p-8 shadow-2xl transition-all relative overflow-hidden ${
             isLight
               ? 'bg-white border-slate-200 text-slate-900 shadow-slate-200/50'
@@ -272,69 +304,20 @@ export const LoginView: React.FC<LoginViewProps> = ({
               Mot de passe oublié ?
             </button>
 
+            <div className="mt-4 pt-4 border-t border-slate-700/60 text-center text-xs font-mono">
+              <span className="opacity-70">Pas encore de compte ?</span>{' '}
+              <button
+                type="button"
+                onClick={() => setSignupOpen(true)}
+                className="text-emerald-500 hover:text-emerald-400 font-bold underline underline-offset-2 cursor-pointer"
+              >
+                Créer un compte
+              </button>
+            </div>
+
           </div>
         </div>
 
-        {/* Right Column: Tactical Poster Preview & Mission Rules */}
-        <div className="lg:col-span-6 space-y-4">
-          <div className={`border rounded-2xl p-5 shadow-xl space-y-4 ${
-            isLight ? 'bg-white border-slate-200 text-slate-800' : 'bg-[#0b131e]/80 border-slate-800 text-white'
-          }`}>
-            <div className="flex items-center justify-between">
-              <div>
-                <span className={`text-[10px] font-mono uppercase px-2 py-0.5 rounded border font-bold ${
-                  isLight
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                    : 'bg-emerald-950 text-emerald-400 border-emerald-500/30'
-                }`}>
-                  {t('nav_poster')}
-                </span>
-                <h3 className="font-tactical font-black text-base tracking-wide mt-1 bg-gradient-to-r from-emerald-500 to-teal-500 bg-clip-text text-transparent">
-                  {t('rate_rule')}
-                </h3>
-              </div>
-
-              {onOpenPosterLightbox && (
-                <button
-                  onClick={() => onOpenPosterLightbox(officialPosterUrl)}
-                  className="px-3 py-1.5 bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-600 text-xs font-mono font-bold rounded-lg border border-emerald-500/30 flex items-center gap-1.5 transition-colors cursor-pointer"
-                >
-                  <Eye className="w-3.5 h-3.5" />
-                  <span>Zoom HD</span>
-                </button>
-              )}
-            </div>
-
-            {/* Poster Thumbnail Clickable */}
-            <div
-              onClick={() => onOpenPosterLightbox && onOpenPosterLightbox(officialPosterUrl)}
-              className="relative rounded-xl overflow-hidden border border-slate-300 dark:border-slate-700 shadow-md cursor-pointer group bg-black max-h-[240px] flex items-center justify-center"
-            >
-              <img
-                src={officialPosterUrl}
-                alt="Delta Force Poster"
-                className="w-full h-auto object-cover group-hover:scale-105 transition-transform duration-300"
-              />
-            </div>
-
-            {/* Directives Summary with 1M Abbreviations */}
-            <div className="grid grid-cols-2 gap-3 text-xs font-mono">
-              <div className={`p-3 rounded-xl border ${
-                isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#080e16] border-slate-800'
-              }`}>
-                <span className="text-[10px] text-emerald-500 uppercase font-bold block">{t('pay_scale')}</span>
-                <span className="font-bold text-sm">1M = 1 000 Ar</span>
-              </div>
-
-              <div className={`p-3 rounded-xl border ${
-                isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#080d14] border-slate-800'
-              }`}>
-                <span className="text-[10px] text-amber-500 uppercase font-bold block">{t('matrix_badge')}</span>
-                <span className="font-bold text-sm">20 Postes (2x10)</span>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Bottom Footer */}
@@ -399,6 +382,86 @@ export const LoginView: React.FC<LoginViewProps> = ({
                   </button>
                   <button type="submit" disabled={fgBusy} className="px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-sm font-bold text-white cursor-pointer disabled:opacity-60">
                     {fgBusy ? 'Envoi…' : 'Envoyer'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {signupOpen && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm overflow-y-auto" onClick={closeSignup}>
+          <div className="w-full max-w-sm my-auto bg-[#0d1624] border border-slate-700 p-5 space-y-4 text-slate-100 text-xs font-mono" onClick={e => e.stopPropagation()}>
+            <div className="flex items-start justify-between gap-2">
+              <h3 className="font-tactical font-bold text-base text-white">Créer un compte booster</h3>
+              <button type="button" onClick={closeSignup} className="p-1 text-slate-400 hover:text-white" aria-label="Fermer">✕</button>
+            </div>
+            {sgDone ? (
+              <div className="space-y-4">
+                <div className="p-3 border border-emerald-600/60 bg-emerald-950/40 text-emerald-200 text-sm leading-relaxed">
+                  Demande envoyée. L'administrateur doit la valider avant que vous puissiez vous connecter.
+                </div>
+                <button type="button" onClick={closeSignup} className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm">
+                  Fermer
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={submitSignup} className="space-y-3">
+                {sgError && <div className="p-2.5 border border-red-500/60 bg-red-950/60 text-red-200 text-xs font-semibold">{sgError}</div>}
+                <div>
+                  <label className="block text-slate-300 uppercase mb-1">Nom complet</label>
+                  <input type="text" value={sgName} onChange={e => setSgName(e.target.value)} autoComplete="name"
+                    className="w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white focus:border-emerald-500" />
+                </div>
+                <div>
+                  <label className="block text-slate-300 uppercase mb-1">Pseudo</label>
+                  <input type="text" value={sgUser} onChange={e => setSgUser(e.target.value)}
+                    autoCapitalize="off" autoCorrect="off" spellCheck={false} autoComplete="username"
+                    className="w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white focus:border-emerald-500" />
+                </div>
+                <div>
+                  <label className="block text-slate-300 uppercase mb-1">Téléphone</label>
+                  <input type="tel" inputMode="numeric" maxLength={16} placeholder="261 34 12 345 67"
+                    value={sgPhone} onChange={e => setSgPhone(formatPhone(e.target.value))}
+                    className="w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white focus:border-emerald-500" />
+                </div>
+                <div>
+                  <label className="block text-slate-300 uppercase mb-1">Shift souhaité</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button type="button" onClick={() => setSgShift('day')}
+                      className={`flex items-center justify-center gap-1.5 py-2.5 border font-bold ${sgShift === 'day' ? 'bg-emerald-600 border-emerald-400 text-white' : 'bg-[#141e2a] border-slate-600 text-slate-300'}`}>
+                      <Sun className="w-4 h-4" /> Jour
+                    </button>
+                    <button type="button" onClick={() => setSgShift('night')}
+                      className={`flex items-center justify-center gap-1.5 py-2.5 border font-bold ${sgShift === 'night' ? 'bg-emerald-600 border-emerald-400 text-white' : 'bg-[#141e2a] border-slate-600 text-slate-300'}`}>
+                      <Moon className="w-4 h-4" /> Nuit
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-slate-300 uppercase mb-1">Mot de passe (6 caractères min.)</label>
+                  <div className="relative">
+                    <input type={sgShow ? 'text' : 'password'} value={sgPass} onChange={e => setSgPass(e.target.value)}
+                      autoCapitalize="off" autoCorrect="off" spellCheck={false} autoComplete="new-password"
+                      className="w-full bg-[#141e2a] border border-slate-600 p-2.5 pr-10 text-white focus:border-emerald-500" />
+                    <button type="button" onClick={() => setSgShow(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-emerald-500" aria-label="Afficher le mot de passe">
+                      {sgShow ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-slate-300 uppercase mb-1">Répète le mot de passe</label>
+                  <input type={sgShow ? 'text' : 'password'} value={sgPass2} onChange={e => setSgPass2(e.target.value)}
+                    autoCapitalize="off" autoCorrect="off" spellCheck={false} autoComplete="new-password"
+                    className="w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white focus:border-emerald-500" />
+                </div>
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <button type="button" onClick={closeSignup} className="px-3 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 font-semibold text-sm">
+                    Annuler
+                  </button>
+                  <button type="submit" disabled={sgBusy} className="px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm disabled:opacity-60">
+                    {sgBusy ? 'Envoi…' : 'Envoyer la demande'}
                   </button>
                 </div>
               </form>
