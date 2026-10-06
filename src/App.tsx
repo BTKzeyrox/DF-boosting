@@ -1,27 +1,30 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { User, PostSession } from './types';
 import { db } from './db/store';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
 import { WelcomeAnimation } from './components/WelcomeAnimation';
 import { LoginView } from './views/LoginView';
-import { AdminDashboard } from './views/admin/AdminDashboard';
-import { EmployeesManagement } from './views/admin/EmployeesManagement';
-import { BoosterPage } from './views/admin/BoosterPage';
-import { HistoryPage } from './views/admin/HistoryPage';
-import { EmployeeDashboard } from './views/employee/EmployeeDashboard';
-import { CalendarView } from './views/CalendarView';
-import { SettingsView } from './views/admin/SettingsView';
-import { ChatView } from './components/ChatView';
 import { LightboxModal } from './components/LightboxModal';
-import { CVViewerModal } from './components/CVViewerModal';
 import { ProfilePhotoGate } from './components/ProfilePhotoGate';
 import { ConfirmHost, askConfirm } from './components/ConfirmModal';
 import { ReasonHost } from './components/ReasonModal';
-import { setChineseMode } from './utils/zhTranslate';
-import { DayDetailsModal } from './components/DayDetailsModal';
 import { useApp } from './context/AppContext';
 import { LogoutTransition } from './components/LogoutTransition';
+
+let zhLoaded = false; // le module chinois a déjà été chargé (pour pouvoir revenir au français)
+
+// Pages chargées seulement quand on les ouvre (le premier affichage télécharge moins de code)
+const AdminDashboard = lazy(() => import('./views/admin/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
+const EmployeesManagement = lazy(() => import('./views/admin/EmployeesManagement').then(m => ({ default: m.EmployeesManagement })));
+const BoosterPage = lazy(() => import('./views/admin/BoosterPage').then(m => ({ default: m.BoosterPage })));
+const HistoryPage = lazy(() => import('./views/admin/HistoryPage').then(m => ({ default: m.HistoryPage })));
+const SettingsView = lazy(() => import('./views/admin/SettingsView').then(m => ({ default: m.SettingsView })));
+const EmployeeDashboard = lazy(() => import('./views/employee/EmployeeDashboard').then(m => ({ default: m.EmployeeDashboard })));
+const CalendarView = lazy(() => import('./views/CalendarView').then(m => ({ default: m.CalendarView })));
+const ChatView = lazy(() => import('./components/ChatView').then(m => ({ default: m.ChatView })));
+const CVViewerModal = lazy(() => import('./components/CVViewerModal').then(m => ({ default: m.CVViewerModal })));
+const DayDetailsModal = lazy(() => import('./components/DayDetailsModal').then(m => ({ default: m.DayDetailsModal })));
 
 export default function App() {
   const { theme, t, startLogoutAnimation, lang } = useApp();
@@ -30,8 +33,15 @@ export default function App() {
   const [isReady, setIsReady] = useState(false);
 
   // Langue chinoise : traduit tous les textes affichés (aucun mot français ne reste)
+  // Le dictionnaire (34 Ko) n'est téléchargé que si la langue chinoise est choisie
   useEffect(() => {
-    setChineseMode(lang === 'zh');
+    let off = false;
+    if (lang === 'zh' || zhLoaded) {
+      import('./utils/zhTranslate').then(m => { zhLoaded = true; if (!off) m.setChineseMode(lang === 'zh'); });
+    } else {
+      document.documentElement.lang = 'fr';
+    }
+    return () => { off = true; };
   }, [lang]);
   const [currentUser, setCurrentUser] = useState<User | null>(db.getCurrentUser());
   const [activeView, setActiveView] = useState<string>('grid');
@@ -244,6 +254,7 @@ export default function App() {
 
         {/* Dynamic Page Content Based on activeView */}
         <main className="flex-1 p-2 sm:p-3 lg:p-4 max-w-none w-full mx-auto">
+          <Suspense fallback={<div className="p-6 text-sm font-mono text-slate-400">Chargement…</div>}>
           {viewUser.role === 'admin' ? (
             /* ================= ADMIN SEPARATED PAGES ================= */
             <>
@@ -318,6 +329,7 @@ export default function App() {
               )}
             </>
           )}
+          </Suspense>
         </main>
       </div>
 
@@ -335,21 +347,29 @@ export default function App() {
       <ReasonHost />
 
       {/* PROFILE MODAL */}
-      <CVViewerModal
-        isOpen={cvModalUser !== null}
-        onClose={() => setCvModalUser(null)}
-        user={cvModalUser}
-      />
+      {cvModalUser !== null && (
+        <Suspense fallback={null}>
+          <CVViewerModal
+            isOpen={cvModalUser !== null}
+            onClose={() => setCvModalUser(null)}
+            user={cvModalUser}
+          />
+        </Suspense>
+      )}
 
       {/* DETAILED DAY MODAL (Pop-up on Calendar Click) */}
-      <DayDetailsModal
-        isOpen={dayDetailsState.isOpen}
-        dateStr={dayDetailsState.dateStr}
-        onClose={() => setDayDetailsState(prev => ({ ...prev, isOpen: false }))}
-        onBack={() => setDayDetailsState(prev => ({ ...prev, isOpen: false }))}
-        shifts={dayDetailsState.shifts}
-        onOpenProofLightbox={handleOpenProofLightbox}
-      />
+      {dayDetailsState.isOpen && (
+        <Suspense fallback={null}>
+          <DayDetailsModal
+            isOpen={dayDetailsState.isOpen}
+            dateStr={dayDetailsState.dateStr}
+            onClose={() => setDayDetailsState(prev => ({ ...prev, isOpen: false }))}
+            onBack={() => setDayDetailsState(prev => ({ ...prev, isOpen: false }))}
+            shifts={dayDetailsState.shifts}
+            onOpenProofLightbox={handleOpenProofLightbox}
+          />
+        </Suspense>
+      )}
 
 
       {/* LIGHTBOX MODAL - AT THE VERY BOTTOM SO IT OVERLAYS ALL OTHER MODALS WITHOUT CONFLICT */}
