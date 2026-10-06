@@ -1,6 +1,6 @@
 # HANDOVER.md — Passation du projet DF-boosting (à lire après AI_STUDIO.md)
 
-Dernière mise à jour : 2026-10-06 (soir). Prochain travail : section 3 ter. Propriétaire : BTK (français, mots simples, réponses courtes).
+Dernière mise à jour : 2026-10-06 (fin de session). Étape 1 faite (section 3 ter). Prochain travail : étape 2 (barre du haut) après les tests de BTK. Propriétaire : BTK (français, mots simples, réponses courtes).
 
 ## 0. Règles de travail avec BTK
 1. Faire un **recap court, puis attendre le mot « GO »** avant de modifier quoi que ce soit.
@@ -18,8 +18,8 @@ Dernière mise à jour : 2026-10-06 (soir). Prochain travail : section 3 ter. Pr
 | Serveur | Supabase Edge Function `df-api` (code : `supabase/functions/df-api/index.ts`, `verify_jwt` désactivé) |
 | Base | Supabase, projet « Replay » (id `ljorjzrxkxqacmmkmqdx`), tables `df_users`, `df_posts`, `df_contracts`, `df_security_logs`, `df_advances`, `df_messages`, `df_credentials`, + `df_settings` (Réglages), `df_resets` (mots de passe oubliés), `df_profile_requests` (modifs de profil). Fonction SQL `df_rename_employee`. Bucket Storage public `df-files` (10 Mo max) |
 | Porte d'entrée du site | `src/db/store.ts` (constante `API_BASE`, synchro toutes les 5 s) |
-| Serveur déployé | `df-api` **version 5** au dernier contrôle (routes : login, forgot, state, sync, create-user, set-password, logout, reset-decision, upload, profile-request, profile-decision, signup, signup-decision). Vérifier la version réelle avec `list_edge_functions` avant tout redéploiement |
-| Dernier état | `main` (dernier commit de fonctionnalité : inscription des boosters validée par l'admin, `4b20c8b`) (la branche `design` n'est plus utilisée) |
+| Serveur déployé | `df-api` **version 6** annoncée par le commit `4202d90` (motif de rejet obligatoire) ; non revérifiée dans cette session. Version 5 au contrôle précédent (routes : login, forgot, state, sync, create-user, set-password, logout, reset-decision, upload, profile-request, profile-decision, signup, signup-decision). Vérifier la version réelle avec `list_edge_functions` avant tout redéploiement |
+| Dernier état | `main` (dernier commit de fonctionnalité : `3eda6db`, Accueil admin + grille fusionnés ; étape 1 de la section 3 ter terminée) (la branche `design` n'est plus utilisée) |
 
 ## 2. Fait jusqu'ici
 - Connexion pseudo + mot de passe (scrypt) ; comptes `admin`, `kiot`, `toki` (mots de passe : demander à BTK).
@@ -45,16 +45,18 @@ Tout est poussé sur `main` et déployé côté serveur. **Rien n'a été testé
 4. Les liens Storage sont publics (noms aléatoires, non listables) : acceptable pour l'instant, à durcir (liens signés) si des preuves sensibles y passent.
 5. Les anciennes photos en base64 déjà dans `df_posts` ne sont pas migrées (la base ne contient plus que les données de démo sans photos).
 
-## 3 ter. PROCHAINE SESSION : liste demandée par BTK le 2026-10-06 (pas encore commencée, attendre son « GO »)
-Ordre proposé : étape 1, puis 2, puis 3. Un changement testé à la fois. Les phrases de l'interface doivent être courtes, sans blabla.
+## 3 ter. Liste demandée par BTK le 2026-10-06 : étape 1 FAITE, étapes 2 et 3 à faire
+Ordre : étape 1 (faite), puis 2, puis 3. Un changement testé à la fois (BTK dit « GO » entre chaque). Les phrases de l'interface doivent être courtes, sans blabla. **Rien de l'étape 1 n'a été testé à l'écran** (on ne voit pas l'écran de BTK) : seuls `tsc` et `npm run build` ont été vérifiés avant chaque push.
 
-**Étape 1 : pages et validations**
-1. **Bug avances** : le booster envoie une demande d'avance, elle n'apparaît pas chez l'admin. Diagnostic déjà fait : la base n'a aucune vraie demande (9 avances, toutes `demo`), le code d'envoi (`submitAdvanceRequest`) et la route serveur (`sync`, collection `advances`) semblent corrects à la lecture. La liste admin n'existe que dans `EmployeesManagement.tsx` (section « Demandes d'Avances »), sans alerte sur l'Accueil. **Test serveur fait le 2026-10-06 (compte de test créé puis supprimé, base propre)** : un booster envoie une avance par `sync` → le serveur répond `ok`, la ligne est bien dans `df_advances`, et l'admin la reçoit dans `state` (id + détail). **Le serveur n'est donc pas en cause : le défaut est côté site (navigateur).** Pistes à vérifier en priorité : (a) la liste admin est tout en bas de la page Employés, sous le tableau, sans alerte ni compteur ailleurs → l'admin ne la voit pas ; (b) `pull()` de `store.ts` : une réponse du serveur arrivée juste après l'envoi, mais calculée avant, peut retirer localement l'avance fraîchement créée (filtre sur `ids`) ; (c) `startPolling` ne tire rien quand l'onglet est caché (`document.hidden`) : au retour sur l'onglet, faire un `pull()` immédiat. À faire : corriger (b) et (c), et afficher les avances dans la nouvelle page Validations avec un compteur dans la cloche.
-2. **Formulaire de motif de rejet** : tout rejet (début/fin de session, avance, inscription, profil, mot de passe) demande un motif écrit, visible ensuite par le booster.
-3. **Fusionner Accueil admin et grille des postes** en une seule page.
-4. **Chaque section sur sa propre page** (pas de blocs mélangés).
-5. **Page Validations** : tous les types de validation (débuts, fins, avances, inscriptions, mots de passe oubliés, modifications de profil) avec filtres.
-6. **Radar sécurité sur sa propre page**, séparé du reste.
+**Étape 1 : pages et validations (FAIT, poussé sur `main`)**
+1. **Bug avances** : `37f50cb` (une réponse serveur périmée ne retire plus l'avance envoyée ; synchro immédiate au retour sur l'onglet) + `2539482` (pastille ambre d'avances en attente dans la barre du haut). Les avances sont aussi dans la page Validations. Le serveur n'était pas en cause. **À tester par BTK** : booster envoie une avance, l'admin la voit (pastille + Validations + page Avances).
+2. **Motif de rejet** : `4202d90` (inscription, profil, mot de passe, avance ; le booster voit le motif ; `df-api` v6). Le rejet d'un début/fin de session a aussi un champ motif (`rejectPost`, `rejection_reason`) : présent dans le code, non testé.
+3. **Accueil admin + grille fusionnés** : `3eda6db`. L'Accueil = 4 cartes cliquables + grille des 20 postes (même fenêtre de gestion de poste). L'entrée « Grille » a disparu du menu admin (le menu booster ne change pas). Dans `AdminDashboard.tsx`, la branche `grid`/`dashboard` affiche `homeCards` puis `PostsGrid20`.
+4. **Une section par page** : `8110821`. Employés (`EmployeesManagement`, prop `section="employees"`) ≠ Avances (même composant, `section="advances"`) ; Suivi des Sessions = boosters en ligne + flux en direct ; Accueil = cartes + grille. Le sous-titre du menu « Suivi des Sessions » dit encore « Contrôle & validations » (et son chinois) : à corriger avec l'accord de BTK.
+5. **Page Validations** : `ce86682`. Onglet « Validations » du menu admin (`activeView 'validations'`), puces de filtre avec compteurs (Tout, Débuts, Fins, Avances, Inscriptions, Mots de passe, Profils). Compteur commun : `src/utils/pendingCount.ts` (`countPending()`), utilisé par la cloche de la barre du haut, le menu et la carte de l'Accueil.
+6. **Radar sécurité sur sa page** : `b40de5a`. Onglet « Surveillance » ; plus sur l'Accueil ; la pastille rouge de la barre du haut l'ouvre.
+
+**Tests à faire par BTK (étape 1)** : chaque page du menu admin montre son propre contenu ; Accueil (cartes + grille, clic sur un poste, valider/refuser/assigner) ; Validations (chaque puce, accepter/refuser avance avec motif, inscription, mot de passe, profil) ; pastille ambre et chiffre ; Surveillance avec une vraie alerte ; mode booster (grille inchangée) ; téléphone.
 
 **Étape 2 : barre du haut fixe**
 7. En-tête fixe, positif (clair), avec **recherche globale** (suggestions intelligentes : postes, boosters, comptes clients, pages) et, à côté, l'**icône notification**.
@@ -64,10 +66,9 @@ Ordre proposé : étape 1, puis 2, puis 3. Un changement testé à la fois. Les 
 **Étape 3 : vitesse**
 10. Le site est trop lent, surtout à l'ajout des preuves : doit être fluide sur téléphone bas de gamme comme haut de gamme. Pistes : compression des photos avant l'envoi avec barre de progression (`compressProofImage` existe déjà), découper le gros fichier JavaScript (alerte Vite > 500 Ko), moins de rechargements (synchro toutes les 5 s, `JSON.stringify` à chaque diff), éviter les rendus inutiles des 20 cartes.
 
-**Déjà fait, ne pas refaire** : inscription des boosters validée par l'admin ; affiche officielle retirée de la page de connexion.
+**Déjà fait, ne pas refaire** : inscription des boosters validée par l'admin ; affiche officielle retirée de la page de connexion et du site (`75f5448`) ; texte « 1M = 1 000 Ar » retiré de la page de connexion et pied de page centré (`4aad56d`).
 
-**Deux petites corrections proposées et acceptées dans le principe** (attendre le GO) :
-- Page de connexion : retirer le texte « 1M = 1 000 Ar » écrit en dur (le prix est réglable dans Réglages, et le texte est visible par tout le monde avant connexion).
+**Deux petites corrections proposées et acceptées dans le principe** (attendre le GO ; la 1re est déjà faite) :
 - Inscription : limiter le spam (aujourd'hui 50 demandes en attente maximum, un robot peut bloquer les vraies inscriptions) : limite par jour et par numéro de téléphone.
 
 ## 4. Calcul d'espace (plan gratuit Supabase : 500 Mo base, 1 Go fichiers, 5 Go transfert/mois, pause après 1 semaine sans activité)
