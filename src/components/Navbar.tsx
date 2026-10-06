@@ -146,6 +146,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const isAdmin = currentUser.role === 'admin';
   const securityLogs = db.getSecurityLogs();
   const unreadViolations = securityLogs.filter(l => !l.resolved);
+  const pendingAdvances = isAdmin ? db.getAdvanceRequests().filter(a => a.status === 'pending') : [];
 
   return (
     <header className="sticky top-0 z-40 bg-[#0b1118]/95 backdrop-blur border-b border-slate-800 text-slate-100 shadow-md">
@@ -344,6 +345,21 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </div>
               )}
             </div>
+
+            {/* Avances en attente (Admin only) */}
+            {isAdmin && pendingAdvances.length > 0 && (
+              <button
+                onClick={() => {
+                  onNavigate('employees');
+                  setTimeout(() => document.getElementById('advances-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
+                }}
+                title="Avances en attente"
+                className="p-1.5 sm:px-2.5 sm:py-1.5 bg-amber-950/80 border border-amber-600 text-amber-300 rounded-lg text-xs font-mono flex items-center gap-1 cursor-pointer"
+              >
+                <DollarSign className="w-4 h-4 text-amber-400" />
+                <span>{pendingAdvances.length}</span>
+              </button>
+            )}
 
             {/* Security Alerts (Admin only) */}
             {isAdmin && unreadViolations.length > 0 && (

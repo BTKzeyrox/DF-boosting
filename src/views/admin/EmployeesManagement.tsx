@@ -498,7 +498,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
       </div>
 
       {/* SECTION: SALARY ADVANCE APPROVALS (DMD d'avance) */}
-      <div className="bg-[#0f1722] border border-slate-800 rounded-xl p-4 sm:p-6 shadow-xl">
+      <div id="advances-section" className="bg-[#0f1722] border border-slate-800 rounded-xl p-4 sm:p-6 shadow-xl">
         <h3 className="font-tactical font-bold text-white text-base flex items-center gap-2 mb-2">
           <DollarSign className="w-5 h-5 text-amber-400" />
           Demandes d'Avances sur Salaire en Attente ({pendingAdvances.length})
