@@ -12,6 +12,7 @@ import {
   LogOut,
   Home,
   ClipboardCheck,
+  History,
   Settings,
   Swords,
   UserCheck,
@@ -87,6 +88,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
             badgeColor: isLight
               ? 'bg-amber-100 text-amber-800 border-amber-300'
               : 'bg-amber-950 text-amber-300 border-amber-500/40',
+          },
+          {
+            id: 'history',
+            label: 'Historique',
+            sublabel: 'Avances et demandes',
+            icon: History,
           },
         ]
       : []),

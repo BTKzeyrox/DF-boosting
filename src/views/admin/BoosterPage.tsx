@@ -83,7 +83,7 @@ export const BoosterPage: React.FC<Props> = ({ userId, onBack, onGo, onOpenCV })
           <button className={link} onClick={() => onOpenCV(u)}><IdCard className="w-4 h-4 text-emerald-400 shrink-0" />Profil complet</button>
           <button className={link} onClick={() => onGo('calendar')}><Calendar className="w-4 h-4 text-emerald-400 shrink-0" />Son calendrier</button>
           <button className={link} onClick={() => onGo('chat')}><MessageSquare className="w-4 h-4 text-emerald-400 shrink-0" />Messagerie privée</button>
-          <button className={link} onClick={() => onGo('advances')}><DollarSign className="w-4 h-4 text-amber-400 shrink-0" />Ses avances{pendingAdv.length > 0 ? ` (${pendingAdv.length} en attente)` : ''}</button>
+          <button className={link} onClick={() => onGo('history')}><DollarSign className="w-4 h-4 text-amber-400 shrink-0" />Son historique (avances, demandes){pendingAdv.length > 0 ? ` (${pendingAdv.length} en attente)` : ''}</button>
           <button className={link} onClick={() => onGo(current.some(p => p.status !== 'active') ? 'validations' : 'dashboard')}><Gamepad2 className="w-4 h-4 text-emerald-400 shrink-0" />Postes{current.length > 0 ? ` (${current.length} en cours)` : ''}</button>
           <button className={link} onClick={() => onGo('security')}><ShieldAlert className="w-4 h-4 text-red-400 shrink-0" />Sécurité{alerts.length > 0 ? ` (${alerts.length} alerte${alerts.length > 1 ? 's' : ''})` : ''}</button>
         </div>

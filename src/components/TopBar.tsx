@@ -51,7 +51,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
     () =>
       isAdmin
         ? [
-            ['dashboard', 'Accueil'], ['validations', 'Validations'], ['security', 'Surveillance'], ['employees', 'Boosters'],
+            ['dashboard', 'Accueil'], ['validations', 'Validations'], ['history', 'Historique'], ['security', 'Surveillance'], ['employees', 'Boosters'],
             ['advances', 'Avances sur salaire'], ['active-post', 'Suivi des sessions'], ['chat', 'Messagerie'],
             ['calendar', 'Calendrier'], ['settings', 'Réglages'],
           ]

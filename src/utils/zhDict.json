@@ -665,5 +665,17 @@
 "Rien à valider.": "没有待审核事项。",
 "Refuser l'avance ?": "拒绝预支？",
 "Accepter l'avance ?": "接受预支？",
-"en attente": "待处理"
+"en attente": "待处理",
+"Historique": "历史记录",
+"Avances et demandes": "预支和申请",
+"Effacer les filtres": "清除筛选",
+"Tous les statuts": "所有状态",
+"Tous les boosters": "所有代练",
+"Toute la période": "全部时间",
+"7 derniers jours": "最近7天",
+"30 derniers jours": "最近30天",
+"Accepté": "已接受",
+"Refusé": "已拒绝",
+"Aucun résultat.": "没有结果。",
+"Son historique (avances, demandes)": "历史记录（预支、申请）"
 }

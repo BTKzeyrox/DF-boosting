@@ -8,6 +8,7 @@ import { LoginView } from './views/LoginView';
 import { AdminDashboard } from './views/admin/AdminDashboard';
 import { EmployeesManagement } from './views/admin/EmployeesManagement';
 import { BoosterPage } from './views/admin/BoosterPage';
+import { HistoryPage } from './views/admin/HistoryPage';
 import { EmployeeDashboard } from './views/employee/EmployeeDashboard';
 import { CalendarView } from './views/CalendarView';
 import { SettingsView } from './views/admin/SettingsView';
@@ -252,6 +253,8 @@ export default function App() {
                 <EmployeesManagement onOpenEmployeeCV={handleOpenEmployeeCV} />
               ) : activeView === 'advances' ? (
                 <EmployeesManagement section="advances" onOpenEmployeeCV={handleOpenEmployeeCV} />
+              ) : activeView === 'history' ? (
+                <HistoryPage initialBoosterId={focusBoosterId || undefined} />
               ) : activeView === 'booster' && focusBoosterId ? (
                 <BoosterPage
                   userId={focusBoosterId}
