@@ -1,6 +1,6 @@
 # HANDOVER.md — Passation du projet DF-boosting (à lire après AI_STUDIO.md)
 
-Dernière mise à jour : 2026-10-06. Propriétaire : BTK (français, mots simples, réponses courtes).
+Dernière mise à jour : 2026-10-06 (soir). Prochain travail : section 3 ter. Propriétaire : BTK (français, mots simples, réponses courtes).
 
 ## 0. Règles de travail avec BTK
 1. Faire un **recap court, puis attendre le mot « GO »** avant de modifier quoi que ce soit.
@@ -42,6 +42,31 @@ Tout est poussé sur `main` et déployé côté serveur. **Rien n'a été testé
 3. Les heures de shift et la tolérance servent au calendrier ; le reste de l'appli (shift « confiné » dans `EmployeeDashboard`) garde peut-être encore des heures codées en dur : à vérifier.
 4. Les liens Storage sont publics (noms aléatoires, non listables) : acceptable pour l'instant, à durcir (liens signés) si des preuves sensibles y passent.
 5. Les anciennes photos en base64 déjà dans `df_posts` ne sont pas migrées (la base ne contient plus que les données de démo sans photos).
+
+## 3 ter. PROCHAINE SESSION : liste demandée par BTK le 2026-10-06 (pas encore commencée, attendre son « GO »)
+Ordre proposé : étape 1, puis 2, puis 3. Un changement testé à la fois. Les phrases de l'interface doivent être courtes, sans blabla.
+
+**Étape 1 : pages et validations**
+1. **Bug avances** : le booster envoie une demande d'avance, elle n'apparaît pas chez l'admin. Diagnostic déjà fait : la base n'a aucune vraie demande (9 avances, toutes `demo`), le code d'envoi (`submitAdvanceRequest`) et la route serveur (`sync`, collection `advances`) semblent corrects à la lecture. La liste admin n'existe que dans `EmployeesManagement.tsx` (section « Demandes d'Avances »), sans alerte sur l'Accueil. À faire : **reproduire avec un vrai envoi** (compte admin fourni par BTK en session, jamais écrit ici), trouver la cause, puis afficher les avances dans la nouvelle page Validations.
+2. **Formulaire de motif de rejet** : tout rejet (début/fin de session, avance, inscription, profil, mot de passe) demande un motif écrit, visible ensuite par le booster.
+3. **Fusionner Accueil admin et grille des postes** en une seule page.
+4. **Chaque section sur sa propre page** (pas de blocs mélangés).
+5. **Page Validations** : tous les types de validation (débuts, fins, avances, inscriptions, mots de passe oubliés, modifications de profil) avec filtres.
+6. **Radar sécurité sur sa propre page**, séparé du reste.
+
+**Étape 2 : barre du haut fixe**
+7. En-tête fixe, positif (clair), avec **recherche globale** (suggestions intelligentes : postes, boosters, comptes clients, pages) et, à côté, l'**icône notification**.
+8. Clic sur la cloche : fenêtre avec toutes les notifications ; **chaque notification ouvre sa page**. Compteur sur la cloche.
+9. **Notification avec son** (bip court ; bouton pour le couper ; attention aux navigateurs qui bloquent le son avant le premier clic).
+
+**Étape 3 : vitesse**
+10. Le site est trop lent, surtout à l'ajout des preuves : doit être fluide sur téléphone bas de gamme comme haut de gamme. Pistes : compression des photos avant l'envoi avec barre de progression (`compressProofImage` existe déjà), découper le gros fichier JavaScript (alerte Vite > 500 Ko), moins de rechargements (synchro toutes les 5 s, `JSON.stringify` à chaque diff), éviter les rendus inutiles des 20 cartes.
+
+**Déjà fait, ne pas refaire** : inscription des boosters validée par l'admin ; affiche officielle retirée de la page de connexion.
+
+**Deux petites corrections proposées et acceptées dans le principe** (attendre le GO) :
+- Page de connexion : retirer le texte « 1M = 1 000 Ar » écrit en dur (le prix est réglable dans Réglages, et le texte est visible par tout le monde avant connexion).
+- Inscription : limiter le spam (aujourd'hui 50 demandes en attente maximum, un robot peut bloquer les vraies inscriptions) : limite par jour et par numéro de téléphone.
 
 ## 4. Calcul d'espace (plan gratuit Supabase : 500 Mo base, 1 Go fichiers, 5 Go transfert/mois, pause après 1 semaine sans activité)
 80 boosters × 10 Mo = 800 Mo/mois → base pleine en ~18 jours, fichiers en ~37 jours. Avec photos compressées + stockage fichiers + suppression à 30 jours : ~0,6 Go stable. Pour la production à 80 boosters, conseiller le plan Pro (25 $/mois : 8 Go base, 100 Go fichiers, sans pause).
