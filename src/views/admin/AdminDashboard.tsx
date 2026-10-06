@@ -276,12 +276,73 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const totalScoreBoosted = users.reduce((acc, u) => acc + (u.total_score_boosted || 0), 0);
   const totalPayrollDistributedAr = users.reduce((acc, u) => acc + (u.total_earnings_ar || 0), 0);
 
-  if (activeSubTab === 'grid') {
+  const homeCards = (() => {
+        const today = new Date().toISOString().split('T')[0];
+        const doneToday = posts.filter(p => p.status === 'completed' && p.date === today);
+        const scoreToday = doneToday.reduce(
+          (acc, p) => acc + Math.max(0, (p.final_score ?? p.current_score ?? 0) - (p.initial_score || 0)),
+          0
+        );
+        const price = db.getSettings().price_per_million;
+        const cardCls =
+          'text-left bg-[#0f1722] border border-slate-800 hover:border-emerald-500/60 rounded-xl p-4 shadow-xl transition-colors cursor-pointer w-full';
+        return (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+            <button type="button" onClick={() => onNavigateToEmployees && onNavigateToEmployees()} className={cardCls}>
+              <div className="flex items-center justify-between text-slate-400 text-xs font-mono uppercase">
+                <span>Boosters en ligne</span>
+                <Radio className="w-4 h-4 text-cyan-400 animate-pulse" />
+              </div>
+              <div className="text-2xl font-black font-mono text-cyan-400 mt-1">
+                {onlineEmployees.length}{' '}
+                <span className="text-sm font-normal text-slate-400">/ {users.filter(u => u.role === 'employee').length}</span>
+              </div>
+              <div className="text-[10px] text-slate-500 font-mono mt-1">Voir les boosters</div>
+            </button>
+
+            <button type="button" onClick={() => onNavigateTab && onNavigateTab('validations')} className={cardCls}>
+              <div className="flex items-center justify-between text-slate-400 text-xs font-mono uppercase">
+                <span>Validations en attente</span>
+                <Clock className="w-4 h-4 text-amber-400" />
+              </div>
+              <div className={`text-2xl font-black font-mono mt-1 ${pend.total > 0 ? 'text-amber-400' : 'text-white'}`}>
+                {pend.total}
+              </div>
+              <div className="text-[10px] text-slate-400 font-mono mt-1">
+                {pend.starts} débuts · {pend.ends} fins · {pend.advances} avances
+              </div>
+            </button>
+
+            <button type="button" onClick={() => onNavigateToCalendar && onNavigateToCalendar()} className={cardCls}>
+              <div className="flex items-center justify-between text-slate-400 text-xs font-mono uppercase">
+                <span>Score du jour</span>
+                <TrendingUp className="w-4 h-4 text-emerald-400" />
+              </div>
+              <div className="text-2xl font-black font-mono text-emerald-400 mt-1">{formatScoreM(scoreToday)}</div>
+              <div className="text-[10px] text-slate-500 font-mono mt-1">
+                {formatCurrencyAr(Math.round((scoreToday / 1000000) * price))} · 1M = {price.toLocaleString('fr-FR')} Ar
+              </div>
+            </button>
+
+            <button type="button" onClick={() => onNavigateToCalendar && onNavigateToCalendar()} className={cardCls}>
+              <div className="flex items-center justify-between text-slate-400 text-xs font-mono uppercase">
+                <span>Shifts complets</span>
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              </div>
+              <div className="text-2xl font-black font-mono text-white mt-1">{doneToday.length}</div>
+              <div className="text-[10px] text-slate-500 font-mono mt-1">Sessions finies aujourd'hui</div>
+            </button>
+          </div>
+        );
+      })();
+
+  if (activeSubTab === 'grid' || activeSubTab === 'dashboard') {
     const adminUser = currentUser || users.find(u => u.role === 'admin') || users[0];
     const availableBoosters = users.filter(u => u.role === 'employee' && u.status === 'active');
 
     return (
       <div className="space-y-3 max-w-none mx-auto px-1.5 sm:px-3 lg:px-4 py-3">
+        {activeSubTab === 'dashboard' && homeCards}
         <PostsGrid20
           currentUser={adminUser}
           allPosts={posts}
@@ -942,72 +1003,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
           ))}
         </div>
-      )}
-
-      {!isValidations && !isSecurity && !isSessions && (
-        <>
-      {/* Cartes d'accueil cliquables */}
-      {(() => {
-        const today = new Date().toISOString().split('T')[0];
-        const doneToday = posts.filter(p => p.status === 'completed' && p.date === today);
-        const scoreToday = doneToday.reduce(
-          (acc, p) => acc + Math.max(0, (p.final_score ?? p.current_score ?? 0) - (p.initial_score || 0)),
-          0
-        );
-        const price = db.getSettings().price_per_million;
-        const cardCls =
-          'text-left bg-[#0f1722] border border-slate-800 hover:border-emerald-500/60 rounded-xl p-4 shadow-xl transition-colors cursor-pointer w-full';
-        return (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-            <button type="button" onClick={() => onNavigateToEmployees && onNavigateToEmployees()} className={cardCls}>
-              <div className="flex items-center justify-between text-slate-400 text-xs font-mono uppercase">
-                <span>Boosters en ligne</span>
-                <Radio className="w-4 h-4 text-cyan-400 animate-pulse" />
-              </div>
-              <div className="text-2xl font-black font-mono text-cyan-400 mt-1">
-                {onlineEmployees.length}{' '}
-                <span className="text-sm font-normal text-slate-400">/ {users.filter(u => u.role === 'employee').length}</span>
-              </div>
-              <div className="text-[10px] text-slate-500 font-mono mt-1">Voir les boosters</div>
-            </button>
-
-            <button type="button" onClick={() => onNavigateTab && onNavigateTab('validations')} className={cardCls}>
-              <div className="flex items-center justify-between text-slate-400 text-xs font-mono uppercase">
-                <span>Validations en attente</span>
-                <Clock className="w-4 h-4 text-amber-400" />
-              </div>
-              <div className={`text-2xl font-black font-mono mt-1 ${pend.total > 0 ? 'text-amber-400' : 'text-white'}`}>
-                {pend.total}
-              </div>
-              <div className="text-[10px] text-slate-400 font-mono mt-1">
-                {pend.starts} débuts · {pend.ends} fins · {pend.advances} avances
-              </div>
-            </button>
-
-            <button type="button" onClick={() => onNavigateToCalendar && onNavigateToCalendar()} className={cardCls}>
-              <div className="flex items-center justify-between text-slate-400 text-xs font-mono uppercase">
-                <span>Score du jour</span>
-                <TrendingUp className="w-4 h-4 text-emerald-400" />
-              </div>
-              <div className="text-2xl font-black font-mono text-emerald-400 mt-1">{formatScoreM(scoreToday)}</div>
-              <div className="text-[10px] text-slate-500 font-mono mt-1">
-                {formatCurrencyAr(Math.round((scoreToday / 1000000) * price))} · 1M = {price.toLocaleString('fr-FR')} Ar
-              </div>
-            </button>
-
-            <button type="button" onClick={() => onNavigateToCalendar && onNavigateToCalendar()} className={cardCls}>
-              <div className="flex items-center justify-between text-slate-400 text-xs font-mono uppercase">
-                <span>Shifts complets</span>
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              </div>
-              <div className="text-2xl font-black font-mono text-white mt-1">{doneToday.length}</div>
-              <div className="text-[10px] text-slate-500 font-mono mt-1">Sessions finies aujourd'hui</div>
-            </button>
-          </div>
-        );
-      })()}
-
-        </>
       )}
 
       {isSecurity && (

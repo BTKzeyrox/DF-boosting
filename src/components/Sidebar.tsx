@@ -88,16 +88,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
           },
         ]
       : []),
-    {
-      id: 'grid',
-      label: t('nav_grid'),
-      sublabel: '',
-      icon: Layers,
-      badge: t('badge_posts_count'),
-      badgeColor: isLight
-        ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
-        : 'bg-emerald-950 text-emerald-300 border-emerald-500/40',
-    },
+    ...(isAdmin
+      ? []
+      : [
+          {
+            id: 'grid',
+            label: t('nav_grid'),
+            sublabel: '',
+            icon: Layers,
+            badge: t('badge_posts_count'),
+            badgeColor: isLight
+              ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+              : 'bg-emerald-950 text-emerald-300 border-emerald-500/40',
+          },
+        ]),
     {
       id: 'active-post',
       label: isAdmin ? t('nav_active_post_admin') : t('nav_active_post_user'),

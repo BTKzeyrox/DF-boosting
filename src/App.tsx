@@ -287,7 +287,7 @@ export default function App() {
                   onNavigateToCalendar={() => setActiveView('calendar')}
                   activeSubTab={
                     activeView === 'grid'
-                      ? 'grid'
+                      ? 'dashboard'
                       : activeView === 'active-post' || activeView === 'sessions'
                       ? 'sessions'
                       : activeView === 'security'
