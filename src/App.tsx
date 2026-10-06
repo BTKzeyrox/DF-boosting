@@ -16,7 +16,6 @@ import { ProfilePhotoGate } from './components/ProfilePhotoGate';
 import { ConfirmHost, askConfirm } from './components/ConfirmModal';
 import { setChineseMode } from './utils/zhTranslate';
 import { DayDetailsModal } from './components/DayDetailsModal';
-import { generateDeltaForcePoster } from './utils/imageUtils';
 import { Menu, Shield } from 'lucide-react';
 import { useApp } from './context/AppContext';
 import { LogoutTransition } from './components/LogoutTransition';
@@ -132,16 +131,6 @@ export default function App() {
     });
   };
 
-  // Open Official Poster
-  const handleOpenPoster = (customUrl?: string) => {
-    handleOpenProofLightbox({
-      imageUrl: customUrl || generateDeltaForcePoster(),
-      title: 'Affiche Officielle // Delta Force Hawk Ops 2026',
-      subtitle: 'Directives de Mission, Barème de Boost & Sécurité Petit Malin',
-      timestamp: new Date().toLocaleDateString('fr-FR'),
-    });
-  };
-
   // Open CV
   const handleOpenEmployeeCV = (employee: User) => {
     setCvModalUser(employee);
@@ -233,7 +222,6 @@ export default function App() {
         }}
         onLogout={requestLogout}
         onOpenEmployeeCV={handleOpenEmployeeCV}
-        onOpenPosterLightbox={handleOpenPoster}
         isOpenMobile={isMobileSidebarOpen}
         onCloseMobile={() => setIsMobileSidebarOpen(false)}
       />
@@ -286,13 +274,6 @@ export default function App() {
                 />
               ) : activeView === 'chat' ? (
                 <ChatView currentUser={viewUser} />
-              ) : activeView === 'poster' ? (
-                <EmployeeDashboard
-                  currentUser={viewUser}
-                  onOpenProofLightbox={handleOpenProofLightbox}
-                  activeSubTab="poster"
-                  onNavigateTab={tab => setActiveView(tab)}
-                />
               ) : (
                 /* Default Admin Views: 'grid' (20 postes 2x10), 'active-post' (sessions), 'dashboard', 'security' */
                 <AdminDashboard
@@ -325,12 +306,12 @@ export default function App() {
               ) : activeView === 'chat' ? (
                 <ChatView currentUser={viewUser} />
               ) : (
-                /* Employee Dashboard managing sub-pages: 'grid' (20 postes 2x10), 'active-post', 'advances', 'chat', 'poster' */
+                /* Employee Dashboard managing sub-pages: 'grid' (20 postes 2x10), 'active-post', 'advances', 'chat' */
                 <EmployeeDashboard
                   currentUser={viewUser}
                   onOpenProofLightbox={handleOpenProofLightbox}
                   activeSubTab={
-                    activeView === 'advances' || activeView === 'chat' || activeView === 'active-post' || activeView === 'poster'
+                    activeView === 'advances' || activeView === 'chat' || activeView === 'active-post'
                       ? (activeView as any)
                       : 'grid'
                   }

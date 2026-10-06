@@ -34,7 +34,7 @@ import {
 import { User, PostSession, ShiftType, ClientContract } from '../../types';
 import { db } from '../../db/store';
 import { askConfirm } from '../../components/ConfirmModal';
-import { generateDeltaForcePoster, compressProofImage } from '../../utils/imageUtils';
+import { compressProofImage } from '../../utils/imageUtils';
 import { AVAILABLE_CLIENT_CONTRACTS } from '../../db/initialData';
 import { PostsGrid20 } from '../../components/PostsGrid20';
 import { formatScoreM, formatCurrencyAr } from '../../utils/formatUtils';
@@ -52,8 +52,8 @@ interface EmployeeDashboardProps {
     operatorName?: string;
     timestamp?: string;
   }) => void;
-  activeSubTab?: 'grid' | 'active-post' | 'advances' | 'chat' | 'poster';
-  onNavigateTab?: (tab: 'grid' | 'active-post' | 'advances' | 'chat' | 'calendar' | 'poster') => void;
+  activeSubTab?: 'grid' | 'active-post' | 'advances' | 'chat';
+  onNavigateTab?: (tab: 'grid' | 'active-post' | 'advances' | 'chat' | 'calendar') => void;
 }
 
 export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
@@ -1092,93 +1092,6 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
               <Send className="w-3.5 h-3.5" />
             </button>
           </form>
-        </div>
-      )}
-
-      {/* SUB-VIEW 4: AFFICHE OFFICIELLE DÉDIÉE (POSTER HD) */}
-      {activeSubTab === 'poster' && (
-        <div className="space-y-4">
-          <div className="bg-[#0f1722] border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-6">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-mono uppercase bg-emerald-950 text-emerald-400 px-2 py-0.5 rounded border border-emerald-500/40 font-bold">
-                    AFFICHE OFFICIELLE // SAISON 2026
-                  </span>
-                  <span className="text-[10px] font-mono text-cyan-400">DELTA FORCE HAWK OPS</span>
-                </div>
-                <h3 className="font-tactical font-black text-xl text-white mt-1">
-                  BRIGADE OPÉRATIONNELLE DE BOOST &amp; EXTRACTION
-                </h3>
-                <p className="text-xs text-slate-400 font-mono">
-                  Affiche de déploiement officiel des boosters avec barèmes et consignes anti-triche.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  onClick={() =>
-                    onOpenProofLightbox({
-                      imageUrl: generateDeltaForcePoster(),
-                      title: "Affiche Officielle // Delta Force Hawk Ops 2026",
-                      subtitle: "Directives Tactiques & Barème Opérationnel de Boost",
-                      operatorName: currentUser.name,
-                      timestamp: new Date().toLocaleDateString('fr-FR')
-                    })
-                  }
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-tactical font-bold text-xs uppercase tracking-wider rounded-lg flex items-center gap-2 transition-colors cursor-pointer shadow"
-                >
-                  <Eye className="w-4 h-4" />
-                  <span>Agrandir en Plein Écran</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Poster High-Res Canvas Display */}
-            <div className="relative rounded-xl overflow-hidden border border-slate-700 shadow-2xl bg-black flex justify-center">
-              <img
-                src={generateDeltaForcePoster()}
-                alt="Affiche Officielle Delta Force Hawk Ops"
-                className="w-full max-w-4xl h-auto object-contain cursor-pointer hover:opacity-95 transition-opacity"
-                onClick={() =>
-                  onOpenProofLightbox({
-                    imageUrl: generateDeltaForcePoster(),
-                    title: "Affiche Officielle // Delta Force Hawk Ops 2026",
-                    subtitle: "Directives Tactiques & Barème Opérationnel de Boost",
-                    operatorName: currentUser.name,
-                    timestamp: new Date().toLocaleDateString('fr-FR')
-                  })
-                }
-              />
-            </div>
-
-            {/* Tactical Explanations under Poster */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs font-mono">
-              <div className="bg-[#121c27] p-4 rounded-xl border border-slate-800 space-y-1">
-                <div className="text-[10px] text-emerald-400 uppercase font-bold">1. Tarifs &amp; Gains Confidentiels</div>
-                <div className="text-white font-bold text-sm">Gestion Réservée Supervision</div>
-                <p className="text-slate-400 text-[11px]">
-                  La tarification client et la comptabilité globale sont strictement confidentielles.
-                </p>
-              </div>
-
-              <div className="bg-[#121c27] p-4 rounded-xl border border-slate-800 space-y-1">
-                <div className="text-[10px] text-amber-400 uppercase font-bold">2. Créneau de Nuit (+20%)</div>
-                <div className="text-white font-bold text-sm">20h00 à 06h00 (Shift Nuit)</div>
-                <p className="text-slate-400 text-[11px]">
-                  Bonus d'expérience et priorité de sélection pour les sessions nocturnes.
-                </p>
-              </div>
-
-              <div className="bg-[#121c27] p-4 rounded-xl border border-slate-800 space-y-1">
-                <div className="text-[10px] text-cyan-400 uppercase font-bold">3. Sécurité "Petit Malin"</div>
-                <div className="text-white font-bold text-sm">Anti-Multi-Poste &amp; Cohérence</div>
-                <p className="text-slate-400 text-[11px]">
-                  Contrôle obligatoire des captures d'écran de début et de fin de chaque session.
-                </p>
-              </div>
-            </div>
-          </div>
         </div>
       )}
 

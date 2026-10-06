@@ -30,7 +30,6 @@ interface SidebarProps {
   onNavigate: (view: string) => void;
   onLogout: () => void;
   onOpenEmployeeCV?: (employee: User) => void;
-  onOpenPosterLightbox?: () => void;
   isOpenMobile?: boolean;
   onCloseMobile?: () => void;
   canSwitchMode?: boolean; // vrai pour l'admin : peut passer en mode booster
@@ -44,7 +43,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onNavigate,
   onLogout,
   onOpenEmployeeCV,
-  onOpenPosterLightbox,
   isOpenMobile = false,
   onCloseMobile,
   canSwitchMode = false,
@@ -154,11 +152,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const handleItemClick = (id: string) => {
     if (id === 'profile' && onOpenEmployeeCV) {
       onOpenEmployeeCV(currentUser);
-      if (onCloseMobile) onCloseMobile();
-      return;
-    }
-    if (id === 'poster' && onOpenPosterLightbox) {
-      onNavigate('poster');
       if (onCloseMobile) onCloseMobile();
       return;
     }
