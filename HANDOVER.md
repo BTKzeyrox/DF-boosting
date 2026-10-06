@@ -18,8 +18,8 @@ Dernière mise à jour : 2026-10-06 (fin de session). Étapes 1 et 2 faites, ét
 | Serveur | Supabase Edge Function `df-api` (code : `supabase/functions/df-api/index.ts`, `verify_jwt` désactivé) |
 | Base | Supabase, projet « Replay » (id `ljorjzrxkxqacmmkmqdx`), tables `df_users`, `df_posts`, `df_contracts`, `df_security_logs`, `df_advances`, `df_messages`, `df_credentials`, + `df_settings` (Réglages), `df_resets` (mots de passe oubliés), `df_profile_requests` (modifs de profil). Fonction SQL `df_rename_employee`. Bucket Storage public `df-files` (10 Mo max) |
 | Porte d'entrée du site | `src/db/store.ts` (constante `API_BASE`, synchro toutes les 5 s) |
-| Serveur déployé | `df-api` **version 6** annoncée par le commit `4202d90` (motif de rejet obligatoire) ; non revérifiée dans cette session. Version 5 au contrôle précédent (routes : login, forgot, state, sync, create-user, set-password, logout, reset-decision, upload, profile-request, profile-decision, signup, signup-decision). Vérifier la version réelle avec `list_edge_functions` avant tout redéploiement |
-| Dernier état | `main` = commit `0fcc0a3` (étape 2 finie). Toujours builder un clone propre de `main` avant de conclure |
+| Serveur déployé | **`df-api` version 5** (vérifié avec `list_edge_functions` le 2026-10-06). Elle gère l'inscription (`signup`, `signup-decision`) mais **pas** les motifs de refus. La **v6** (motifs de refus pour inscription, mot de passe et profil, messages d'état à la connexion, purge des refus de plus de 30 jours) est dans le repo depuis le commit `4202d90` mais **n'est pas déployée**. Routes en ligne : login, forgot, state, sync, create-user, set-password, logout, reset-decision, upload, profile-request, profile-decision, signup, signup-decision. Toujours vérifier la version réelle avant tout redéploiement |
+| Dernier état | Lire `git log` : au 2026-10-06, `main` = commit `35b2b94` (barre du haut sombre en mode sombre). Toujours builder un clone propre de `main` avant de conclure |
 
 ## 2. Fait jusqu'ici
 - Connexion pseudo + mot de passe (scrypt) ; comptes `admin`, `kiot`, `toki` (mots de passe : demander à BTK).
@@ -53,11 +53,16 @@ Rien n'a été testé à l'écran par Claude (seulement build + tests de rendu l
 - Étape 2 : barre du haut fixe claire + recherche globale + cloche (`761454a`, `src/components/TopBar.tsx`), fenêtre de notifications (`a8e2fef`, `src/utils/notifications.ts`), bip + réglage du son dans Réglages, bouton Son pour le booster (`0fcc0a3`, `src/utils/notifSound.ts`).
 - Corrections : `e4aa7ee` (fichier `pendingCount.ts` oublié, le build Vercel échouait), `4aad56d` (texte « 1M = 1 000 Ar » retiré de la connexion).
 
-**PAS FAIT**
-1. Étape 3 : vitesse du site (photos de preuve lentes : compression + barre de progression avec `compressProofImage`, découper le gros JS > 500 Ko, moins de rechargements, éviter les rendus inutiles des 20 cartes).
-2. Anti-spam des inscriptions (limite par jour et par téléphone).
-3. Supprimer `src/components/Navbar.tsx` (code mort, jamais utilisé).
-4. Petits défauts : « 1 avances » (carte Accueil) ; sous-titre « Contrôle & validations » du menu Suivi des Sessions (et son chinois) ; clic sur une notification n'active pas le bon filtre ; son réglé par appareil (localStorage) ; pas de notification pour la messagerie.
+**PAS FAIT** (par ordre de priorité ; chaque point attend le « GO » de BTK)
+1. **Déployer `df-api` v6** (fichier du repo, `deploy_edge_function`, `verify_jwt` = false). Sans elle, quand l'admin refuse une inscription, un mot de passe ou un profil, le motif écrit est jeté et la demande est supprimée : le booster ne voit pas « Modification refusée : motif » et la personne qui s'est inscrite ne voit pas « Inscription refusée : motif » à la connexion. Après le déploiement, tester un refus avec un compte de test puis le supprimer. (Les motifs de refus de session et d'avance marchent déjà de bout en bout.)
+2. **Barre du haut sombre** : le code est corrigé dans `35b2b94`. BTK la voyait encore blanche : vérifier que ce commit est bien `READY` sur `df-boosting-5u7c`, puis lui demander de recharger la page (cache). Si elle reste blanche, chercher pourquoi (`TopBar.tsx`, classe `theme-light` / `theme-dark` posée par le contexte).
+3. **Fiche complète d'un booster depuis la recherche** : quand BTK cherche puis clique sur un booster dans la barre du haut, ouvrir une nouvelle page avec la liste complète de ses infos et des liens vers son profil, son calendrier, son poste en cours, ses avances, etc. Réutiliser les pages existantes (calendrier, avances, profil), ne pas les refaire.
+4. **Historique** des avances et des demandes à valider (débuts et fins de session, inscriptions, mots de passe, profils), avec **barre de recherche et filtres** (statut, booster, période, montant). Montrer le motif quand il y a un refus. À confirmer avec BTK : « ce qui ont besoin » = demandes à valider ?
+5. **Étape 3 : vitesse du site** : photos de preuve lentes (compression + barre de progression avec `compressProofImage`), découper le gros JS (> 500 Ko, `import()` dynamique), moins de rechargements, éviter les rendus inutiles des 20 cartes.
+6. **Anti-spam des inscriptions** : limite par jour et par téléphone (aujourd'hui seulement une demande en attente par pseudo et un plafond de demandes en attente).
+7. **Paie estimée fausse** dans le panneau de validation admin (`AdminDashboard.tsx` autour de la ligne 1184) : `Math.round((scoreDiff / 1000000) * 1000)` utilise 1 000 Ar fixe au lieu du prix du 1M des Réglages.
+8. **Code mort à supprimer** : `src/components/Navbar.tsx` (jamais importé, contient encore le texte « Affiche HD ») et la fonction `generateDeltaForcePoster` dans `src/utils/imageUtils.ts`.
+9. **Petits défauts** : « 1 avances » (carte Accueil) ; sous-titre « Contrôle & validations » du menu Suivi des Sessions (et son chinois) ; clic sur une notification n'active pas le bon filtre ; son réglé par appareil (localStorage) ; pas de notification pour la messagerie.
 
 **À TESTER PAR BTK**
 Déploiement Vercel = Ready ; pages admin (Accueil, Validations, Surveillance, Employés, Avances, Suivi) ; avance booster → pastille/cloche admin + bip ; refus avec motif ; son (Réglages, iPhone) ; téléphone.
@@ -65,7 +70,9 @@ Déploiement Vercel = Ready ; pages admin (Accueil, Validations, Surveillance, E
 **Pièges appris**
 - `git commit -am` n'ajoute pas les fichiers neufs : utiliser `git add -A`, puis builder un clone propre de `origin/main`.
 - Vérifier qu'un composant est vraiment utilisé (`grep -rn`) avant de le modifier.
-- Connecteur Vercel : 403 sur la liste des déploiements, vérification faite par BTK.
+- Connecteur Vercel : 403 sur la liste des déploiements dans une session ; dans une autre, `list_deployments` marche avec `projectId` + `sha`. Sinon BTK vérifie.
+- Connecteur Supabase : il peut renvoyer « FGA Authentication Error. Unauthorized » de façon passagère. Réessayer ; sinon BTK le reconnecte (Paramètres > Connecteurs).
+- Quand une autre session pousse en même temps, `git push` est refusé : `git fetch`, relire ce qui a changé, ne jamais forcer, ne pas refaire un travail déjà présent sur `main`.
 
 ## 4. Calcul d'espace (plan gratuit Supabase : 500 Mo base, 1 Go fichiers, 5 Go transfert/mois, pause après 1 semaine sans activité)
 80 boosters × 10 Mo = 800 Mo/mois → base pleine en ~18 jours, fichiers en ~37 jours. Avec photos compressées + stockage fichiers + suppression à 30 jours : ~0,6 Go stable. Pour la production à 80 boosters, conseiller le plan Pro (25 $/mois : 8 Go base, 100 Go fichiers, sans pause).
