@@ -1181,7 +1181,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 const isStart = post.status === 'pending_start';
                 const finalScore = post.final_score ?? post.current_score;
                 const scoreDiff = isStart ? 0 : Math.max(0, finalScore - post.initial_score);
-                const estimatedAr = Math.round((scoreDiff / 1000000) * 1000);
+                const estimatedAr = Math.round((scoreDiff / 1000000) * db.getSettings().price_per_million);
 
                 return (
                   <div
