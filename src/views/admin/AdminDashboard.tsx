@@ -256,6 +256,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     p => p.status === 'pending_start' || p.status === 'pending_end'
   );
   const isValidations = activeSubTab === 'validations';
+  const isSecurity = activeSubTab === 'security';
   const pend = countPending();
   const pendingAdvances = advances.filter(a => a.status === 'pending');
   const showSubs = valFilter === 'all' || valFilter === 'starts' || valFilter === 'ends';
@@ -942,7 +943,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
       )}
 
-      {!isValidations && (
+      {!isValidations && !isSecurity && (
         <>
       {/* Cartes d'accueil cliquables */}
       {(() => {
@@ -1005,6 +1006,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         );
       })()}
 
+        </>
+      )}
+
+      {isSecurity && (
+        <>
       {/* SECTION 1: ADMIN ALERT BOX ("Petit Malin" Security Log) */}
       <div className={`rounded-xl border shadow-2xl overflow-hidden transition-all duration-300 ${
         activeViolations.length > 0
@@ -1373,7 +1379,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </>
       )}
 
-      {!isValidations && (
+      {!isValidations && !isSecurity && (
         <>
       {/* SECTION 3: CONNECTED EMPLOYEES & LIVE FEED */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

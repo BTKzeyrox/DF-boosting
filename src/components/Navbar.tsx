@@ -363,7 +363,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Security Alerts (Admin only) */}
             {isAdmin && unreadViolations.length > 0 && (
               <button
-                onClick={() => onNavigate('dashboard')}
+                onClick={() => onNavigate('security')}
                 title="Alertes de sécurité"
                 className="p-1.5 sm:px-2.5 sm:py-1.5 bg-red-950/80 border border-red-600 text-red-300 rounded-lg text-xs font-mono flex items-center gap-1 animate-radar-alert"
               >
