@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { User, PostSession } from './types';
 import { db } from './db/store';
 import { Sidebar } from './components/Sidebar';
+import { TopBar } from './components/TopBar';
 import { WelcomeAnimation } from './components/WelcomeAnimation';
 import { LoginView } from './views/LoginView';
 import { AdminDashboard } from './views/admin/AdminDashboard';
@@ -17,7 +18,6 @@ import { ConfirmHost, askConfirm } from './components/ConfirmModal';
 import { ReasonHost } from './components/ReasonModal';
 import { setChineseMode } from './utils/zhTranslate';
 import { DayDetailsModal } from './components/DayDetailsModal';
-import { Menu, Shield } from 'lucide-react';
 import { useApp } from './context/AppContext';
 import { LogoutTransition } from './components/LogoutTransition';
 
@@ -230,34 +230,13 @@ export default function App() {
       {/* Main Container with Sidebar offset */}
       <div className="flex-1 lg:pl-72 flex flex-col min-h-screen">
         
-        {/* Mobile Top Header (with Menu Burger) */}
-        <header className={`lg:hidden p-3.5 border-b flex items-center justify-between sticky top-0 z-30 ${
-          isLight ? 'bg-white border-slate-200' : 'bg-[#0a111a] border-slate-800'
-        }`}>
-          <div className="flex items-center gap-2.5">
-            <button
-              onClick={() => setIsMobileSidebarOpen(true)}
-              className={`p-2 rounded-xl border transition-colors cursor-pointer ${
-                isLight ? 'bg-slate-100 border-slate-200 text-slate-700' : 'bg-[#111a26] border-slate-700 text-slate-300 hover:text-white'
-              }`}
-              title="Ouvrir le menu latéral"
-            >
-              <Menu className="w-5 h-5 text-emerald-500" />
-            </button>
-            <div className="flex items-center gap-2">
-              <Shield className="w-4 h-4 text-emerald-500" />
-              <span className="font-tactical font-black text-sm tracking-wider bg-gradient-to-r from-emerald-500 to-teal-500 bg-clip-text text-transparent">
-                DELTA FORCE
-              </span>
-            </div>
-          </div>
-
-          <div className={`text-[10px] font-mono px-2 py-0.5 rounded border font-bold ${
-            isLight ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-emerald-950/80 text-emerald-400 border-emerald-700/60'
-          }`}>
-            20 POSTES (2x10)
-          </div>
-        </header>
+        {/* Barre du haut fixe : recherche globale + cloche */}
+        <TopBar
+          currentUser={viewUser}
+          onOpenMenu={() => setIsMobileSidebarOpen(true)}
+          onNavigate={view => setActiveView(view)}
+          onOpenEmployeeCV={handleOpenEmployeeCV}
+        />
 
         {/* Dynamic Page Content Based on activeView */}
         <main className="flex-1 p-2 sm:p-3 lg:p-4 max-w-none w-full mx-auto">
