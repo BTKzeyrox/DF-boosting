@@ -10,7 +10,7 @@ interface TopBarProps {
   currentUser: User;
   onOpenMenu: () => void;
   onNavigate: (view: string) => void;
-  onOpenEmployeeCV: (employee: User) => void;
+  onOpenBooster: (userId: string) => void;
 }
 
 interface Hit {
@@ -26,7 +26,7 @@ const KIND_LABEL: Record<Hit['kind'], string> = { page: 'Page', poste: 'Poste', 
 const norm = (s: string) => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
 // Barre du haut fixe (clair) : recherche globale + cloche
-export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavigate, onOpenEmployeeCV }) => {
+export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavigate, onOpenBooster }) => {
   const isAdmin = currentUser.role === 'admin';
   const L = useApp().theme === 'light';
   const [, force] = useState(0);
@@ -69,7 +69,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
     if (isAdmin) {
       db.getUsers().filter(u => u.role === 'employee').forEach(u => {
         if (norm(u.name).includes(s) || norm(u.username).includes(s))
-          out.push({ id: `b-${u.id}`, title: u.name, sub: `@${u.username} · ${u.status === 'blocked' ? 'bloqué' : 'actif'}`, kind: 'booster', go: () => onOpenEmployeeCV(u) });
+          out.push({ id: `b-${u.id}`, title: u.name, sub: `@${u.username} · ${u.status === 'blocked' ? 'bloqué' : 'actif'}`, kind: 'booster', go: () => onOpenBooster(u.id) });
       });
     }
     const seenAcc = new Set<string>();
@@ -87,7 +87,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
       if (`${day}/${m}`.includes(s) || d.includes(s)) out.push({ id: `d-${d}`, title: `${day}/${m}/${y}`, sub: 'Voir au calendrier', kind: 'date', go: () => onNavigate('calendar') });
     });
     return out.slice(0, 8);
-  }, [q, isAdmin, pages, home, onNavigate, onOpenEmployeeCV, db.getContracts().length, db.getUsers().length]);
+  }, [q, isAdmin, pages, home, onNavigate, onOpenBooster, db.getContracts().length, db.getUsers().length]);
 
   const pick = (h: Hit) => { setOpen(false); setQ(''); h.go(); };
   const notifs = buildNotifications(currentUser);

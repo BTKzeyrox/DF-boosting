@@ -29,6 +29,7 @@ import { Avatar } from '../components/Avatar';
 interface CalendarViewProps {
   currentUser: User | null;
   onSelectDay: (dateStr: string, shifts: PostSession[]) => void;
+  initialUserId?: string;
 }
 
 type StatusFilter = 'all' | DayStatus;
@@ -94,7 +95,7 @@ function dayStatus(shifts: PostSession[], dateStr: string, firstActivity: string
   return 'no_post';
 }
 
-export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelectDay }) => {
+export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelectDay, initialUserId }) => {
   const now = new Date();
   const [year, setYear] = useState<number>(now.getFullYear());
   const [month, setMonth] = useState<number>(now.getMonth());
@@ -108,7 +109,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
   const [shiftFilter, setShiftFilter] = useState<ShiftFilter>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [clientFilter, setClientFilter] = useState<string>('all');
-  const [selectedId, setSelectedId] = useState<string>(currentUser?.role === 'employee' ? currentUser.id : '');
+  const [selectedId, setSelectedId] = useState<string>(currentUser?.role === 'employee' ? currentUser.id : initialUserId || '');
 
   useEffect(() => {
     return db.subscribe(() => {

@@ -19,11 +19,11 @@ const readAsDataUrl = (file: File): Promise<string> =>
 // Un « fil » = le groupe général (tous + admin) ou une conversation privée admin ↔ booster
 type Thread = { id: string; title: string; subtitle: string; user?: User };
 
-export const ChatView: React.FC<{ currentUser: User }> = ({ currentUser }) => {
+export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string }> = ({ currentUser, initialThreadId }) => {
   const isAdmin = currentUser.role === 'admin';
   const [messages, setMessages] = useState<ChatMessage[]>(db.getMessages());
   const [users, setUsers] = useState<User[]>(db.getUsers());
-  const [threadId, setThreadId] = useState<string>('all');
+  const [threadId, setThreadId] = useState<string>(initialThreadId || 'all');
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);

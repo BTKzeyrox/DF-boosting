@@ -7,6 +7,7 @@ import { WelcomeAnimation } from './components/WelcomeAnimation';
 import { LoginView } from './views/LoginView';
 import { AdminDashboard } from './views/admin/AdminDashboard';
 import { EmployeesManagement } from './views/admin/EmployeesManagement';
+import { BoosterPage } from './views/admin/BoosterPage';
 import { EmployeeDashboard } from './views/employee/EmployeeDashboard';
 import { CalendarView } from './views/CalendarView';
 import { SettingsView } from './views/admin/SettingsView';
@@ -33,6 +34,7 @@ export default function App() {
   }, [lang]);
   const [currentUser, setCurrentUser] = useState<User | null>(db.getCurrentUser());
   const [activeView, setActiveView] = useState<string>('grid');
+  const [focusBoosterId, setFocusBoosterId] = useState<string | null>(null); // booster ouvert depuis la recherche
   const [isWelcomeAnimating, setIsWelcomeAnimating] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   // Admin : peut jouer son propre rôle de booster, puis revenir en admin
@@ -219,6 +221,7 @@ export default function App() {
             setCvModalUser(currentUser);
             return;
           }
+          setFocusBoosterId(null);
           setActiveView(view);
         }}
         onLogout={requestLogout}
@@ -234,8 +237,8 @@ export default function App() {
         <TopBar
           currentUser={viewUser}
           onOpenMenu={() => setIsMobileSidebarOpen(true)}
-          onNavigate={view => setActiveView(view)}
-          onOpenEmployeeCV={handleOpenEmployeeCV}
+          onNavigate={view => { setFocusBoosterId(null); setActiveView(view); }}
+          onOpenBooster={id => { setFocusBoosterId(id); setActiveView('booster'); }}
         />
 
         {/* Dynamic Page Content Based on activeView */}
@@ -249,13 +252,21 @@ export default function App() {
                 <EmployeesManagement onOpenEmployeeCV={handleOpenEmployeeCV} />
               ) : activeView === 'advances' ? (
                 <EmployeesManagement section="advances" onOpenEmployeeCV={handleOpenEmployeeCV} />
+              ) : activeView === 'booster' && focusBoosterId ? (
+                <BoosterPage
+                  userId={focusBoosterId}
+                  onBack={() => { setFocusBoosterId(null); setActiveView('dashboard'); }}
+                  onGo={view => setActiveView(view)}
+                  onOpenCV={handleOpenEmployeeCV}
+                />
               ) : activeView === 'calendar' ? (
                 <CalendarView
                   currentUser={viewUser}
                   onSelectDay={handleSelectDay}
+                  initialUserId={focusBoosterId || undefined}
                 />
               ) : activeView === 'chat' ? (
-                <ChatView currentUser={viewUser} />
+                <ChatView currentUser={viewUser} initialThreadId={focusBoosterId || undefined} />
               ) : (
                 /* Default Admin Views: 'grid' (20 postes 2x10), 'active-post' (sessions), 'dashboard', 'security' */
                 <AdminDashboard
