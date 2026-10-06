@@ -321,11 +321,10 @@ export const LoginView: React.FC<LoginViewProps> = ({
       </div>
 
       {/* Bottom Footer */}
-      <footer className={`py-3 border-t flex flex-col sm:flex-row items-center justify-between gap-2 text-xs font-mono opacity-60 relative z-10 ${
+      <footer className={`py-3 border-t flex items-center justify-center text-xs font-mono opacity-60 relative z-10 ${
         isLight ? 'border-slate-200' : 'border-slate-800/80'
       }`}>
-        <div>Delta Force : Hawk Ops · 2026</div>
-        <div>1M = 1 000 Ar</div>
+        <div className="text-center">Delta Force : Hawk Ops · 2026</div>
       </footer>
 
       {forgotOpen && (
