@@ -30,6 +30,7 @@ import { formatScoreM } from '../../utils/formatUtils';
 
 interface EmployeesManagementProps {
   onOpenEmployeeCV: (employee: User) => void;
+  section?: 'employees' | 'advances';
 }
 
 // Téléphone : chiffres uniquement, format fixe « 261 34 12 345 67 »
@@ -48,6 +49,7 @@ const phoneIsComplete = (v: string) => phoneDigits(v).length === 12;
 
 export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
   onOpenEmployeeCV,
+  section = 'employees',
 }) => {
   const [users, setUsers] = useState<User[]>(db.getUsers());
   const [advances, setAdvances] = useState<SalaryAdvanceRequest[]>(db.getAdvanceRequests());
@@ -233,6 +235,8 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
   return (
     <div className="space-y-4 sm:space-y-3 max-w-none mx-auto px-1.5 sm:px-3 lg:px-4 py-4 sm:py-6">
       
+      {section === 'employees' && (
+        <>
       {/* Top Header & Actions */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-[#0f1722] p-4 sm:p-6 rounded-xl border border-slate-800 shadow-xl">
         <div className="flex items-center gap-3">
@@ -497,6 +501,11 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
         </div>
       </div>
 
+        </>
+      )}
+
+      {section === 'advances' && (
+        <>
       {/* SECTION: SALARY ADVANCE APPROVALS (DMD d'avance) */}
       <div id="advances-section" className="bg-[#0f1722] border border-slate-800 rounded-xl p-4 sm:p-6 shadow-xl">
         <h3 className="font-tactical font-bold text-white text-base flex items-center gap-2 mb-2">
@@ -552,6 +561,9 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
           </div>
         )}
       </div>
+
+        </>
+      )}
 
       {/* EDIT USER MODAL */}
       {editingUser && (

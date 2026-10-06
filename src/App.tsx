@@ -268,6 +268,8 @@ export default function App() {
                 <SettingsView />
               ) : activeView === 'employees' ? (
                 <EmployeesManagement onOpenEmployeeCV={handleOpenEmployeeCV} />
+              ) : activeView === 'advances' ? (
+                <EmployeesManagement section="advances" onOpenEmployeeCV={handleOpenEmployeeCV} />
               ) : activeView === 'calendar' ? (
                 <CalendarView
                   currentUser={viewUser}
