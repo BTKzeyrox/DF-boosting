@@ -137,7 +137,11 @@ class DeltaForceStore {
         },
       });
       const data = await res.json().catch(() => ({}));
-      if (res.status === 401 && this.token && path !== 'login') this.expireSession();
+      if (res.status === 401 && this.token && path !== 'login') {
+        // Déconnecté parce que le shift est fini (ou accès bloqué) : on garde le message pour la page de connexion
+        if (data?.code === 'shift' && data.error) { try { sessionStorage.setItem('df_login_notice', String(data.error)); } catch { /* ignore */ } }
+        this.expireSession();
+      }
       return { ok: res.ok, status: res.status, data };
     } catch {
       return { ok: false, status: 0, data: { error: 'Réseau indisponible.' } };
@@ -979,6 +983,16 @@ class DeltaForceStore {
   }
 
   // --- USER PROFILE & SECURITY CONTROLS ---
+  // Admin : accès d'un booster selon son shift (auto / toute heure / bloqué)
+  public setAccessMode(userId: string, mode: 'auto' | 'allow' | 'block'): { success: boolean } {
+    const user = this.users.find(u => u.id === userId);
+    if (!user || user.role !== 'employee') return { success: false };
+    if (mode === 'auto') delete user.access_mode;
+    else user.access_mode = mode;
+    this.notify();
+    return { success: true };
+  }
+
   public toggleUserBlock(userId: string): { success: boolean; newStatus: 'active' | 'blocked' } {
     const user = this.users.find(u => u.id === userId);
     if (!user) return { success: false, newStatus: 'active' };

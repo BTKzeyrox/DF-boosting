@@ -444,6 +444,24 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                       {/* Profile Actions: [ View CV ], [ Edit Info ], [ Block/Unblock ], [ Delete Profile ] */}
                       <td className="p-3 pr-4 sm:pr-6 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1.5">
+                          {/* Accès selon le shift : auto / toute heure / bloqué */}
+                          <select
+                            value={emp.access_mode || 'auto'}
+                            onChange={e => db.setAccessMode(emp.id, e.target.value as 'auto' | 'allow' | 'block')}
+                            className={`px-1.5 py-1 text-[11px] font-mono rounded border cursor-pointer focus:outline-none ${
+                              emp.access_mode === 'block'
+                                ? 'bg-red-950 text-red-300 border-red-800'
+                                : emp.access_mode === 'allow'
+                                ? 'bg-emerald-950 text-emerald-300 border-emerald-800'
+                                : 'bg-slate-800 text-slate-200 border-slate-600'
+                            }`}
+                            title="Accès selon l'heure du shift"
+                          >
+                            <option value="auto">Accès : shift</option>
+                            <option value="allow">Accès : toute heure</option>
+                            <option value="block">Accès : bloqué</option>
+                          </select>
+
                           {/* View CV button */}
                           <button
                             onClick={() => onOpenEmployeeCV(emp)}

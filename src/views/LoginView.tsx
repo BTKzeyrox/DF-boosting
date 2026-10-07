@@ -28,7 +28,16 @@ export const LoginView: React.FC<LoginViewProps> = ({
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(() => {
+    // Message laissé par une déconnexion (shift terminé, accès bloqué)
+    try {
+      const n = sessionStorage.getItem('df_login_notice');
+      if (n) sessionStorage.removeItem('df_login_notice');
+      return n;
+    } catch {
+      return null;
+    }
+  });
   const [isLoading, setIsLoading] = useState(false);
 
   // Mot de passe oublié

@@ -48,6 +48,7 @@ export interface User {
   status: UserStatus;
   shift: ShiftType; // 'day' (08:00 - 18:00) or 'night' (20:00 - 06:00)
   is_online: boolean;
+  access_mode?: 'auto' | 'allow' | 'block'; // accès selon le shift : auto (défaut), toute heure, bloqué
   avatar_url: string;
   phone: string;
   cv_url?: string;

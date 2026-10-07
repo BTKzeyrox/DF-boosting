@@ -82,6 +82,43 @@ const authenticate = async (req: any) => {
   return user as any;
 };
 
+// ---------- accès selon l'heure du shift (heure de Madagascar, UTC+3) ----------
+let stCache: { at: number; data: any } | null = null;
+const getSettings = async () => {
+  if (stCache && Date.now() - stCache.at < 60_000) return stCache.data;
+  const { data } = await sb.from(T.settings).select('data').eq('id', 'general').maybeSingle();
+  stCache = { at: Date.now(), data: data?.data || {} };
+  return stCache.data;
+};
+const toMin = (s: unknown, dflt: number) => {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(s || ''));
+  return m ? Number(m[1]) * 60 + Number(m[2]) : dflt;
+};
+// Vrai si l'heure `now` est dans le shift (la tolérance ouvre l'accès un peu avant le début ; le shift de nuit passe minuit)
+const inShiftWindow = (shift: 'day' | 'night', st: any, now: Date): boolean => {
+  const s = shift === 'night' ? toMin(st.night_shift_start, 20 * 60) : toMin(st.day_shift_start, 8 * 60);
+  const e = shift === 'night' ? toMin(st.night_shift_end, 6 * 60) : toMin(st.day_shift_end, 18 * 60);
+  const tol = Math.max(0, Number(st.late_tolerance_min) || 0);
+  const from = (s - tol + 1440) % 1440;
+  const m = (now.getUTCHours() * 60 + now.getUTCMinutes() + 180) % 1440;
+  return from <= e ? m >= from && m < e : m >= from || m < e;
+};
+// Booster : « auto » = seulement pendant son shift ; « allow » = toute heure ; « block » = jamais.
+// Une session en cours (début ou fin à valider) garde l'accès jusqu'à sa fin.
+async function shiftAccess(user: any): Promise<{ ok: boolean; message?: string }> {
+  if (user.role !== 'employee') return { ok: true };
+  if (user.access_mode === 'block') return { ok: false, message: "Ton accès est bloqué par l'administrateur." };
+  if (user.access_mode === 'allow') return { ok: true };
+  const st = await getSettings();
+  const shift: 'day' | 'night' = user.shift === 'night' ? 'night' : 'day';
+  if (inShiftWindow(shift, st, new Date())) return { ok: true };
+  const { data: open } = await sb.from(T.posts).select('id').eq('data->>employee_id', user.id).in('data->>status', OPEN_STATUS).limit(1);
+  if (open && open.length) return { ok: true };
+  const from = shift === 'night' ? st.night_shift_start || '20:00' : st.day_shift_start || '08:00';
+  const to = shift === 'night' ? st.night_shift_end || '06:00' : st.day_shift_end || '18:00';
+  return { ok: false, message: `Ton shift ${shift === 'night' ? 'de nuit' : 'de jour'} est de ${from} à ${to}. Reviens à ce moment.` };
+}
+
 // ---------- présence (en ligne, temps de connexion, file d'attente « sans poste ») ----------
 const dayOf = (d: Date) => new Date(d.getTime() + 3 * 3600 * 1000).toISOString().slice(0, 10); // jour à Madagascar (UTC+3)
 const ALIVE_MS = 5 * 60 * 1000;
@@ -159,6 +196,8 @@ async function login(req: any, res: any) {
   const user = await getUserRow(cred.user_id);
   if (!user) return res.status(401).json({ error: 'Compte introuvable.' });
   if (user.status === 'blocked') return res.status(403).json({ error: 'Compte bloqué par l\'administrateur.' });
+  const acc = await shiftAccess(user);
+  if (!acc.ok) return res.status(403).json({ error: acc.message, code: 'shift' });
 
   user.is_online = true;
   await sb.from(T.users).upsert({ id: user.id, data: user, updated_at: new Date().toISOString() });
@@ -679,6 +718,10 @@ Deno.serve(async (request: Request) => {
     if (action === "signup" && req.method === "POST") return await signup(req, res);
     const me = await authenticate(req);
     if (!me) return res.status(401).json({ error: "Session expirée. Reconnectez-vous." });
+    if (action !== "logout") {
+      const acc = await shiftAccess(me);
+      if (!acc.ok) return res.status(401).json({ error: acc.message, code: 'shift' });
+    }
     if (action === "state" && req.method === "GET") return await state(req, res, me);
     if (action === "sync" && req.method === "POST") return await sync(req, res, me);
     if (action === "create-user" && req.method === "POST") return await createUser(req, res, me);

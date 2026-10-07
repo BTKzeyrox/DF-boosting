@@ -752,5 +752,9 @@
 "Modifier le poste en attente": "修改待审核岗位",
 "Possible seulement avant la validation de l'admin.": "仅在管理员审核前可修改。",
 "Remplacer la capture (facultatif)": "替换截图（可选）",
-"Nouvelle photo prête.": "新照片已就绪。"
+"Nouvelle photo prête.": "新照片已就绪。",
+"Accès : shift": "权限：按班次",
+"Accès : toute heure": "权限：任何时间",
+"Accès : bloqué": "权限：已禁止",
+"Accès selon l'heure du shift": "按班次时间的登录权限"
 }
