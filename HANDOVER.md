@@ -55,13 +55,13 @@ Rien n'a été testé à l'écran par Claude (seulement build + tests de rendu l
 - Paie estimée du panneau de validation = prix du 1M des Réglages (`c344dd2`). JS principal 585 Ko → 300 Ko, pages chargées à la demande (`922c836`). Pastille « Photo en cours d'envoi » (`96da0e4`).
 - Corrections : `e4aa7ee` (fichier `pendingCount.ts` oublié, le build Vercel échouait), `4aad56d` (texte « 1M = 1 000 Ar » retiré de la connexion).
 
-**PAS FAIT** (par ordre de priorité ; chaque point attend le « GO » de BTK)
-1. **Tester `df-api` v6** : refuser une inscription, un mot de passe oublié et un profil avec motif ; le booster doit voir le motif (profil : sur sa page ; inscription et mot de passe : message à la connexion). Si cassé : retour arrière (voir « Serveur déployé »).
-2. **Barre du haut sombre** : corrigée dans `35b2b94`. Vérifier que le déploiement est READY et que BTK recharge la page (cache).
-5. **Étape 3 : vitesse du site** : photos de preuve lentes (compression + barre de progression avec `compressProofImage`), découper le gros JS (> 500 Ko, `import()` dynamique), moins de rechargements, éviter les rendus inutiles des 20 cartes.
-6. **Anti-spam des inscriptions** : limite par jour et par téléphone (aujourd'hui seulement une demande en attente par pseudo et un plafond de demandes en attente).
-8. **Code mort à supprimer** : `src/components/Navbar.tsx` (jamais importé, contient encore le texte « Affiche HD ») et la fonction `generateDeltaForcePoster` dans `src/utils/imageUtils.ts`.
-9. **Petits défauts** : « 1 avances » (carte Accueil) ; sous-titre « Contrôle & validations » du menu Suivi des Sessions (et son chinois) ; clic sur une notification n'active pas le bon filtre ; son réglé par appareil (localStorage) ; pas de notification pour la messagerie.
+**PAS FAIT** (chaque point attend le « GO » de BTK)
+1. **Tests de BTK à l'écran** : presque rien n'a été testé en vrai (voir « À TESTER »). Priorité avant le lancement avec de vraies données.
+2. **Sauvegarde** : bouton « Télécharger une sauvegarde » (fichier avec toutes les données) dans Réglages. Le plan Supabase gratuit ne garde probablement pas de sauvegarde récupérable (non vérifié).
+3. **Plan Supabase** : le projet est en plan gratuit (vérifié). 80 boosters connectés dépassent le quota d'appels (≈ 3,5 millions par mois à 20 s) et la place de la base (500 Mo ; les photos vont maintenant sur Cloudinary, voir plus haut). Décision de BTK : passer en plan Pro avant le lancement réel.
+4. **Rendus inutiles des 20/50 cartes de postes** (`PostsGrid20.tsx`) : non mesuré, non traité.
+5. **Son des notifications réglé par appareil** (localStorage) : choix volontaire, pas un bug.
+6. **Petits défauts connus** : aucun ouvert. Réglés : pluriels, filtres des notifications, sous-titre du menu, anti-spam, messagerie dans la cloche, `Navbar.tsx` et `generateDeltaForcePoster` supprimés.
 
 **À TESTER PAR BTK**
 Déploiement Vercel = Ready ; pages admin (Accueil, Validations, Surveillance, Employés, Avances, Suivi) ; avance booster → pastille/cloche admin + bip ; refus avec motif ; son (Réglages, iPhone) ; téléphone.
