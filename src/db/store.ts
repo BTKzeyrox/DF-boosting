@@ -10,6 +10,8 @@ import {
   SignupRequest,
   AppSettings,
   ProfileChangeRequest,
+  PresenceRow,
+  QueueInfo,
 } from '../types';
 import { AVAILABLE_CLIENT_CONTRACTS } from './initialData';
 
@@ -51,6 +53,8 @@ class DeltaForceStore {
   private resets: PasswordResetRequest[] = [];
   private signups: SignupRequest[] = [];
   private profileRequests: ProfileChangeRequest[] = [];
+  private presence: PresenceRow[] = []; // admin : tous les boosters
+  private myQueue: QueueInfo | null = null; // booster : sa place dans la file « sans poste »
   private currentUser: User | null = null;
   private listeners: Set<() => void> = new Set();
 
@@ -118,6 +122,8 @@ class DeltaForceStore {
     this.resets = [];
     this.signups = [];
     this.profileRequests = [];
+    this.presence = [];
+    this.myQueue = null;
     this.currentUser = null;
   }
 
@@ -156,7 +162,7 @@ class DeltaForceStore {
     this.pollTimer = setInterval(() => {
       if (typeof document !== 'undefined' && document.hidden) return;
       void this.pull();
-    }, 6000);
+    }, 20000);
     // Retour sur l'onglet (ou l'appli) : on recharge tout de suite, sans attendre 5 s
     if (typeof document !== 'undefined') {
       this.onVisible = () => { if (!document.hidden) void this.pull(); };
@@ -234,6 +240,16 @@ class DeltaForceStore {
         this.profileRequests = nextPr;
         changedAny = true;
       }
+    }
+
+    // Présence (admin : tous les boosters) et file d'attente (booster : sa place)
+    if (Array.isArray(r.data.presence)) {
+      const next = r.data.presence as PresenceRow[];
+      if (JSON.stringify(next) !== JSON.stringify(this.presence)) { this.presence = next; changedAny = true; }
+    }
+    if ('queue' in r.data && !Array.isArray(r.data.presence)) {
+      const next = (r.data.queue || null) as QueueInfo | null;
+      if (JSON.stringify(next) !== JSON.stringify(this.myQueue)) { this.myQueue = next; changedAny = true; }
     }
 
     // Demandes de mot de passe oublié (admin seulement)
@@ -466,6 +482,21 @@ class DeltaForceStore {
       this.emit();
     }
     return r.ok ? { success: true } : { success: false, error: r.data?.error || 'Erreur.' };
+  }
+
+  public getPresence(): PresenceRow[] {
+    return [...this.presence];
+  }
+
+  public getMyQueue(): QueueInfo | null {
+    return this.myQueue;
+  }
+
+  // Booster : « je n'ai pas de poste » (join = true) ou quitter la file (join = false)
+  public async setWaiting(join: boolean): Promise<{ success: boolean; error?: string }> {
+    const r = await this.api('queue', { method: 'POST', body: JSON.stringify({ join }) });
+    if (r.ok) await this.pull(true);
+    return r.ok ? { success: true } : { success: false, error: r.data?.error || 'Action impossible.' };
   }
 
   public getPasswordResets(): PasswordResetRequest[] {

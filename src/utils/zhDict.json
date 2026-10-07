@@ -733,5 +733,17 @@
 "modifié": "已修改",
 "· modifié": "· 已修改",
 "Actions": "操作",
-"Agrandir": "放大"
+"Agrandir": "放大",
+"En poste": "在岗",
+"Connecté sans poste": "在线无岗位",
+"Sans poste (en attente)": "无岗位（排队中）",
+"Hors ligne": "离线",
+"Pas de poste libre ? Prévenez l'admin.": "没有空闲岗位？请通知管理员。",
+"Quitter la file": "退出排队",
+"Je n'ai pas de poste": "我没有岗位",
+"On te prévient quand un poste se libère.": "有岗位空出时会通知你。",
+"Un poste est libre": "有岗位空闲了",
+"Connecté aujourd'hui :": "今日在线：",
+"attend depuis": "已等待",
+"Sans poste depuis": "无岗位已"
 }

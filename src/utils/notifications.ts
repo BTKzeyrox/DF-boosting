@@ -1,6 +1,7 @@
 import { db } from '../db/store';
 import { User } from '../types';
 import { formatCurrencyAr } from './formatUtils';
+import { getQueue, getFreePosts } from './presence';
 import type { ValFilter } from './navIntent';
 
 export interface Notif {
@@ -32,9 +33,19 @@ export const buildNotifications = (user: User): Notif[] => {
       out.push({ id: `rst-${r.id}`, title: r.name, sub: 'Mot de passe oublié (urgent)', view: 'validations', filter: 'resets', at: r.created_at, tone: 'urgent' }));
     db.getProfileRequests().filter(r => r.status === 'pending').forEach(r =>
       out.push({ id: `prf-${r.id}`, title: r.old.name, sub: 'Changement de profil à valider', view: 'validations', filter: 'profiles', at: r.created_at, tone: 'info' }));
+    // Boosters sans poste depuis 15 min, puis 30 min
+    getQueue(db.getUsers(), db.getPosts(), db.getPresence()).forEach(w => {
+      const lvl = w.minutes >= 30 ? 30 : w.minutes >= 15 ? 15 : 0;
+      if (lvl) out.push({ id: `wait-${w.user.id}-${lvl}-${w.waitingSince}`, title: w.user.name, sub: `Sans poste depuis ${lvl} min`, view: 'active-post', at: w.waitingSince as string, tone: lvl === 30 ? 'urgent' : 'info' });
+    });
     db.getSecurityLogs().filter(l => !l.resolved).forEach(l =>
       out.push({ id: `sec-${l.id}`, title: l.employee_name, sub: 'Alerte de sécurité', view: 'security', at: l.timestamp, tone: 'urgent' }));
   } else {
+    // Premier de la file et un poste vient de se libérer
+    const q = db.getMyQueue();
+    const free = q && q.position === 1 ? getFreePosts(db.getContracts(), db.getPosts()) : [];
+    if (q && free.length > 0)
+      out.push({ id: `free-${q.waiting_since}-${free[0].id}`, title: 'Un poste est libre', sub: `${free[0].client_name} (poste ${free[0].post_number}) : à toi en premier`, view: 'grid', at: new Date().toISOString(), tone: 'ok' });
     db.getPosts().filter(p => p.employee_id === user.id && p.status === 'rejected').forEach(p =>
       out.push({ id: `rej-${p.id}-${p.updated_at}`, title: `${p.client_name} refusé`, sub: p.rejection_reason ? `Motif : ${p.rejection_reason}` : 'Soumission refusée', view: 'active-post', at: p.updated_at || p.date, tone: 'bad' }));
     db.getAdvanceRequests().filter(a => a.employee_id === user.id && a.status !== 'pending').forEach(a =>

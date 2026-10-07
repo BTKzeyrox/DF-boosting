@@ -38,6 +38,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
   const bellBox = useRef<HTMLDivElement>(null);
 
   useEffect(() => db.subscribe(() => force(n => n + 1)), []);
+  useEffect(() => { const t = setInterval(() => force(n => n + 1), 30000); return () => clearInterval(t); }, []);
   useEffect(() => {
     const on = () => force(n => n + 1);
     window.addEventListener(SEEN_EVENT, on);

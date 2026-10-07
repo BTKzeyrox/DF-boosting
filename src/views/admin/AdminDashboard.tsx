@@ -36,6 +36,7 @@ import { proofsOf } from '../../utils/proofs';
 import { askConfirm } from '../../components/ConfirmModal';
 import { askReason } from '../../components/ReasonModal';
 import { countPending } from '../../utils/pendingCount';
+import { getPresenceStatus, getQueue, STATUS_LABEL, STATUS_DOT } from '../../utils/presence';
 import { PostsGrid20 } from '../../components/PostsGrid20';
 import { formatScoreM, formatCurrencyAr, plural } from '../../utils/formatUtils';
 import { takeValFilterIntent, VAL_INTENT_EVENT } from '../../utils/navIntent';
@@ -266,7 +267,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
 
   // Computations
-  const onlineEmployees = users.filter(u => u.role === 'employee' && u.is_online);
+  const presence = db.getPresence();
+  const onlineEmployees = users.filter(u => u.role === 'employee' && getPresenceStatus(u, posts, presence).status !== 'offline');
+  const waitingQueue = getQueue(users, posts, presence);
   const pendingSubmissions = posts.filter(
     p => p.status === 'pending_start' || p.status === 'pending_end'
   );
@@ -1404,6 +1407,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         
         {/* Connected Boosters List */}
         <div className="bg-[#0f1722] border border-slate-800 rounded-xl p-6 shadow-xl lg:col-span-1">
+          {waitingQueue.length > 0 && (
+            <div className="mb-4 bg-[#1a150a] border-2 border-amber-500 p-3 space-y-2">
+              <h3 className="font-tactical font-black text-white text-sm">File d'attente « sans poste » ({waitingQueue.length})</h3>
+              {waitingQueue.map(w => (
+                <div key={w.user.id} className="flex items-center justify-between gap-2 text-xs font-mono">
+                  <span className="text-white break-words min-w-0">#{w.position} · {w.user.name}</span>
+                  <span className={`shrink-0 font-bold ${w.minutes >= 30 ? 'text-red-400' : w.minutes >= 15 ? 'text-amber-300' : 'text-slate-300'}`}>
+                    attend depuis {w.minutes} min
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-tactical font-bold text-white text-base flex items-center gap-2">
               <Radio className="w-4 h-4 text-cyan-400" />
@@ -1421,6 +1437,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 const active = posts.find(
                   p => p.employee_id === emp.id && (p.status === 'active' || p.status === 'pending_start')
                 );
+                const ps = getPresenceStatus(emp, posts, presence);
 
                 return (
                   <div
@@ -1431,9 +1448,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       <div className="relative">
                         <Avatar src={emp.avatar_url} name={emp.name} className="w-8 h-8" />
                         <span
-                          className={`absolute bottom-0 right-0 w-2 h-2 rounded-full border border-slate-900 ${
-                            emp.is_online ? 'bg-emerald-400' : 'bg-slate-600'
-                          }`}
+                          className={`absolute bottom-0 right-0 w-2 h-2 rounded-full border border-slate-900 ${STATUS_DOT[ps.status]}`}
                         />
                       </div>
                       <div>
@@ -1444,7 +1459,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           )}
                         </div>
                         <div className="text-[10px] text-slate-400">
-                          Shift {emp.shift.toUpperCase()} · {active ? `En jeu: ${active.client_name}` : 'En attente'}
+                          Shift {emp.shift.toUpperCase()} · {active ? `En jeu: ${active.client_name}` : STATUS_LABEL[ps.status]}
                         </div>
                       </div>
                     </div>

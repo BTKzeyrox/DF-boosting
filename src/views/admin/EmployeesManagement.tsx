@@ -28,6 +28,7 @@ import { askConfirm } from '../../components/ConfirmModal';
 import { AdvanceHistory } from '../../components/AdvanceHistory';
 import { useLockBodyScroll } from '../../utils/useLockBodyScroll';
 import { formatScoreM } from '../../utils/formatUtils';
+import { getPresenceStatus, STATUS_LABEL, STATUS_DOT } from '../../utils/presence';
 
 interface EmployeesManagementProps {
   onOpenEmployeeCV: (employee: User) => void;
@@ -366,8 +367,9 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                           <div className="relative shrink-0">
                             <Avatar src={emp.avatar_url} name={emp.name} className="w-8 h-8 sm:w-9 sm:h-9" />
                             <span
+                              title={STATUS_LABEL[getPresenceStatus(emp, db.getPosts(), db.getPresence()).status]}
                               className={`absolute bottom-0 right-0 w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full border border-slate-900 ${
-                                emp.is_online ? 'bg-emerald-400' : 'bg-slate-600'
+                                STATUS_DOT[getPresenceStatus(emp, db.getPosts(), db.getPresence()).status]
                               }`}
                             />
                           </div>

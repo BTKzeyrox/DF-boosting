@@ -209,3 +209,17 @@ export interface SignupRequest {
   created_at: string;
   note?: string; // description facultative du booster
 }
+
+// Présence d'un booster (signe de vie, temps de connexion du jour, file d'attente « sans poste »)
+export interface PresenceRow {
+  user_id: string;
+  last_seen: string;
+  day: string;
+  online_sec: number;
+  waiting_since: string | null;
+}
+export interface QueueInfo {
+  waiting_since: string;
+  position: number;
+  total: number;
+}

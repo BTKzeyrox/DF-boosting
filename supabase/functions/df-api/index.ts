@@ -21,6 +21,7 @@ const SECRET = createHash("sha256").update("df-session:" + SB_KEY).digest("hex")
 const RESETS = "df_resets";
 const SIGNUPS = "df_signups";
 const PROFILE_REQ = "df_profile_requests";
+const PRESENCE = "df_presence";
 const BUCKET = "df-files";
 const OPEN_STATUS = ["pending_start", "active", "pending_end"];
 const EMP_POST_TARGET = [...OPEN_STATUS, "force_released"];
@@ -78,6 +79,42 @@ const authenticate = async (req: any) => {
   return user as any;
 };
 
+// ---------- présence (en ligne, temps de connexion, file d'attente « sans poste ») ----------
+const dayOf = (d: Date) => new Date(d.getTime() + 3 * 3600 * 1000).toISOString().slice(0, 10); // jour à Madagascar (UTC+3)
+const ALIVE_MS = 5 * 60 * 1000;
+async function touchPresence(me: any) {
+  const now = new Date();
+  const day = dayOf(now);
+  const { data: row } = await sb.from(PRESENCE).select('*').eq('user_id', me.id).maybeSingle();
+  let sec = row && row.day === day ? row.online_sec : 0;
+  if (row && row.day === day) {
+    const gap = (now.getTime() - new Date(row.last_seen).getTime()) / 1000;
+    if (gap > 0 && gap <= 120) sec += Math.round(gap); // on compte le temps entre deux signes de vie rapprochés
+  }
+  await sb.from(PRESENCE).upsert({ user_id: me.id, last_seen: now.toISOString(), day, online_sec: sec, waiting_since: row?.waiting_since ?? null });
+}
+const queueOf = (rows: any[], meId: string) => {
+  const now = Date.now();
+  const waiting = rows
+    .filter((r: any) => r.waiting_since && now - new Date(r.last_seen).getTime() < ALIVE_MS)
+    .sort((a: any, b: any) => String(a.waiting_since).localeCompare(String(b.waiting_since)));
+  const i = waiting.findIndex((r: any) => r.user_id === meId);
+  return i < 0 ? null : { waiting_since: waiting[i].waiting_since, position: i + 1, total: waiting.length };
+};
+async function queueRoute(req: any, res: any, me: any) {
+  if (me.role !== 'employee') return res.status(403).json({ error: 'Réservé aux boosters.' });
+  const join = req.body?.join === true;
+  if (join) {
+    const { data: open } = await sb.from(T.posts).select('id').eq('data->>employee_id', me.id).in('data->>status', OPEN_STATUS).limit(1);
+    if (open && open.length) return res.status(409).json({ error: 'Tu as déjà un poste en cours.' });
+  }
+  await touchPresence(me);
+  const { data: row } = await sb.from(PRESENCE).select('waiting_since').eq('user_id', me.id).maybeSingle();
+  const next = join ? row?.waiting_since || new Date().toISOString() : null;
+  await sb.from(PRESENCE).update({ waiting_since: next }).eq('user_id', me.id);
+  return res.json({ ok: true });
+}
+
 // ---------- login ----------
 // Si le pseudo + mot de passe correspondent à une demande d'inscription ou de nouveau mot de passe,
 // on explique l'état de la demande (seulement si le mot de passe saisi est bien celui de la demande).
@@ -122,6 +159,7 @@ async function login(req: any, res: any) {
 
   user.is_online = true;
   await sb.from(T.users).upsert({ id: user.id, data: user, updated_at: new Date().toISOString() });
+  if (user.role === 'employee') await touchPresence(user);
   const token = sign({ uid: user.id, exp: Date.now() + 30 * 24 * 3600 * 1000 });
   return res.json({ token, user });
 }
@@ -138,6 +176,7 @@ async function state(req: any, res: any, me: any) {
   const serverTime = new Date(Date.now() - 3000).toISOString();
   const out: Record<string, { changed: any[]; ids: string[] }> = {};
   const admin = me.role === 'admin';
+  if (!admin) await touchPresence(me);
 
   for (const col of COLS) {
     if (col === 'securityLogs' && !admin) { out[col] = { changed: [], ids: [] }; continue; }
@@ -169,7 +208,9 @@ async function state(req: any, res: any, me: any) {
   }
   const { data: prs } = await sb.from(PROFILE_REQ).select('data').order('updated_at', { ascending: true });
   const profileRequests = (prs || []).map((r: any) => r.data).filter((r: any) => (admin ? r.status === 'pending' : r.user_id === me.id && (r.status === 'pending' || r.status === 'rejected')));
-  return res.json({ serverTime, me, collections: out, resets, signups, profileRequests });
+  const { data: presRows } = await sb.from(PRESENCE).select('*');
+  const pres = presRows || [];
+  return res.json({ serverTime, me, collections: out, resets, signups, profileRequests, presence: admin ? pres : undefined, queue: admin ? undefined : queueOf(pres, me.id) });
 }
 
 // ---------- sync (écriture) ----------
@@ -178,6 +219,7 @@ async function sync(req: any, res: any, me: any) {
   const admin = me.role === 'admin';
   const rejected: { col: string; id: string; reason: string }[] = [];
   const now = new Date().toISOString();
+  let tookPost = false;
 
   for (const col of COLS) {
     const ch = changes[col];
@@ -233,6 +275,7 @@ async function sync(req: any, res: any, me: any) {
         if (!ok) { rejected.push({ col, id: rec.id, reason: 'forbidden' }); continue; }
       }
       await sb.from(T[col]).upsert({ id: rec.id, data: toSave, updated_at: now });
+      if (!admin && col === 'posts' && OPEN_STATUS.includes(rec.status)) tookPost = true;
     }
 
     for (const id of deletes) {
@@ -251,10 +294,12 @@ async function sync(req: any, res: any, me: any) {
         const u = await getUserRow(id);
         if (u?.role === 'admin') { rejected.push({ col, id, reason: 'admin' }); continue; }
         await sb.from('df_credentials').delete().eq('user_id', id);
+        await sb.from(PRESENCE).delete().eq('user_id', id);
       }
       await sb.from(T[col]).delete().eq('id', id);
     }
   }
+  if (tookPost) await sb.from(PRESENCE).update({ waiting_since: null }).eq('user_id', me.id);
   return res.json({ ok: true, rejected });
 }
 
@@ -293,6 +338,7 @@ async function setPassword(req: any, res: any, me: any) {
 async function logout(_req: any, res: any, me: any) {
   me.is_online = false;
   await sb.from(T.users).upsert({ id: me.id, data: me, updated_at: new Date().toISOString() });
+  await sb.from(PRESENCE).update({ last_seen: new Date(0).toISOString(), waiting_since: null }).eq('user_id', me.id);
   return res.json({ ok: true });
 }
 
@@ -572,6 +618,7 @@ Deno.serve(async (request: Request) => {
     if (action === "logout" && req.method === "POST") return await logout(req, res, me);
     if (action === "reset-decision" && req.method === "POST") return await resetDecision(req, res, me);
     if (action === "signup-decision" && req.method === "POST") return await signupDecision(req, res, me);
+    if (action === "queue" && req.method === "POST") return await queueRoute(req, res, me);
     if (action === "upload" && req.method === "POST") return await upload(req, res, me);
     if (action === "profile-request" && req.method === "POST") return await profileRequest(req, res, me);
     if (action === "profile-decision" && req.method === "POST") return await profileDecision(req, res, me);

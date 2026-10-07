@@ -42,6 +42,7 @@ import { PostsGrid20 } from '../../components/PostsGrid20';
 import { formatScoreM, formatCurrencyAr } from '../../utils/formatUtils';
 import { useLockBodyScroll } from '../../utils/useLockBodyScroll';
 import { ScoreInput } from '../../components/ScoreInput';
+import { QueueButton } from '../../components/QueueButton';
 
 interface EmployeeDashboardProps {
   currentUser: User;
@@ -516,6 +517,8 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
           Photo en cours d'envoi… ne ferme pas la page
         </div>
       )}
+
+      <QueueButton userId={currentUser.id} />
 
       {/* Top Banner: Terminal Status */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 bg-[#0f1722] p-4 rounded-xl border border-slate-800 shadow-xl">
