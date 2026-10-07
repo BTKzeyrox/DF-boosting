@@ -59,7 +59,7 @@
 "Score gagné": "获得分数",
 "Paie totale": "工资合计",
 "Avances validées": "已批预支",
-"Avances en attente": "待批预支",
+"Avances en attente": "待处理预支",
 "Net à payer": "实付工资",
 "Aujourd'hui": "今天",
 "Mois précédent": "上个月",
@@ -363,7 +363,6 @@
 "Payroll Cumulé": "累计工资",
 "Historique Récent de Vos Missions": "近期任务记录",
 "Alertes de sécurité": "安全警报",
-"Avances en attente": "待处理预支",
 "Surveillance \"Petit Malin\"": "\"小聪明\"监控",
 "RADAR SÉCURITÉ (\"PETIT MALIN\")": "安全雷达（\"小聪明\"）",
 "Sécurité \"Petit Malin\"": "\"小聪明\"安全",
@@ -678,5 +677,12 @@
 "Refusé": "已拒绝",
 "Aucun résultat.": "没有结果。",
 "Son historique (avances, demandes)": "历史记录（预支、申请）",
-"Photo en cours d'envoi… ne ferme pas la page": "照片上传中…请勿关闭页面"
+"Photo en cours d'envoi… ne ferme pas la page": "照片上传中…请勿关闭页面",
+"Compression de la photo…": "正在压缩照片…",
+"Envoi de la photo…": "正在上传照片…",
+"Photo envoyée": "照片已上传",
+"Pièce jointe": "附件",
+"Trop de demandes aujourd'hui. Réessayez demain.": "今天的申请过多，请明天再试。",
+"Trop de demandes avec ce numéro. Réessayez demain.": "该号码申请次数过多，请明天再试。",
+"Trop de demandes depuis cet appareil. Réessayez demain.": "该设备申请次数过多，请明天再试。"
 }

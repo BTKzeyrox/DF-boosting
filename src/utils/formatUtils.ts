@@ -26,3 +26,7 @@ export function formatCurrencyAr(amount: number | undefined | null): string {
   if (!amount) return '0 Ar';
   return `${amount.toLocaleString('fr-FR')} Ar`;
 }
+
+// « 1 avance », « 2 avances » : accord du pluriel (0 et 1 = singulier)
+export const plural = (n: number, one: string, many?: string): string =>
+  `${n} ${n > 1 ? many || one + 's' : one}`;

@@ -156,7 +156,7 @@ class DeltaForceStore {
     this.pollTimer = setInterval(() => {
       if (typeof document !== 'undefined' && document.hidden) return;
       void this.pull();
-    }, 5000);
+    }, 6000);
     // Retour sur l'onglet (ou l'appli) : on recharge tout de suite, sans attendre 5 s
     if (typeof document !== 'undefined') {
       this.onVisible = () => { if (!document.hidden) void this.pull(); };
@@ -172,7 +172,21 @@ class DeltaForceStore {
   }
 
   // Récupère les changements du serveur. Retourne true si la session est valide.
+  private pulling = false;
   private async pull(force = false): Promise<boolean> {
+    if (!this.token) return false;
+    // Un seul rechargement à la fois (évite les requêtes qui s'empilent sur réseau lent)
+    if (this.pulling && !force) return true;
+    if (!force && typeof navigator !== 'undefined' && navigator.onLine === false) return true;
+    this.pulling = true;
+    try {
+      return await this.pullInner(force);
+    } finally {
+      this.pulling = false;
+    }
+  }
+
+  private async pullInner(force = false): Promise<boolean> {
     if (!this.token) return false;
     const tokenAtStart = this.token;
     const seqAtStart = this.mutationSeq;

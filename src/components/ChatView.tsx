@@ -4,6 +4,7 @@ import { db } from '../db/store';
 import { ChatMessage, User } from '../types';
 import { compressProofImage } from '../utils/imageUtils';
 import { Avatar } from './Avatar';
+import { markChatSeen } from '../utils/notifications';
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const OK_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf', 'text/plain'];
@@ -65,6 +66,11 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string }>
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: 'end' });
   }, [visible.length, current.id]);
+
+  // La messagerie est ouverte : tout est lu
+  useEffect(() => {
+    markChatSeen(currentUser);
+  }, [messages.length, currentUser.id]);
 
   const send = (extra?: { url: string; name: string; kind: 'image' | 'file' }) => {
     if (!text.trim() && !extra) return;

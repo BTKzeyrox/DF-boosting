@@ -232,18 +232,36 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
   // Photo de preuve : compressée (~150 Ko) puis envoyée dans Supabase Storage.
   // Si l'envoi échoue, on garde la version compressée pour ne rien perdre.
   const [uploadingCount, setUploadingCount] = useState(0);
+  const [uploadStep, setUploadStep] = useState<{ pct: number; label: string } | null>(null);
   const prepareProof = async (file: File): Promise<string | null> => {
     setUploadingCount(c => c + 1);
+    setUploadStep({ pct: 10, label: 'Compression de la photo…' });
     try {
       const small = await compressProofImage(file);
+      setUploadStep({ pct: 55, label: 'Envoi de la photo…' });
       const url = await db.uploadFile(small);
+      setUploadStep({ pct: 100, label: 'Photo envoyée' });
       return url || small;
     } catch {
       return null;
     } finally {
-      setUploadingCount(c => c - 1);
+      setUploadingCount(c => {
+        if (c - 1 <= 0) setTimeout(() => setUploadStep(null), 700);
+        return c - 1;
+      });
     }
   };
+  const uploadBar = uploadStep ? (
+    <div className="mt-2" role="status" aria-live="polite">
+      <div className="flex justify-between text-[11px] font-mono text-cyan-300 mb-1">
+        <span>{uploadStep.label}</span>
+        <span>{uploadStep.pct}%</span>
+      </div>
+      <div className="h-1.5 rounded-full bg-slate-700 overflow-hidden">
+        <div className="h-full bg-cyan-400 transition-all duration-300" style={{ width: `${uploadStep.pct}%` }} />
+      </div>
+    </div>
+  ) : null;
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, target: 'start' | 'end' | 'edit') => {
     const file = e.target.files?.[0];
@@ -1309,6 +1327,8 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                   </div>
                 )}
 
+                {uploadBar}
+
                 {/* Photos Thumbnails Grid (1 to 4) */}
                 {startProofPhotos.length > 0 ? (
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
@@ -1697,11 +1717,12 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                         className="text-xs font-mono text-red-400 hover:text-red-300 flex items-center gap-1 cursor-pointer"
                       >
                         <X className="w-3.5 h-3.5" />
-                        <span>Supprimer</span>
+                            <span>Supprimer</span>
                       </button>
                     </div>
                   </div>
                 )}
+                {uploadBar}
               </div>
 
               <div>

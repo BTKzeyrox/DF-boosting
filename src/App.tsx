@@ -91,7 +91,10 @@ export default function App() {
   useEffect(() => {
     const unsubscribe = db.subscribe(() => {
       const user = db.getCurrentUser();
-      setCurrentUser(user ? { ...user } : null);
+      setCurrentUser(prev => {
+        if (!user) return null;
+        return prev && JSON.stringify(prev) === JSON.stringify(user) ? prev : { ...user };
+      });
     });
     return unsubscribe;
   }, []);

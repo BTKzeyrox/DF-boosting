@@ -36,7 +36,8 @@ import { askConfirm } from '../../components/ConfirmModal';
 import { askReason } from '../../components/ReasonModal';
 import { countPending } from '../../utils/pendingCount';
 import { PostsGrid20 } from '../../components/PostsGrid20';
-import { formatScoreM, formatCurrencyAr } from '../../utils/formatUtils';
+import { formatScoreM, formatCurrencyAr, plural } from '../../utils/formatUtils';
+import { takeValFilterIntent, VAL_INTENT_EVENT } from '../../utils/navIntent';
 import { generateDeltaForceScreenshot } from '../../utils/imageUtils';
 import { useLockBodyScroll } from '../../utils/useLockBodyScroll';
 import { ScoreInput } from '../../components/ScoreInput';
@@ -77,6 +78,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [profileErr, setProfileErr] = useState<string | null>(null);
   const [advances, setAdvances] = useState(db.getAdvanceRequests());
   const [valFilter, setValFilter] = useState<'all' | 'starts' | 'ends' | 'advances' | 'signups' | 'resets' | 'profiles'>('all');
+  // Clic sur une notification : ouvre Validations avec le bon filtre
+  useEffect(() => {
+    const apply = () => {
+      const f = takeValFilterIntent();
+      if (f) setValFilter(f);
+    };
+    apply();
+    window.addEventListener(VAL_INTENT_EVENT, apply);
+    return () => window.removeEventListener(VAL_INTENT_EVENT, apply);
+  }, []);
 
   // Rejection modal state
   const [rejectingPostId, setRejectingPostId] = useState<string | null>(null);
@@ -309,7 +320,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 {pend.total}
               </div>
               <div className="text-[10px] text-slate-400 font-mono mt-1">
-                {pend.starts} débuts · {pend.ends} fins · {pend.advances} avances
+                {plural(pend.starts, 'début')} · {plural(pend.ends, 'fin')} · {plural(pend.advances, 'avance')}
               </div>
             </button>
 

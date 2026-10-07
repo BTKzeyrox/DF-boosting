@@ -3,7 +3,8 @@ import { Bell, Menu, Search, Shield, Users, Gamepad2, Calendar, FileText } from 
 import { User } from '../types';
 import { useApp } from '../context/AppContext';
 import { db } from '../db/store';
-import { buildNotifications, markSeen, unreadCount, getSeen } from '../utils/notifications';
+import { buildNotifications, markSeen, unreadCount, getSeen, SEEN_EVENT } from '../utils/notifications';
+import { setValFilterIntent } from '../utils/navIntent';
 import { beepIfEnabled } from '../utils/notifSound';
 
 interface TopBarProps {
@@ -37,6 +38,11 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
   const bellBox = useRef<HTMLDivElement>(null);
 
   useEffect(() => db.subscribe(() => force(n => n + 1)), []);
+  useEffect(() => {
+    const on = () => force(n => n + 1);
+    window.addEventListener(SEEN_EVENT, on);
+    return () => window.removeEventListener(SEEN_EVENT, on);
+  }, []);
   useEffect(() => {
     const away = (e: MouseEvent) => {
       if (box.current && !box.current.contains(e.target as Node)) setOpen(false);
@@ -180,7 +186,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
                   notifs.slice(0, 30).map(n => (
                     <button
                       key={n.id}
-                      onClick={() => { setBellOpen(false); onNavigate(n.view); }}
+                      onClick={() => { setBellOpen(false); if (n.filter) setValFilterIntent(n.filter); onNavigate(n.view); }}
                       className={`w-full text-left px-3 py-2.5 flex items-start gap-2.5 ${L ? 'hover:bg-emerald-50' : 'hover:bg-emerald-950/40'} border-b ${L ? 'border-slate-50' : 'border-slate-800'} cursor-pointer`}
                     >
                       <span className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${n.tone === 'urgent' ? 'bg-red-500' : n.tone === 'bad' ? 'bg-orange-500' : n.tone === 'ok' ? 'bg-emerald-500' : 'bg-amber-400'}`} />

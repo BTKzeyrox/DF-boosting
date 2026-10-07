@@ -165,7 +165,7 @@ async function state(req: any, res: any, me: any) {
   let signups: any[] = [];
   if (admin) {
     const { data: sg } = await sb.from(SIGNUPS).select('data').order('updated_at', { ascending: true });
-    signups = (sg || []).map((r: any) => ({ ...r.data, password_hash: undefined })).filter((r: any) => r.status === 'pending');
+    signups = (sg || []).map((r: any) => ({ ...r.data, password_hash: undefined, ip_hash: undefined })).filter((r: any) => r.status === 'pending');
   }
   const { data: prs } = await sb.from(PROFILE_REQ).select('data').order('updated_at', { ascending: true });
   const profileRequests = (prs || []).map((r: any) => r.data).filter((r: any) => (admin ? r.status === 'pending' : r.user_id === me.id && (r.status === 'pending' || r.status === 'rejected')));
@@ -414,12 +414,19 @@ async function signup(req: any, res: any) {
   const { data: pend } = await sb.from(SIGNUPS).select('data');
   const pending = (pend || []).map((r: any) => r.data).filter((r: any) => r.status === 'pending');
   if (pending.length >= 50) return res.status(429).json({ error: 'Trop de demandes en attente. Réessayez plus tard.' });
+  // Anti-spam : limites sur les dernières 24 h (demandes en attente ou refusées)
+  const dayAgo = Date.now() - 24 * 3600 * 1000;
+  const recent = (pend || []).map((r: any) => r.data).filter((r: any) => Date.parse(r.created_at || '') > dayAgo);
+  const ipHash = req.headers.ip ? createHash('sha256').update('df-ip:' + req.headers.ip).digest('hex').slice(0, 16) : '';
+  if (recent.length >= 40) return res.status(429).json({ error: "Trop de demandes aujourd'hui. Réessayez demain." });
+  if (phoneClean && recent.filter((r: any) => r.phone === phoneClean).length >= 3) return res.status(429).json({ error: 'Trop de demandes avec ce numéro. Réessayez demain.' });
+  if (ipHash && recent.filter((r: any) => r.ip_hash === ipHash).length >= 8) return res.status(429).json({ error: 'Trop de demandes depuis cet appareil. Réessayez demain.' });
   if (pending.some((r: any) => r.username === uname)) return res.status(409).json({ error: "Ce pseudo n'est pas disponible. Choisissez-en un autre." });
   if (phoneClean && pending.some((r: any) => r.phone === phoneClean)) return res.status(409).json({ error: 'Une demande avec ce numéro est déjà en attente.' });
   const id = `signup-${uname}`;
   await sb.from(SIGNUPS).upsert({
     id,
-    data: { id, name, username: uname, phone: phoneClean, shift, password_hash: hashPw(password), status: 'pending', created_at: new Date().toISOString() },
+    data: { id, name, username: uname, phone: phoneClean, shift, password_hash: hashPw(password), status: 'pending', created_at: new Date().toISOString(), ip_hash: ipHash },
     updated_at: new Date().toISOString(),
   });
   return res.json({ ok: true });
@@ -528,7 +535,10 @@ Deno.serve(async (request: Request) => {
     method: request.method,
     body,
     query: { since: url.searchParams.get("since") || "" },
-    headers: { authorization: request.headers.get("authorization") || "" },
+    headers: {
+      authorization: request.headers.get("authorization") || "",
+      ip: (request.headers.get("x-forwarded-for") || "").split(",")[0].trim(),
+    },
   };
   try {
     if (action === "login" && req.method === "POST") return await login(req, res);
