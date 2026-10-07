@@ -1,6 +1,6 @@
 # HANDOVER.md — Passation du projet DF-boosting (à lire après AI_STUDIO.md)
 
-Dernière mise à jour : 2026-10-06 (fin de session). Étapes 1 et 2 faites, étape 3 à faire. Propriétaire : BTK (français, mots simples, réponses COURTES).
+Dernière mise à jour : 2026-10-08. Les livraisons 1, 2 et 3 sont faites et poussées sur `main` ; elles restent à tester à l'écran par BTK (personne n'a vu l'écran réel). Propriétaire : BTK (français, mots simples, réponses COURTES).
 
 ## 0. Règles de travail avec BTK
 1. Faire un **recap court, puis attendre le mot « GO »** avant de modifier quoi que ce soit.
@@ -18,8 +18,8 @@ Dernière mise à jour : 2026-10-06 (fin de session). Étapes 1 et 2 faites, ét
 | Serveur | Supabase Edge Function `df-api` (code : `supabase/functions/df-api/index.ts`, `verify_jwt` désactivé) |
 | Base | Supabase, projet « Replay » (id `ljorjzrxkxqacmmkmqdx`), tables `df_users`, `df_posts`, `df_contracts`, `df_security_logs`, `df_advances`, `df_messages`, `df_credentials`, + `df_settings` (Réglages), `df_resets` (mots de passe oubliés), `df_profile_requests` (modifs de profil). Fonction SQL `df_rename_employee`. Bucket Storage public `df-files` (10 Mo max) |
 | Porte d'entrée du site | `src/db/store.ts` (constante `API_BASE`, synchro toutes les 5 s) |
-| Serveur déployé | **`df-api` version 9 (2026-10-07)** : un petit fichier qui charge `supabase/functions/df-api/index.ts` **depuis GitHub au commit `c4b88b2`** (`import "https://raw.githubusercontent.com/BTKzeyrox/DF-boosting/<sha>/supabase/functions/df-api/index.ts"`). **Pour redéployer** : pousser le code sur `main`, relever le sha du commit, puis `deploy_edge_function` avec ce seul fichier `index.ts` (1 ligne d'import avec le nouveau sha, `verify_jwt` = false). Inutile de recopier les 700 lignes. Le contenu = v8 + photos sur Cloudinary + nettoyage à 7 jours |
-| Dernier état | Lire `git log` : au 2026-10-06, `main` = commit `35b2b94` (barre du haut sombre en mode sombre). Toujours builder un clone propre de `main` avant de conclure |
+| Serveur déployé | **`df-api` version 10 (relevée le 2026-10-08 avec `get_edge_function`, même fichier d'import au commit `c4b88b2`)** : un petit fichier qui charge `supabase/functions/df-api/index.ts` **depuis GitHub au commit `c4b88b2`** (`import "https://raw.githubusercontent.com/BTKzeyrox/DF-boosting/<sha>/supabase/functions/df-api/index.ts"`). **Pour redéployer** : pousser le code sur `main`, relever le sha du commit, puis `deploy_edge_function` avec ce seul fichier `index.ts` (1 ligne d'import avec le nouveau sha, `verify_jwt` = false). Inutile de recopier les 700 lignes. Le contenu = v8 + photos sur Cloudinary + nettoyage à 7 jours |
+| Dernier état | Au 2026-10-08, `main` contient les livraisons 1, 2, 3, les photos Cloudinary, les corrections de cartes (bordure rouge / orange) et la barre du haut fixe. Lire `git log`, et toujours builder un clone propre de `main` avant de conclure. |
 
 ## 2. Fait jusqu'ici
 - Connexion pseudo + mot de passe (scrypt) ; comptes `admin`, `kiot`, `toki` (mots de passe : demander à BTK).
@@ -28,6 +28,16 @@ Dernière mise à jour : 2026-10-06 (fin de session). Étapes 1 et 2 faites, ét
 - Formulaires employé/admin épurés ; téléphone au format `261 34 12 345 67` ; photo de profil obligatoire (employé) ; CV retiré ; confirmations « Es-tu sûr ? » (`ConfirmModal`).
 - Calendrier admin : liste de boosters + recherche + filtres (shift, statut, compte client) + résumé du mois.
 - Interface française / chinois simplifié : traduction automatique par dictionnaire (`src/utils/zhDict.json` + `zhTranslate.ts`). Les textes oubliés restent en français : ajouter au dictionnaire.
+
+## 2 bis. Ajouts du 2026-10-06 au 2026-10-08 (mémo, session du Claude « livraison 1 »)
+- **Inscription des boosters** : « Créer un compte » sur la page de connexion (la colonne « Affiche officielle HD » est retirée). Table `df_signups`, routes `signup` (publique, anti-spam) et `signup-decision` (admin). L'admin accepte ou refuse sur l'accueil (carte « inscriptions en attente »). Le nouveau booster ajoute sa photo à sa première connexion.
+- **50 postes en base** (`df_contracts`) : 1 à 20 d'origine (certains noms en chinois), 21 à 40 avec comptes et objectifs différents (8M à 70M), 41 à 50 **sans compte** (`no_account: true`, nom vide, grisés, non réservables). `store.addContract` / `store.removeContract` (max 100, refus si session en cours).
+- **Preuves** : `LightboxModal` réécrite (pincement, molette, double-tap, déplacement, précédent / suivant via `gallery`, flèches du clavier) ; helper `src/utils/proofs.ts` (`proofsOf`).
+- **Avances** : `src/components/AdvanceHistory.tsx` (recherche, filtres statut / mois / booster / montant, totaux), côté admin et côté booster.
+- **Comptes et données de démo** : `admin`, `kiot`, `toki`, `sarah` (mots de passe : demander à BTK, ne jamais les écrire ici ; ils sont faibles, à changer avant l'usage réel). Historique d'1 mois « démo » (`demo: true` sur sessions et avances) avec retards, absences (lundi à samedi, dimanche = repos), refus et avances ; bouton « Supprimer les données de démonstration » dans Réglages.
+- **Calendrier** : statuts À l'heure / En retard (heures de shift et tolérance des Réglages) / Absent ; résumé du mois (Retards, Jours travaillés, paie, avances, net).
+- **Vieux téléphones** : plus de lookbehind dans `zhTranslate.ts`. Si « le lien ne s'ouvre pas sur l'autre téléphone » : vérifier que BTK utilise l'adresse complète `df-boosting-5u7c.vercel.app` (sans le `-5u7c` : erreur NXDOMAIN).
+- **À tester par BTK** : ajout / retrait d'un poste, remplissage d'un poste sans compte, pincement sur téléphone, historique des avances, textes chinois des nouveaux écrans (à faire relire par une personne chinoise).
 
 ## 3. Livraisons A, B, C : état au 2026-10-06
 Tout est poussé sur `main` et déployé côté serveur. **Rien n'a été testé à l'écran par Claude** : seuls le build et des appels API simples (connexion refusée, « mot de passe oublié » avec faux pseudo) ont été vérifiés.
@@ -82,7 +92,7 @@ Déploiement Vercel = Ready ; pages admin (Accueil, Validations, Surveillance, E
 Un seul Claude travaille à la fois. Faire `git pull` avant tout. Recap court puis « GO » de BTK avant chaque livraison. Hypothèses confirmées par BTK : 50 postes = 20 actuels + 20 nouveaux (comptes et objectifs différents, noms chinois possibles) + 10 « sans compte » ; alertes admin à 15 puis 30 min ; épingler / supprimer un message par l'auteur ou l'admin.
 
 **Livraison 1 — postes, preuves, historique des avances (site seulement, pas de redéploiement du serveur) — FAITE le 2026-10-06 et poussée sur `main` (commit `8f0b830`), à tester par BTK.** 50 postes en base (20 + 20 nouveaux + 10 `no_account`) ; `addContract` / `removeContract` dans `store.ts` ; `LightboxModal` réécrite (pincement, molette, double-tap, `gallery`) ; `AdvanceHistory.tsx` (admin et booster). Non testé à l'écran.
-1. Postes : l'admin ajoute et retire des postes (max 100 ; on ne retire pas un poste avec une session en cours). Poste « sans compte » : grisé, non réservable, rempli par l'admin quand le compte arrive. Fond de la carte selon le Reste : < 21M vert vif, 21M à 51M ambre, au-dessus normal. Les textes « 20 postes » deviennent dynamiques (nombre réel).
+1. Postes : l'admin ajoute et retire des postes (max 100 ; on ne retire pas un poste avec une session en cours). Poste « sans compte » : grisé, non réservable, rempli par l'admin quand le compte arrive. Couleur de la carte selon le Reste (règle mise à jour ensuite par BTK, commits `c164bde` puis `eb68c15`) : moins de 20M = rouge, moins de 50M = orange, sur la **bordure extérieure** seulement (plus de fond coloré). Les textes « 20 postes » deviennent dynamiques (nombre réel).
 2. Preuves : zoom au pincement, à la molette et au double-tap, avec déplacement ; boutons précédent / suivant entre les preuves d'une même session.
 3. Historique des avances (admin et booster) : recherche (nom, motif) + filtres (statut, mois, booster, montant) + totaux par statut.
 
