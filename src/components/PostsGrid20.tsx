@@ -348,22 +348,11 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
             const noAccount = !!contract.no_account || !contract.client_name;
             // Couleur selon le Reste : moins de 20M rouge, moins de 50M orange, au-dessus aucune couleur
             const band = getRemainingBand(remainingScore, noAccount);
+            // Seule la bordure extérieure est colorée (rouge ou orange) : le fond de la carte reste normal
             const bandStyle: React.CSSProperties | undefined =
               isPending || isMyActive || isTakenByOther || band === 'normal'
                 ? undefined
-                : band === 'red'
-                ? {
-                    backgroundImage: isLight
-                      ? 'linear-gradient(135deg, rgba(239,68,68,.28), rgba(254,202,202,.5))'
-                      : 'linear-gradient(135deg, rgba(239,68,68,.42), rgba(127,29,29,.55))',
-                    borderColor: '#ef4444',
-                  }
-                : {
-                    backgroundImage: isLight
-                      ? 'linear-gradient(135deg, rgba(245,158,11,.30), rgba(253,230,138,.5))'
-                      : 'linear-gradient(135deg, rgba(245,158,11,.42), rgba(120,53,15,.55))',
-                    borderColor: '#f59e0b',
-                  };
+                : { borderColor: band === 'red' ? '#ef4444' : '#f59e0b', borderWidth: 3 };
             const photoCount =
               activeSessionOnThis?.start_proof_urls?.length || (activeSessionOnThis?.start_proof_url ? 1 : 0);
 
