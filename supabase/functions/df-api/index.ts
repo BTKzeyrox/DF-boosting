@@ -23,6 +23,9 @@ const SIGNUPS = "df_signups";
 const PROFILE_REQ = "df_profile_requests";
 const PRESENCE = "df_presence";
 const BUCKET = "df-files";
+// Cloudinary : le nom du cloud n'est pas secret ; la clé API et le secret sont lus dans le coffre-fort (Vault)
+const CLD_CLOUD = "dirnrsy5v";
+const CLD_PREFIX = `https://res.cloudinary.com/${CLD_CLOUD}/image/upload/`;
 const OPEN_STATUS = ["pending_start", "active", "pending_end"];
 const EMP_POST_TARGET = [...OPEN_STATUS, "force_released"];
 
@@ -199,8 +202,8 @@ async function state(req: any, res: any, me: any) {
   if (admin) {
     const { data: rs } = await sb.from(RESETS).select('data').order('updated_at', { ascending: true });
     resets = (rs || []).map((r: any) => ({ ...r.data, password_hash: undefined })).filter((r: any) => r.status === 'pending');
-    void maybePurge();
   }
+  void maybePurge();
   let signups: any[] = [];
   if (admin) {
     const { data: sg } = await sb.from(SIGNUPS).select('data').order('updated_at', { ascending: true });
@@ -344,7 +347,7 @@ async function logout(_req: any, res: any, me: any) {
 
 
 const isBucketUrl = (u: unknown) =>
-  typeof u === 'string' && u.startsWith(`${SB_URL}/storage/v1/object/public/${BUCKET}/`);
+  typeof u === 'string' && (u.startsWith(`${SB_URL}/storage/v1/object/public/${BUCKET}/`) || u.startsWith(CLD_PREFIX));
 
 // ---------- modification de profil (validée par l'admin) ----------
 // Description facultative jointe à une demande (300 caractères max)
@@ -530,6 +533,64 @@ async function signupDecision(req: any, res: any, me: any) {
 }
 
 // ---------- fichiers (photos, pièces jointes) ----------
+// ---------- Cloudinary (photos) ----------
+let cldCache: { key: string; secret: string; at: number } | null = null;
+async function cldCreds() {
+  if (cldCache && Date.now() - cldCache.at < 10 * 60 * 1000) return cldCache;
+  const [k, sc] = await Promise.all([
+    sb.rpc('df_get_secret', { secret_name: 'cloudinary_api_key' }),
+    sb.rpc('df_get_secret', { secret_name: 'cloudinary_api_secret' }),
+  ]);
+  if (k.error || sc.error || !k.data || !sc.data) { console.error('cloudinary vault error:', k.error || sc.error); return null; }
+  cldCache = { key: String(k.data), secret: String(sc.data), at: Date.now() };
+  return cldCache;
+}
+const sha1 = (t: string) => createHash('sha1').update(t).digest('hex');
+
+// Envoie une image ; renvoie l'URL https ou null si échec
+async function cldUpload(dataUrl: string, id: string): Promise<string | null> {
+  try {
+    const c = await cldCreds();
+    if (!c) return null;
+    const publicId = `df-proofs/${id}`;
+    const ts = String(Math.floor(Date.now() / 1000));
+    const form = new FormData();
+    form.set('file', dataUrl);
+    form.set('api_key', c.key);
+    form.set('timestamp', ts);
+    form.set('public_id', publicId);
+    form.set('signature', sha1(`public_id=${publicId}&timestamp=${ts}${c.secret}`));
+    const r = await fetch(`https://api.cloudinary.com/v1_1/${CLD_CLOUD}/image/upload`, { method: 'POST', body: form });
+    const j: any = await r.json().catch(() => ({}));
+    if (!r.ok || typeof j.secure_url !== 'string' || !j.secure_url.startsWith(CLD_PREFIX)) {
+      console.error('cloudinary upload error:', r.status, j?.error?.message);
+      return null;
+    }
+    return j.secure_url;
+  } catch (e) { console.error('cloudinary upload exception:', e); return null; }
+}
+
+// Supprime une image (identifiant lu dans l'URL) ; true si supprimée ou déjà absente
+async function cldDestroy(publicId: string): Promise<boolean> {
+  try {
+    const c = await cldCreds();
+    if (!c) return false;
+    const ts = String(Math.floor(Date.now() / 1000));
+    const body = new URLSearchParams({
+      public_id: publicId, timestamp: ts, api_key: c.key, invalidate: 'true',
+      signature: sha1(`invalidate=true&public_id=${publicId}&timestamp=${ts}${c.secret}`),
+    });
+    const r = await fetch(`https://api.cloudinary.com/v1_1/${CLD_CLOUD}/image/destroy`, { method: 'POST', body });
+    const j: any = await r.json().catch(() => ({}));
+    return r.ok && (j.result === 'ok' || j.result === 'not found');
+  } catch (e) { console.error('cloudinary destroy exception:', e); return false; }
+}
+const cldIdOf = (u: string) => {
+  if (!u.startsWith(CLD_PREFIX)) return '';
+  const m = u.slice(CLD_PREFIX.length).match(/^(?:v\d+\/)?(.+)\.[a-z0-9]+$/i);
+  return m ? decodeURIComponent(m[1]) : '';
+};
+
 const EXT: Record<string, string> = {
   'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif',
   'application/pdf': 'pdf', 'text/plain': 'txt',
@@ -543,6 +604,11 @@ async function upload(req: any, res: any, me: any) {
   if (!ext) return res.status(400).json({ error: 'Type de fichier non accepté.' });
   const bytes = Buffer.from(m[2], 'base64');
   if (bytes.length > 10 * 1024 * 1024) return res.status(413).json({ error: 'Fichier trop gros (10 Mo max).' });
+  // Images : Cloudinary (plus de place gratuite). En cas d'échec ou de PDF/texte : Supabase Storage.
+  if (mime.startsWith('image/')) {
+    const url = await cldUpload(dataUrl, `${me.id}-${Date.now()}-${randomBytes(6).toString('hex')}`);
+    if (url) return res.json({ url, path: '' });
+  }
   const path = `${me.id}/${Date.now()}-${randomBytes(6).toString('hex')}.${ext}`;
   const { error } = await sb.storage.from(BUCKET).upload(path, bytes, { contentType: mime, upsert: false });
   if (error) { console.error('upload error:', error); return res.status(500).json({ error: 'Envoi impossible.' }); }
@@ -557,22 +623,24 @@ const pathOf = (u: string) => {
   return i >= 0 ? decodeURIComponent(u.slice(i + `/object/public/${BUCKET}/`.length)) : '';
 };
 async function maybePurge() {
-  if (Date.now() - lastPurge < 6 * 3600 * 1000) return;
+  if (Date.now() - lastPurge < 2 * 3600 * 1000) return;
   lastPurge = Date.now();
   try {
     const { data: st } = await sb.from(T.settings).select('data').eq('id', 'general').maybeSingle();
-    const days = Math.max(1, Number(st?.data?.retention_days) || 30);
+    const days = Math.max(1, Number(st?.data?.retention_days) || 7);
     const cutoff = new Date(Date.now() - days * 24 * 3600 * 1000).toISOString();
-    const old30 = new Date(Date.now() - 30 * 24 * 3600 * 1000).toISOString();
-    for (const tb of [SIGNUPS, RESETS, PROFILE_REQ]) await sb.from(tb).delete().eq('data->>status', 'rejected').lt('updated_at', old30);
     const { data: rows } = await sb.from(T.posts).select('id,data')
-      .lt('updated_at', cutoff).in('data->>status', ['completed', 'rejected', 'force_released']).limit(40);
+      .lt('updated_at', cutoff).in('data->>status', ['completed', 'rejected', 'force_released']).order('updated_at', { ascending: true }).limit(60);
     for (const r of rows || []) {
       const p = r.data;
       if (p.proofs_purged) continue;
       const urls: string[] = [p.start_proof_url, p.end_proof_url, ...(p.start_proof_urls || []), ...(p.end_proof_urls || [])].filter(Boolean);
       const paths = urls.map(pathOf).filter(Boolean);
       if (paths.length) await sb.storage.from(BUCKET).remove(paths);
+      // Photos Cloudinary : si une suppression échoue, on réessaie au prochain passage (la session n'est pas marquée)
+      const ids = urls.map(cldIdOf).filter(Boolean);
+      const results = await Promise.all(ids.map(cldDestroy));
+      if (results.some(ok => !ok)) continue;
       const next = { ...p, start_proof_url: '', end_proof_url: '', start_proof_urls: [], end_proof_urls: [], proofs_purged: true };
       await sb.from(T.posts).upsert({ id: r.id, data: next, updated_at: new Date().toISOString() });
     }

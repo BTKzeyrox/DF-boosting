@@ -27,7 +27,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   night_shift_start: '20:00',
   night_shift_end: '06:00',
   late_tolerance_min: 15,
-  retention_days: 30,
+  retention_days: 7,
   rules: '',
   post_types: ['NO R/C', 'YES R/C', 'RED 9CASE'],
 };
