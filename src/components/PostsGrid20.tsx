@@ -27,6 +27,7 @@ import { useApp } from '../context/AppContext';
 import { askConfirm } from './ConfirmModal';
 import { ScoreInput } from './ScoreInput';
 import { getRemainingBand } from '../utils/postBand';
+import { PendingPostActions } from './PendingPostActions';
 
 interface PostsGrid20Props {
   currentUser: User;
@@ -644,9 +645,14 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
                         <span>Valider ({activeSessionOnThis?.employee_name})</span>
                       </button>
                     ) : (
+                      <>
                       <div className="w-full py-2.5 px-2 sm:px-4 text-center leading-tight bg-amber-950/60 border border-amber-600/50 text-amber-300 text-xs font-mono rounded-xl text-center">
                         <span className="inline-flex items-center gap-1.5"><Hourglass className="w-3.5 h-3.5 shrink-0" />En attente de validation</span>
                       </div>
+                      {activeSessionOnThis && activeSessionOnThis.employee_id === currentUser.id && (
+                        <PendingPostActions post={activeSessionOnThis} onGoToPost={onNavigateToActivePost} />
+                      )}
+                      </>
                     )
                   ) : isMyActive ? (
                     <button

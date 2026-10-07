@@ -745,5 +745,12 @@
 "Un poste est libre": "有岗位空闲了",
 "Connecté aujourd'hui :": "今日在线：",
 "attend depuis": "已等待",
-"Sans poste depuis": "无岗位已"
+"Sans poste depuis": "无岗位已",
+"Annuler la fin de session ?": "取消结束申请？",
+"Annuler la fin": "取消结束",
+"Modifier la fin ?": "修改结束？",
+"Modifier le poste en attente": "修改待审核岗位",
+"Possible seulement avant la validation de l'admin.": "仅在管理员审核前可修改。",
+"Remplacer la capture (facultatif)": "替换截图（可选）",
+"Nouvelle photo prête.": "新照片已就绪。"
 }

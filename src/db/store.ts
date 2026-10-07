@@ -828,6 +828,23 @@ class DeltaForceStore {
     return { success: true };
   }
 
+  // Cancel the end request before admin validation: the session goes back to « en cours »
+  public cancelPendingEndPost(postId: string): { success: boolean; error?: string } {
+    const post = this.posts.find(p => p.id === postId);
+    if (!post) return { success: false, error: 'Poste introuvable' };
+    if (post.status !== 'pending_end') {
+      return { success: false, error: 'Annulation impossible: la fin est déjà validée ou la session n\'est pas en attente de fin.' };
+    }
+    post.status = 'active';
+    post.final_score = undefined;
+    post.end_proof_url = '';
+    post.end_proof_urls = [];
+    post.end_time = undefined;
+    post.updated_at = new Date().toISOString();
+    this.notify();
+    return { success: true };
+  }
+
   // Update current score during active post
   public updateCurrentScore(postId: string, newScore: number): { success: boolean; error?: string } {
     const post = this.posts.find(p => p.id === postId);

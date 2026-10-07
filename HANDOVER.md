@@ -55,6 +55,8 @@ Rien n'a été testé à l'écran par Claude (seulement build + tests de rendu l
 - Paie estimée du panneau de validation = prix du 1M des Réglages (`c344dd2`). JS principal 585 Ko → 300 Ko, pages chargées à la demande (`922c836`). Pastille « Photo en cours d'envoi » (`96da0e4`).
 - Corrections : `e4aa7ee` (fichier `pendingCount.ts` oublié, le build Vercel échouait), `4aad56d` (texte « 1M = 1 000 Ar » retiré de la connexion).
 
+**Boutons Modifier / Annuler sur la carte d'un poste en attente (2026-10-07, demande de BTK)** : visibles seulement pour le booster concerné (`src/components/PendingPostActions.tsx`, dans `PostsGrid20`). Début en attente : Modifier = score + photo (`updatePendingStartPost`), Annuler = supprime le poste (`cancelPendingStartPost`). Fin en attente : Annuler / Modifier = retour « en cours » (`cancelPendingEndPost`, Modifier va ensuite sur Mon poste). Refusé par le store si l'admin a déjà validé. Le serveur autorise déjà ces écritures (non testé en réel).
+
 **Règle de couleur des cartes de postes (2026-10-07, demande de BTK)** : selon le « Reste » : moins de 20M = rouge, moins de 50M = orange, au-dessus = aucune couleur (`src/utils/postBand.ts`). Les postes sans compte, en attente, ou pris ne changent pas.
 
 **PAS FAIT** (chaque point attend le « GO » de BTK)
