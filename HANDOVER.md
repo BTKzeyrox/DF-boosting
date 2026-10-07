@@ -71,6 +71,7 @@ Rien n'a été testé à l'écran par Claude (seulement build + tests de rendu l
 Déploiement Vercel = Ready ; pages admin (Accueil, Validations, Surveillance, Employés, Avances, Suivi) ; avance booster → pastille/cloche admin + bip ; refus avec motif ; son (Réglages, iPhone) ; téléphone.
 
 **Pièges appris**
+- **Fonds en thème sombre** : `index.css` rend à moitié transparent (verre) tout élément dont la classe contient `bg-[#`. Pour une petite fenêtre déroulante (menu, notifications, suggestions), ne pas utiliser `bg-[#...]` : utiliser `bg-slate-900 df-popover` (fond plein). Les fenêtres plein écran (`fixed inset-0 bg-black/..`) ont déjà leur correctif.
 - `git commit -am` n'ajoute pas les fichiers neufs : utiliser `git add -A`, puis builder un clone propre de `origin/main`.
 - Vérifier qu'un composant est vraiment utilisé (`grep -rn`) avant de le modifier.
 - Connecteur Vercel : 403 sur la liste des déploiements dans une session ; dans une autre, `list_deployments` marche avec `projectId` + `sha`. Sinon BTK vérifie.

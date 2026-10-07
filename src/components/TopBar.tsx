@@ -142,7 +142,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
             className={`w-full h-9 pl-9 pr-3 rounded-lg ${L ? 'bg-slate-100' : 'bg-[#111a26]'} border ${L ? 'border-slate-200' : 'border-slate-700'} text-sm ${L ? 'text-slate-800' : 'text-slate-100'} placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 ${L ? 'focus:bg-white' : 'focus:bg-[#0f1722]'}`}
           />
           {open && q.trim() && (
-            <div className={`absolute left-0 right-0 top-full mt-1 ${L ? 'bg-white' : 'bg-[#0f1722]'} border ${L ? 'border-slate-200' : 'border-slate-700'} rounded-lg shadow-xl overflow-hidden z-40`}>
+            <div className={`absolute left-0 right-0 top-full mt-1 df-popover ${L ? 'bg-white' : 'bg-slate-900'} border ${L ? 'border-slate-200' : 'border-slate-700'} rounded-lg shadow-xl overflow-hidden z-40`}>
               {hits.length === 0 ? (
                 <div className={`px-3 py-2.5 text-sm ${L ? 'text-slate-500' : 'text-slate-400'}`}>Aucun résultat.</div>
               ) : (
@@ -178,7 +178,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
             )}
           </button>
           {bellOpen && (
-            <div className={`absolute right-0 top-full mt-1.5 w-[min(92vw,22rem)] ${L ? 'bg-white' : 'bg-[#0f1722]'} border ${L ? 'border-slate-200' : 'border-slate-700'} rounded-lg shadow-xl overflow-hidden z-40`}>
+            <div className={`absolute right-0 top-full mt-1.5 w-[min(92vw,22rem)] df-popover ${L ? 'bg-white' : 'bg-slate-900'} border ${L ? 'border-slate-200' : 'border-slate-700'} rounded-lg shadow-xl overflow-hidden z-40`}>
               <div className={`px-3 py-2 border-b ${L ? 'border-slate-100' : 'border-slate-800'} text-sm font-bold ${L ? 'text-slate-800' : 'text-slate-100'}`}>Notifications</div>
               <div className="max-h-[60vh] overflow-y-auto">
                 {notifs.length === 0 ? (

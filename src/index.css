@@ -215,3 +215,13 @@ select { text-overflow: clip; }
   -webkit-backdrop-filter: blur(10px) !important;
   backdrop-filter: blur(10px) !important;
 }
+
+/* Petites fenêtres déroulantes (notifications, suggestions de recherche) : fond PLEIN, rien ne se voit à travers */
+html.theme-dark .df-popover {
+  background-color: #0f1722 !important;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+html.theme-light .df-popover {
+  background-color: #f1f5f9 !important;
+}
