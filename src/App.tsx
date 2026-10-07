@@ -55,6 +55,7 @@ export default function App() {
   const [lightboxParams, setLightboxParams] = useState<{
     isOpen: boolean;
     imageUrl: string;
+    gallery?: string[];
     title: string;
     subtitle?: string;
     score?: number;
@@ -129,6 +130,7 @@ export default function App() {
   // Open Lightbox
   const handleOpenProofLightbox = (params: {
     imageUrl: string;
+    gallery?: string[];
     title: string;
     subtitle?: string;
     score?: number;
@@ -139,6 +141,7 @@ export default function App() {
     setLightboxParams({
       isOpen: true,
       imageUrl: params.imageUrl,
+      gallery: params.gallery,
       title: params.title,
       subtitle: params.subtitle,
       score: params.score,
@@ -185,6 +188,7 @@ export default function App() {
           isOpen={lightboxParams.isOpen}
           onClose={() => setLightboxParams(prev => ({ ...prev, isOpen: false }))}
           imageUrl={lightboxParams.imageUrl}
+          gallery={lightboxParams.gallery}
           title={lightboxParams.title}
           subtitle={lightboxParams.subtitle}
           score={lightboxParams.score}
@@ -380,6 +384,7 @@ export default function App() {
         isOpen={lightboxParams.isOpen}
         onClose={() => setLightboxParams(prev => ({ ...prev, isOpen: false }))}
         imageUrl={lightboxParams.imageUrl}
+          gallery={lightboxParams.gallery}
         title={lightboxParams.title}
         subtitle={lightboxParams.subtitle}
         score={lightboxParams.score}

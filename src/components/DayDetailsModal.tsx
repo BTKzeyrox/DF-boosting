@@ -3,6 +3,7 @@ import { X, ArrowLeft, Calendar, Clock, Trophy, Eye, CheckCircle2, AlertTriangle
 import { PostSession } from '../types';
 import { useLockBodyScroll } from '../utils/useLockBodyScroll';
 import { formatScoreM } from '../utils/formatUtils';
+import { proofsOf } from '../utils/proofs';
 import { db } from '../db/store';
 
 interface DayDetailsModalProps {
@@ -13,6 +14,7 @@ interface DayDetailsModalProps {
   shifts: PostSession[];
   onOpenProofLightbox: (params: {
     imageUrl: string;
+    gallery?: string[];
     title: string;
     subtitle?: string;
     score?: number;
@@ -209,6 +211,7 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
                           onClick={() =>
                             onOpenProofLightbox({
                               imageUrl: shift.start_proof_url,
+                              gallery: proofsOf(shift),
                               title: `Preuve de Début - ${shift.client_name}`,
                               subtitle: `Booster: ${shift.employee_name} · Score initial: ${formatScoreM(shift.initial_score)} pts`,
                               score: shift.initial_score,

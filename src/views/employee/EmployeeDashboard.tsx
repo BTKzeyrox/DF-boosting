@@ -33,7 +33,9 @@ import {
 } from 'lucide-react';
 import { User, PostSession, ShiftType, ClientContract } from '../../types';
 import { db } from '../../db/store';
+import { proofsOf } from '../../utils/proofs';
 import { askConfirm } from '../../components/ConfirmModal';
+import { AdvanceHistory } from '../../components/AdvanceHistory';
 import { compressProofImage } from '../../utils/imageUtils';
 import { AVAILABLE_CLIENT_CONTRACTS } from '../../db/initialData';
 import { PostsGrid20 } from '../../components/PostsGrid20';
@@ -45,6 +47,7 @@ interface EmployeeDashboardProps {
   currentUser: User;
   onOpenProofLightbox: (params: {
     imageUrl: string;
+    gallery?: string[];
     title: string;
     subtitle?: string;
     score?: number;
@@ -774,6 +777,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                             onClick={() =>
                               onOpenProofLightbox({
                                 imageUrl: url,
+                                gallery: proofsOf(activePost),
                                 title: `Photo ${idx + 1} - Preuve Début - ${activePost.client_name}`,
                                 score: activePost.initial_score,
                                 clientTag: activePost.client_name,
@@ -880,6 +884,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                           onClick={() =>
                             onOpenProofLightbox({
                               imageUrl: post.end_proof_url || post.start_proof_url,
+                              gallery: proofsOf(post),
                               title: `Preuve - ${post.client_name}`,
                               score: post.final_score,
                               clientTag: post.client_name,
@@ -973,49 +978,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
               Historique et validation par le superviseur Delta Force.
             </p>
 
-            {userAdvances.length === 0 ? (
-              <div className="text-center py-10 text-slate-500 text-xs font-mono border border-dashed border-slate-800 rounded-lg">
-                Aucune demande d'avance enregistrée pour votre profil.
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {userAdvances.map(adv => (
-                  <div
-                    key={adv.id}
-                    className="bg-[#131c28] p-4 rounded-lg border border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs font-mono"
-                  >
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-base font-bold text-amber-400">
-                          {adv.amount_ar.toLocaleString()} Ar
-                        </span>
-                        <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                            adv.status === 'approved'
-                              ? 'bg-emerald-950/80 border border-emerald-500/50 text-emerald-400'
-                              : adv.status === 'rejected'
-                              ? 'bg-red-950/80 border border-red-500/50 text-red-400'
-                              : 'bg-amber-950/80 border border-amber-500/50 text-amber-400 animate-pulse'
-                          }`}
-                        >
-                          {adv.status === 'approved' ? 'Validé' : adv.status === 'rejected' ? 'Rejeté' : 'En attente'}
-                        </span>
-                      </div>
-                      <p className="text-slate-300 mt-1">{adv.reason}</p>
-                      {adv.admin_notes && (
-                        <p className="text-[11px] text-cyan-300 mt-1 bg-cyan-950/40 p-1.5 rounded border border-cyan-800/40">
-                          Note Admin: {adv.admin_notes}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="text-slate-400 text-right text-[11px]">
-                      Date: {adv.request_date}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            <AdvanceHistory advances={userAdvances} />
           </div>
         </div>
       )}
@@ -1344,6 +1307,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                           onClick={() =>
                             onOpenProofLightbox({
                               imageUrl: photoUrl,
+                              gallery: startProofPhotos,
                               title: `Photo ${idx + 1}/${startProofPhotos.length} - ${clientName}`,
                               score: initialScore,
                               clientTag: `${clientName} #${accountTag}`,
@@ -1356,6 +1320,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                           onClick={() =>
                             onOpenProofLightbox({
                               imageUrl: photoUrl,
+                              gallery: startProofPhotos,
                               title: `Photo ${idx + 1}/${startProofPhotos.length} - ${clientName}`,
                               score: initialScore,
                               clientTag: `${clientName} #${accountTag}`,

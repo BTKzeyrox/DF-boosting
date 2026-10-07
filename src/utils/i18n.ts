@@ -9,8 +9,8 @@ export const TRANSLATIONS = {
 
     // Sidebar Menus
     menu_operational: 'Menu Opérationnel',
-    nav_grid: 'Grille des 20 Postes',
-    nav_grid_sub: 'Disposition 2x10 active',
+    nav_grid: 'Grille des Postes',
+    nav_grid_sub: '',
     nav_active_post_user: 'Mon Poste en Cours',
     nav_active_post_user_sub: 'Chrono, score & preuves',
     nav_active_post_admin: 'Suivi des Sessions',
@@ -29,7 +29,7 @@ export const TRANSLATIONS = {
     nav_security_sub: 'Détection anti-triche',
     badge_unlimited: 'Illimité',
     badge_anticheat: 'Anti-Triche',
-    badge_posts_count: '20 Postes',
+    badge_posts_count: 'Postes',
     btn_logout: 'Déconnexion',
     logging_out: 'Déconnexion en cours...',
 
@@ -41,7 +41,7 @@ export const TRANSLATIONS = {
     grid_desc: 'Sélectionnez un poste pour lancer ou superviser votre session.',
     total_posts: 'Total Postes',
     pay_scale: 'Barème Rémunération',
-    filter_all: 'Tous (20)',
+    filter_all: 'Tous',
     filter_day: ' Jour',
     filter_night: ' Nuit',
     filter_urgent: ' Urgents',
@@ -93,7 +93,7 @@ export const TRANSLATIONS = {
 
     // Sidebar Menus
     menu_operational: '作战操作菜单',
-    nav_grid: '20个代练工位',
+    nav_grid: '岗位总览',
     nav_grid_sub: '2x10 矩阵全景',
     nav_active_post_user: '当前进行中工位',
     nav_active_post_user_sub: '倒计时、得分与结算截图',
@@ -125,7 +125,7 @@ export const TRANSLATIONS = {
     grid_desc: '在20个客户账号中选择工位，开始代练并提交凭据。',
     total_posts: '总工位数',
     pay_scale: '薪酬兑换规则',
-    filter_all: '全部 (20)',
+    filter_all: '全部',
     filter_day: ' 白班',
     filter_night: ' 夜班',
     filter_urgent: ' 紧急工单',

@@ -76,7 +76,7 @@ Déploiement Vercel = Ready ; pages admin (Accueil, Validations, Surveillance, E
 ## 3 quater. Plan en 3 livraisons (demandé par BTK le 2026-10-06 : à lire en premier)
 Un seul Claude travaille à la fois. Faire `git pull` avant tout. Recap court puis « GO » de BTK avant chaque livraison. Hypothèses confirmées par BTK : 50 postes = 20 actuels + 20 nouveaux (comptes et objectifs différents, noms chinois possibles) + 10 « sans compte » ; alertes admin à 15 puis 30 min ; épingler / supprimer un message par l'auteur ou l'admin.
 
-**Livraison 1 — postes, preuves, historique des avances (site seulement, pas de redéploiement du serveur)**
+**Livraison 1 — postes, preuves, historique des avances (site seulement, pas de redéploiement du serveur) — FAITE le 2026-10-06 sur la branche `design`, en attente de test et de « GO » de BTK pour fusionner dans `main`.** 50 postes en base (20 + 20 nouveaux + 10 `no_account`) ; `addContract` / `removeContract` dans `store.ts` ; `LightboxModal` réécrite (pincement, molette, double-tap, `gallery`) ; `AdvanceHistory.tsx` (admin et booster). Non testé à l'écran.
 1. Postes : l'admin ajoute et retire des postes (max 100 ; on ne retire pas un poste avec une session en cours). Poste « sans compte » : grisé, non réservable, rempli par l'admin quand le compte arrive. Fond de la carte selon le Reste : < 21M vert vif, 21M à 51M ambre, au-dessus normal. Les textes « 20 postes » deviennent dynamiques (nombre réel).
 2. Preuves : zoom au pincement, à la molette et au double-tap, avec déplacement ; boutons précédent / suivant entre les preuves d'une même session.
 3. Historique des avances (admin et booster) : recherche (nom, motif) + filtres (statut, mois, booster, montant) + totaux par statut.

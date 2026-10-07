@@ -32,6 +32,7 @@ import {
 import { User, PostSession, SecurityViolation, ClientContract, ShiftType, PasswordResetRequest, ProfileChangeRequest, SignupRequest } from '../../types';
 import { Avatar } from '../../components/Avatar';
 import { db } from '../../db/store';
+import { proofsOf } from '../../utils/proofs';
 import { askConfirm } from '../../components/ConfirmModal';
 import { askReason } from '../../components/ReasonModal';
 import { countPending } from '../../utils/pendingCount';
@@ -46,6 +47,7 @@ interface AdminDashboardProps {
   currentUser?: User;
   onOpenProofLightbox: (params: {
     imageUrl: string;
+    gallery?: string[];
     title: string;
     subtitle?: string;
     score?: number;
@@ -190,6 +192,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       target_score: editTargetScore,
       game_mode: editGameMode.trim(),
       description: editDescription.trim(),
+      no_account: false,
       recommended_shift: editShift,
     });
 
@@ -504,6 +507,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               onClick={() =>
                                 onOpenProofLightbox({
                                   imageUrl: photoUrl,
+                                  gallery: proofsOf(activeSessionForModal),
                                   title: `Photo ${pIdx + 1} - Preuve Début - ${activeSessionForModal.client_name}`,
                                   score: activeSessionForModal.initial_score,
                                   clientTag: activeSessionForModal.client_name,
@@ -1272,6 +1276,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           onClick={() =>
                             onOpenProofLightbox({
                               imageUrl: post.start_proof_url,
+                              gallery: proofsOf(post),
                               title: `Preuve de Début - ${post.client_name}`,
                               score: post.initial_score,
                               clientTag: post.client_name,
@@ -1304,6 +1309,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             onClick={() =>
                               onOpenProofLightbox({
                                 imageUrl: post.end_proof_url!,
+                                gallery: proofsOf(post),
                                 title: `Preuve de Fin - ${post.client_name}`,
                                 score: finalScore,
                                 clientTag: post.client_name,

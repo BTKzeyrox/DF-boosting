@@ -1,3 +1,4 @@
+import { db } from '../db/store';
 import React, { useEffect, useState } from 'react';
 import { ShieldCheck, Cpu, Terminal, Zap, CheckCircle2, Crosshair } from 'lucide-react';
 import { User } from '../types';
@@ -20,7 +21,7 @@ export const WelcomeAnimation: React.FC<WelcomeAnimationProps> = ({ user, onComp
 
     const t2 = setTimeout(() => {
       setProgress(75);
-      setStepText('DÉPLOIEMENT DE LA MATRICE DES 20 POSTES CLIENTS (2x10)...');
+      setStepText(`DÉPLOIEMENT DE LA MATRICE DES ${db.getContracts().length || 20} POSTES CLIENTS...`);
       setGlitchActive(true);
     }, 700);
 
@@ -93,7 +94,7 @@ export const WelcomeAnimation: React.FC<WelcomeAnimationProps> = ({ user, onComp
           </div>
 
           <div className="flex items-center justify-between text-[10px] font-mono text-slate-500 pt-1">
-            <span>GRILLE 20 POSTES (2x10)</span>
+            <span>GRILLE {db.getContracts().length || 20} POSTES</span>
             <span className="text-emerald-500">SYNCHRONISÉ</span>
           </div>
         </div>

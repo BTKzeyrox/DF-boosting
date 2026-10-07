@@ -489,6 +489,58 @@ class DeltaForceStore {
     return [...this.posts];
   }
 
+  public static readonly MAX_CONTRACTS = 100;
+
+  // Admin : ajoute un poste (sans nom de compte = poste « sans compte », grisé)
+  public addContract(p: { client_name: string; initial_score: number; objective: number; description?: string; post_type?: string }): { success: boolean; error?: string } {
+    if (this.contracts.length >= DeltaForceStore.MAX_CONTRACTS) {
+      return { success: false, error: `Maximum ${DeltaForceStore.MAX_CONTRACTS} postes.` };
+    }
+    const name = p.client_name.trim();
+    const used = new Set(this.contracts.map(c => c.post_number));
+    let n = 1;
+    while (used.has(n)) n++;
+    const initial = Math.max(0, p.initial_score || 0);
+    const objective = Math.max(0, p.objective || 0);
+    if (name && objective <= 0) return { success: false, error: "L'objectif doit être supérieur à 0." };
+    this.contracts.push({
+      id: `contract-${Date.now()}`,
+      post_number: n,
+      client_name: name,
+      account_tag: name ? `ACC-${n}` : '',
+      game_mode: '',
+      description: (p.description || '').trim(),
+      post_type: p.post_type || '',
+      current_rank: '—',
+      target_rank: '—',
+      initial_score: name ? initial : 0,
+      target_score: name ? initial + objective : 0,
+      recommended_shift: 'any',
+      estimated_reward_ar: Math.round(objective / 1000),
+      priority: 'Normale',
+      region_server: '—',
+      no_account: !name,
+    });
+    this.contracts.sort((a, b) => a.post_number - b.post_number);
+    this.notify();
+    return { success: true };
+  }
+
+  // Admin : retire un poste (refusé si une session est en cours dessus)
+  public removeContract(id: string): { success: boolean; error?: string } {
+    const c = this.contracts.find(x => x.id === id);
+    if (!c) return { success: false, error: 'Poste introuvable.' };
+    const busy = this.posts.some(
+      p =>
+        (p.post_number === c.post_number || (!!c.client_name && p.client_name === c.client_name)) &&
+        (p.status === 'active' || p.status === 'pending_start' || p.status === 'pending_end')
+    );
+    if (busy) return { success: false, error: 'Ce poste a une session en cours : impossible de le retirer.' };
+    this.contracts = this.contracts.filter(x => x.id !== id);
+    this.notify();
+    return { success: true };
+  }
+
   public getContracts(): ClientContract[] {
     return [...this.contracts];
   }

@@ -17,11 +17,15 @@ import {
   Hourglass,
   CircleDot,
   Circle,
+  Trash2,
+  Plus,
 } from 'lucide-react';
 import { ClientContract, PostSession, User } from '../types';
 import { db } from '../db/store';
 import { formatScoreM, formatCurrencyAr } from '../utils/formatUtils';
 import { useApp } from '../context/AppContext';
+import { askConfirm } from './ConfirmModal';
+import { ScoreInput } from './ScoreInput';
 
 interface PostsGrid20Props {
   currentUser: User;
@@ -30,6 +34,7 @@ interface PostsGrid20Props {
   onSelectContract: (contract: ClientContract) => void;
   onOpenProofLightbox: (params: {
     imageUrl: string;
+    gallery?: string[];
     title: string;
     subtitle?: string;
     score?: number;
@@ -56,6 +61,24 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
   const [sortBy, setSortBy] = useState<'number' | 'rest_desc' | 'obj_asc' | 'obj_desc'>('number');
 
   const isLight = theme === 'light';
+
+  // Admin : ajout d'un poste
+  const [showAdd, setShowAdd] = useState(false);
+  const [addName, setAddName] = useState('');
+  const [addInitial, setAddInitial] = useState(0);
+  const [addObjective, setAddObjective] = useState(0);
+  const [addDesc, setAddDesc] = useState('');
+  const [addType, setAddType] = useState('');
+  const [addError, setAddError] = useState<string | null>(null);
+  const postTypes = db.getSettings().post_types || [];
+
+  const submitAdd = (e: React.FormEvent) => {
+    e.preventDefault();
+    const r = db.addContract({ client_name: addName, initial_score: addInitial, objective: addObjective, description: addDesc, post_type: addType });
+    if (!r.success) return setAddError(r.error || 'Ajout impossible.');
+    setShowAdd(false);
+    setAddName(''); setAddInitial(0); setAddObjective(0); setAddDesc(''); setAddType(''); setAddError(null);
+  };
 
   // Keep contracts synchronized with store
   useEffect(() => {
@@ -179,8 +202,18 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
               }`}
             >
               <div className="text-[9px] font-mono text-slate-400 uppercase leading-none">Postes</div>
-              <div className="text-sm font-tactical font-black text-emerald-500 mt-0.5">20</div>
+              <div className="text-sm font-tactical font-black text-emerald-500 mt-0.5">{contractsList.length}</div>
             </div>
+            {currentUser.role === 'admin' && (
+              <button
+                type="button"
+                onClick={() => { setAddError(null); setShowAdd(true); }}
+                disabled={contractsList.length >= 100}
+                className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-bold shrink-0"
+              >
+                <Plus className="w-4 h-4" /> Ajouter un poste
+              </button>
+            )}
           </div>
         </div>
 
@@ -310,13 +343,39 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
             const progressPercent = Math.min(100, Math.max(0, Math.round((boostedDiff / objectiveScore) * 100)));
 
             const postLabel = `#${String(contract.post_number).padStart(2, '0')}`;
+            const noAccount = !!contract.no_account || !contract.client_name;
+            // Couleur selon le Reste : < 21M vert vif, 21M à 51M ambre, au-dessus normal
+            const band: 'green' | 'amber' | 'normal' = noAccount
+              ? 'normal'
+              : remainingScore < 21_000_000
+              ? 'green'
+              : remainingScore <= 51_000_000
+              ? 'amber'
+              : 'normal';
+            const bandStyle: React.CSSProperties | undefined =
+              isPending || isMyActive || isTakenByOther || band === 'normal'
+                ? undefined
+                : band === 'green'
+                ? {
+                    backgroundImage: isLight
+                      ? 'linear-gradient(135deg, rgba(16,185,129,.34), rgba(167,243,208,.5))'
+                      : 'linear-gradient(135deg, rgba(16,185,129,.46), rgba(6,78,59,.6))',
+                    borderColor: '#34d399',
+                  }
+                : {
+                    backgroundImage: isLight
+                      ? 'linear-gradient(135deg, rgba(245,158,11,.30), rgba(253,230,138,.5))'
+                      : 'linear-gradient(135deg, rgba(245,158,11,.42), rgba(120,53,15,.55))',
+                    borderColor: '#f59e0b',
+                  };
             const photoCount =
               activeSessionOnThis?.start_proof_urls?.length || (activeSessionOnThis?.start_proof_url ? 1 : 0);
 
             return (
               <div
                 key={contract.id}
-                className={`border rounded-2xl p-3 sm:p-5 flex flex-col justify-between space-y-3 sm:space-y-4 transition-all duration-200 hover:shadow-xl relative overflow-hidden ${
+                style={bandStyle}
+                className={`${noAccount ? 'opacity-60 grayscale ' : ''}border rounded-2xl p-3 sm:p-5 flex flex-col justify-between space-y-3 sm:space-y-4 transition-all duration-200 hover:shadow-xl relative overflow-hidden ${
                   isPending
                     ? isLight
                       ? 'border-amber-500 ring-2 ring-amber-500/20 bg-amber-50/40'
@@ -336,6 +395,34 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
               >
                 {/* Card Header: Post Number & Status */}
                 <div>
+                  {noAccount && (
+                    <div className="mb-2 px-2 py-1 text-[11px] font-bold border border-slate-500/60 bg-slate-500/15 text-slate-300">
+                      Sans compte : en attente du compte client
+                    </div>
+                  )}
+                  {isAdminView && (
+                    <button
+                      type="button"
+                      onClick={e => {
+                        e.stopPropagation();
+                        askConfirm({
+                          title: `Retirer le poste ${postLabel} ?`,
+                          message: activeSessionOnThis ? 'Une session est en cours sur ce poste : impossible de le retirer.' : 'Le poste sera supprimé de la grille. Cette action ne peut pas être annulée.',
+                          confirmLabel: 'Retirer',
+                          danger: true,
+                          onConfirm: () => {
+                            const r = db.removeContract(contract.id);
+                            if (!r.success) alert(r.error);
+                          },
+                        });
+                      }}
+                      className="float-right ml-2 p-1 text-slate-400 hover:text-red-400"
+                      title="Retirer ce poste"
+                      aria-label="Retirer ce poste"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                   {/* Type de poste : l'admin le change ici, le booster le voit */}
                   {isAdminView ? (
                     <select
@@ -387,7 +474,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
                               isLight ? 'text-slate-900' : 'text-white'
                             }`}
                           >
-                            {contract.client_name}
+                            {contract.client_name || 'Poste sans compte'}
                           </h3>
                           <span
                             className={`hidden sm:inline-block text-[10px] font-mono px-1.5 py-0.5 rounded border shrink-0 ${
@@ -612,14 +699,16 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
                   ) : (
                     <button
                       type="button"
+                      disabled={noAccount && !isAdminView}
                       onClick={e => {
                         e.stopPropagation();
+                        if (noAccount && !isAdminView) return;
                         onSelectContract(contract);
                       }}
-                      className="w-full py-2.5 px-2 sm:px-4 text-center leading-tight bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 hover:from-emerald-500 hover:to-teal-500 active:scale-[0.99] text-white font-tactical font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer"
+                      className="disabled:opacity-50 disabled:cursor-not-allowed w-full py-2.5 px-2 sm:px-4 text-center leading-tight bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 hover:from-emerald-500 hover:to-teal-500 active:scale-[0.99] text-white font-tactical font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 shadow-md cursor-pointer"
                     >
                       <Target className="w-4 h-4" />
-                      <span>{currentUser.role === 'admin' ? 'Modifier le poste' : 'Prendre ce poste'}</span>
+                      <span>{currentUser.role === 'admin' ? (noAccount ? 'Remplir le poste' : 'Modifier le poste') : noAccount ? 'En attente du compte' : 'Prendre ce poste'}</span>
                     </button>
                   )}
                 </div>
@@ -627,6 +716,47 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
             );
           })}
         </div>
+
+      {showAdd && (
+        <div className="fixed inset-0 z-[90] flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm overflow-y-auto" onClick={() => setShowAdd(false)}>
+          <form onSubmit={submitAdd} onClick={e => e.stopPropagation()} className="w-full max-w-sm my-auto bg-[#0d1624] border border-slate-700 p-5 space-y-3 text-slate-100 text-xs font-mono">
+            <h3 className="font-tactical font-bold text-base text-white">Ajouter un poste</h3>
+            <p className="text-slate-400 leading-relaxed">Laisse le nom vide pour créer un poste « sans compte » : il reste grisé jusqu'à l'arrivée du compte client.</p>
+            {addError && <div className="p-2 border border-red-500/60 bg-red-950/60 text-red-200 font-semibold">{addError}</div>}
+            <div>
+              <label className="block text-slate-300 uppercase mb-1">Nom du compte client (facultatif)</label>
+              <input type="text" value={addName} onChange={e => setAddName(e.target.value)} className="w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white focus:border-emerald-500" />
+            </div>
+            {addName.trim() && (
+              <>
+                <div>
+                  <label className="block text-slate-300 uppercase mb-1">Score de début</label>
+                  <ScoreInput value={addInitial} onChange={setAddInitial} />
+                </div>
+                <div>
+                  <label className="block text-slate-300 uppercase mb-1">Objectif (points à gagner)</label>
+                  <ScoreInput value={addObjective} onChange={setAddObjective} />
+                </div>
+              </>
+            )}
+            <div>
+              <label className="block text-slate-300 uppercase mb-1">Type de poste</label>
+              <select value={addType} onChange={e => setAddType(e.target.value)} className="w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white">
+                <option value="">Aucun</option>
+                {postTypes.map(t2 => (<option key={t2} value={t2}>{t2}</option>))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-slate-300 uppercase mb-1">Description (facultatif)</label>
+              <textarea value={addDesc} onChange={e => setAddDesc(e.target.value)} rows={2} className="w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white resize-y" />
+            </div>
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <button type="button" onClick={() => setShowAdd(false)} className="px-3 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 font-semibold text-sm">Annuler</button>
+              <button type="submit" className="px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm">Ajouter</button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 };

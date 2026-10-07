@@ -1,4 +1,5 @@
 import { Avatar } from './Avatar';
+import { db } from '../db/store';
 import React, { useEffect } from 'react';
 import {
   Layers,
@@ -105,7 +106,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             label: t('nav_grid'),
             sublabel: '',
             icon: Layers,
-            badge: t('badge_posts_count'),
+            badge: `${db.getContracts().length} Postes`,
             badgeColor: isLight
               ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
               : 'bg-emerald-950 text-emerald-300 border-emerald-500/40',

@@ -25,6 +25,7 @@ import { User, ShiftType, SalaryAdvanceRequest } from '../../types';
 import { Avatar } from '../../components/Avatar';
 import { db } from '../../db/store';
 import { askConfirm } from '../../components/ConfirmModal';
+import { AdvanceHistory } from '../../components/AdvanceHistory';
 import { useLockBodyScroll } from '../../utils/useLockBodyScroll';
 import { formatScoreM } from '../../utils/formatUtils';
 
@@ -560,6 +561,11 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
             ))}
           </div>
         )}
+      </div>
+
+      {/* HISTORIQUE DES AVANCES : recherche + filtres */}
+      <div className="bg-[#0f1722] border border-slate-800 p-4 sm:p-6 shadow-xl">
+        <AdvanceHistory advances={advances} showBooster />
       </div>
 
         </>

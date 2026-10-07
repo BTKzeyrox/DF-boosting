@@ -30,6 +30,8 @@ export function translateText(input: string): string {
   s = s.replace(new RegExp(`(${MONTH_RE})\\s+(\\d{4})`, 'gi'), (_m, mo, y) => `${y}年${monthNum(mo)}月`);
   // compteurs
   s = s.replace(/(\d+)\s+shifts?(\(s\))?/gi, '$1 个班次');
+  s = s.replace(/GRILLE\s+(\d+)\s+POSTES/gi, '$1个岗位总览');
+  s = s.replace(/(\d+)\s+postes?\b/gi, '$1 个岗位');
   s = s.replace(PHRASES, (_m, pre: string, w: string) => pre + (lookup.get(w.toLowerCase().replace(/\u2019/g, "'")) ?? w));
   return lead + s + trail;
 }
