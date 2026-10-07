@@ -26,6 +26,7 @@ import { formatScoreM, formatCurrencyAr } from '../utils/formatUtils';
 import { useApp } from '../context/AppContext';
 import { askConfirm } from './ConfirmModal';
 import { ScoreInput } from './ScoreInput';
+import { getRemainingBand } from '../utils/postBand';
 
 interface PostsGrid20Props {
   currentUser: User;
@@ -344,23 +345,17 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
 
             const postLabel = `#${String(contract.post_number).padStart(2, '0')}`;
             const noAccount = !!contract.no_account || !contract.client_name;
-            // Couleur selon le Reste : < 21M vert vif, 21M à 51M ambre, au-dessus normal
-            const band: 'green' | 'amber' | 'normal' = noAccount
-              ? 'normal'
-              : remainingScore < 21_000_000
-              ? 'green'
-              : remainingScore <= 51_000_000
-              ? 'amber'
-              : 'normal';
+            // Couleur selon le Reste : moins de 20M rouge, moins de 50M orange, au-dessus aucune couleur
+            const band = getRemainingBand(remainingScore, noAccount);
             const bandStyle: React.CSSProperties | undefined =
               isPending || isMyActive || isTakenByOther || band === 'normal'
                 ? undefined
-                : band === 'green'
+                : band === 'red'
                 ? {
                     backgroundImage: isLight
-                      ? 'linear-gradient(135deg, rgba(16,185,129,.34), rgba(167,243,208,.5))'
-                      : 'linear-gradient(135deg, rgba(16,185,129,.46), rgba(6,78,59,.6))',
-                    borderColor: '#34d399',
+                      ? 'linear-gradient(135deg, rgba(239,68,68,.28), rgba(254,202,202,.5))'
+                      : 'linear-gradient(135deg, rgba(239,68,68,.42), rgba(127,29,29,.55))',
+                    borderColor: '#ef4444',
                   }
                 : {
                     backgroundImage: isLight
