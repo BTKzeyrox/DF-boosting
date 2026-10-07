@@ -73,6 +73,25 @@ Déploiement Vercel = Ready ; pages admin (Accueil, Validations, Surveillance, E
 - Connecteur Supabase : il peut renvoyer « FGA Authentication Error. Unauthorized » de façon passagère. Réessayer ; sinon BTK le reconnecte (Paramètres > Connecteurs).
 - Quand une autre session pousse en même temps, `git push` est refusé : `git fetch`, relire ce qui a changé, ne jamais forcer, ne pas refaire un travail déjà présent sur `main`.
 
+## 3 quater. Plan en 3 livraisons (demandé par BTK le 2026-10-06 : à lire en premier)
+Un seul Claude travaille à la fois. Faire `git pull` avant tout. Recap court puis « GO » de BTK avant chaque livraison. Hypothèses confirmées par BTK : 50 postes = 20 actuels + 20 nouveaux (comptes et objectifs différents, noms chinois possibles) + 10 « sans compte » ; alertes admin à 15 puis 30 min ; épingler / supprimer un message par l'auteur ou l'admin.
+
+**Livraison 1 — postes, preuves, historique des avances (site seulement, pas de redéploiement du serveur)**
+1. Postes : l'admin ajoute et retire des postes (max 100 ; on ne retire pas un poste avec une session en cours). Poste « sans compte » : grisé, non réservable, rempli par l'admin quand le compte arrive. Fond de la carte selon le Reste : < 21M vert vif, 21M à 51M ambre, au-dessus normal. Les textes « 20 postes » deviennent dynamiques (nombre réel).
+2. Preuves : zoom au pincement, à la molette et au double-tap, avec déplacement ; boutons précédent / suivant entre les preuves d'une même session.
+3. Historique des avances (admin et booster) : recherche (nom, motif) + filtres (statut, mois, booster, montant) + totaux par statut.
+
+**Livraison 2 — messagerie et descriptions (redéploiement de `df-api` nécessaire)**
+4. Messagerie : images ouvertes dans l'appli (zoom, retour, précédent / suivant), fichiers cliquables, épingler, supprimer pour tous, modifier un message envoyé (mention « modifié »), appui long ou menu comme WhatsApp / Telegram.
+5. Règle sur les descriptions et motifs : le booster peut ajouter une « Description (facultatif) » sur toutes ses demandes (début de session, avance, profil, mot de passe oublié, inscription ; fin de session = champ « Notes » existant). Refus admin = motif obligatoire (vérifier début et fin de session). Approbation admin = description facultative, visible par le booster et dans l'Historique. Vaut aussi pour tout nouveau formulaire.
+6. Anti-spam des demandes : déjà en partie fait (commit `67d4c84`), à vérifier.
+
+**Livraison 3 — présence, « Sans poste », file d'attente (redéploiement de `df-api` nécessaire)**
+7. En ligne et statuts : sans signe de vie ~90 s et sans session en cours = hors ligne ; un booster avec session en cours reste « actif » même s'il quitte le site ; statuts admin : En poste / Connecté sans poste / Sans poste (en attente) / Hors ligne ; temps de connexion du jour compté dès la connexion.
+8. « Sans poste » et file d'attente : bouton pour le booster ; l'admin voit la file (position, temps d'attente) ; le 1er est notifié quand un poste se libère ; il sort de la file quand il prend un poste.
+9. Alertes admin à 15 puis 30 min sans poste.
+10. Économie d'appels : interroger le serveur toutes les 15 à 30 s (aujourd'hui 5 s) avec le ping groupé dans la même requête ; sinon 80 boosters dépassent le plan gratuit (~500 000 appels / mois, à vérifier sur la page des tarifs Supabase).
+
 ## 4. Calcul d'espace (plan gratuit Supabase : 500 Mo base, 1 Go fichiers, 5 Go transfert/mois, pause après 1 semaine sans activité)
 80 boosters × 10 Mo = 800 Mo/mois → base pleine en ~18 jours, fichiers en ~37 jours. Avec photos compressées + stockage fichiers + suppression à 30 jours : ~0,6 Go stable. Pour la production à 80 boosters, conseiller le plan Pro (25 $/mois : 8 Go base, 100 Go fichiers, sans pause).
 
