@@ -36,6 +36,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
   const [fgUser, setFgUser] = useState('');
   const [fgPass, setFgPass] = useState('');
   const [fgPass2, setFgPass2] = useState('');
+  const [fgNote, setFgNote] = useState('');
   const [fgShow, setFgShow] = useState(false);
   const [fgBusy, setFgBusy] = useState(false);
   const [fgError, setFgError] = useState<string | null>(null);
@@ -54,7 +55,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
     if (fgPass.length < 6) return setFgError('Mot de passe : 6 caractères minimum.');
     if (fgPass !== fgPass2) return setFgError('Les deux mots de passe ne sont pas identiques.');
     setFgBusy(true);
-    const r = await db.requestPasswordReset(fgUser.trim(), fgPass);
+    const r = await db.requestPasswordReset(fgUser.trim(), fgPass, fgNote.trim());
     setFgBusy(false);
     if (!r.success) return setFgError(r.error || 'Envoi impossible. Réessaie.');
     setFgDone(true);
@@ -68,6 +69,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
   const [sgShift, setSgShift] = useState<'day' | 'night'>('day');
   const [sgPass, setSgPass] = useState('');
   const [sgPass2, setSgPass2] = useState('');
+  const [sgNote, setSgNote] = useState('');
   const [sgShow, setSgShow] = useState(false);
   const [sgBusy, setSgBusy] = useState(false);
   const [sgError, setSgError] = useState<string | null>(null);
@@ -94,6 +96,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
       password: sgPass,
       phone: phoneIsEmpty(sgPhone) ? '' : sgPhone,
       shift: sgShift,
+      note: sgNote.trim(),
     });
     setSgBusy(false);
     if (!r.success) return setSgError(r.error || 'Envoi impossible. Réessaie.');
@@ -375,6 +378,17 @@ export const LoginView: React.FC<LoginViewProps> = ({
                     className="w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white focus:border-emerald-500 focus:outline-none"
                   />
                 </div>
+                <div>
+                  <label className="block text-slate-300 uppercase mb-1">Description (facultatif)</label>
+                  <textarea
+                    rows={2}
+                    maxLength={300}
+                    value={fgNote}
+                    onChange={e => setFgNote(e.target.value)}
+                    placeholder="Un mot pour l'admin (facultatif)"
+                    className="w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
                 <div className="grid grid-cols-2 gap-2 pt-1">
                   <button type="button" onClick={closeForgot} className="px-3 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-sm font-semibold cursor-pointer">
                     Annuler
@@ -454,6 +468,17 @@ export const LoginView: React.FC<LoginViewProps> = ({
                   <input type={sgShow ? 'text' : 'password'} value={sgPass2} onChange={e => setSgPass2(e.target.value)}
                     autoCapitalize="off" autoCorrect="off" spellCheck={false} autoComplete="new-password"
                     className="w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white focus:border-emerald-500" />
+                </div>
+                <div>
+                  <label className="block text-slate-300 uppercase mb-1">Description (facultatif)</label>
+                  <textarea
+                    rows={2}
+                    maxLength={300}
+                    value={sgNote}
+                    onChange={e => setSgNote(e.target.value)}
+                    placeholder="Un mot pour l'admin (facultatif)"
+                    className="w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white focus:border-emerald-500 focus:outline-none"
+                  />
                 </div>
                 <div className="grid grid-cols-2 gap-2 pt-1">
                   <button type="button" onClick={closeSignup} className="px-3 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 font-semibold text-sm">

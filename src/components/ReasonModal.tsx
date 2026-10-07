@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { XCircle } from 'lucide-react';
+import { XCircle, CheckCircle } from 'lucide-react';
 
 export interface ReasonOptions {
   title: string;
   message?: string;
   confirmLabel?: string;
+  optional?: boolean; // approbation : description facultative (au lieu d'un motif obligatoire)
   onSubmit: (reason: string) => void;
 }
 
@@ -16,7 +17,8 @@ const ReasonModal: React.FC<{ options: ReasonOptions | null; onClose: () => void
   useEffect(() => { setText(''); }, [options]);
   if (!options) return null;
   const clean = text.trim();
-  const ok = clean.length >= MIN;
+  const optional = !!options.optional;
+  const ok = optional || clean.length >= MIN;
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-3 bg-black/70" onClick={onClose} role="dialog" aria-modal="true">
       <form
@@ -31,22 +33,22 @@ const ReasonModal: React.FC<{ options: ReasonOptions | null; onClose: () => void
         }}
       >
         <div className="flex items-start gap-3">
-          <XCircle className="w-6 h-6 shrink-0 text-red-400" />
+          {optional ? <CheckCircle className="w-6 h-6 shrink-0 text-emerald-400" /> : <XCircle className="w-6 h-6 shrink-0 text-red-400" />}
           <div className="min-w-0">
             <h3 className="font-tactical font-bold text-base leading-snug">{options.title}</h3>
             {options.message && <p className="text-sm text-slate-300 mt-1.5 leading-relaxed">{options.message}</p>}
           </div>
         </div>
         <div>
-          <label className="block text-xs font-mono text-slate-300 uppercase mb-1">Motif (obligatoire)</label>
+          <label className="block text-xs font-mono text-slate-300 uppercase mb-1">{optional ? 'Description (facultatif)' : 'Motif (obligatoire)'}</label>
           <textarea
             rows={3}
             value={text}
             maxLength={MAX}
             autoFocus
             onChange={e => setText(e.target.value)}
-            placeholder="Écris la raison du refus"
-            className="w-full bg-[#141e2a] border border-slate-600 p-2.5 text-sm text-white focus:border-red-500 focus:outline-none"
+            placeholder={optional ? "Un mot pour le booster (facultatif)" : "Écris la raison du refus"}
+            className={`w-full bg-[#141e2a] border border-slate-600 p-2.5 text-sm text-white focus:outline-none ${optional ? 'focus:border-emerald-500' : 'focus:border-red-500'}`}
           />
         </div>
         <div className="grid grid-cols-2 gap-2">
@@ -56,9 +58,9 @@ const ReasonModal: React.FC<{ options: ReasonOptions | null; onClose: () => void
           <button
             type="submit"
             disabled={!ok}
-            className="px-3 py-2.5 bg-red-600 hover:bg-red-500 text-sm font-bold text-white cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            className={`px-3 py-2.5 text-sm font-bold text-white cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${optional ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-red-600 hover:bg-red-500'}`}
           >
-            {options.confirmLabel || 'Refuser'}
+            {options.confirmLabel || (optional ? 'Valider' : 'Refuser')}
           </button>
         </div>
       </form>

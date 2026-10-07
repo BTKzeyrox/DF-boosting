@@ -208,12 +208,25 @@ async function sync(req: any, res: any, me: any) {
         } else if (col === 'advances') {
           ok = !existing && rec.employee_id === me.id && rec.status === 'pending';
         } else if (col === 'messages') {
-          ok = !existing && rec.sender_id === me.id && typeof rec.message === 'string' && rec.message.length <= 4000;
-          if (ok && rec.recipient_id && rec.recipient_id !== 'all') {
-            const target = await getUserRow(rec.recipient_id);
-            ok = !!target && target.role === 'admin';
+          if (existing) {
+            // Modifier / épingler son propre message : seuls le texte et l'épingle changent
+            ok = existing.sender_id === me.id && typeof rec.message === 'string' && rec.message.length <= 4000 &&
+              (rec.message.trim().length > 0 || !!existing.attachment_url);
+            if (ok) {
+              const changed = rec.message.trim() !== existing.message;
+              toSave = { ...existing, message: rec.message.trim() };
+              if (changed) toSave.edited_at = now;
+              if (rec.pinned) { toSave.pinned = true; toSave.pinned_at = existing.pinned_at || now; }
+              else { delete toSave.pinned; delete toSave.pinned_at; }
+            }
+          } else {
+            ok = rec.sender_id === me.id && typeof rec.message === 'string' && rec.message.length <= 4000;
+            if (ok && rec.recipient_id && rec.recipient_id !== 'all') {
+              const target = await getUserRow(rec.recipient_id);
+              ok = !!target && target.role === 'admin';
+            }
+            if (ok && rec.attachment_url && !isBucketUrl(rec.attachment_url)) ok = false;
           }
-          if (ok && rec.attachment_url && !isBucketUrl(rec.attachment_url)) ok = false;
         } else if (col === 'securityLogs') {
           ok = !existing && rec.employee_id === me.id;
         }
@@ -228,6 +241,9 @@ async function sync(req: any, res: any, me: any) {
         if (col === 'posts') {
           const { data: row } = await sb.from(T.posts).select('data').eq('id', id).maybeSingle();
           ok = !!row && row.data.employee_id === me.id && row.data.status === 'pending_start';
+        } else if (col === 'messages') {
+          const { data: row } = await sb.from(T.messages).select('data').eq('id', id).maybeSingle();
+          ok = !!row && row.data.sender_id === me.id;
         }
         if (!ok) { rejected.push({ col, id, reason: 'forbidden' }); continue; }
       }
@@ -285,6 +301,9 @@ const isBucketUrl = (u: unknown) =>
   typeof u === 'string' && u.startsWith(`${SB_URL}/storage/v1/object/public/${BUCKET}/`);
 
 // ---------- modification de profil (validée par l'admin) ----------
+// Description facultative jointe à une demande (300 caractères max)
+const noteOf = (body: any): string => String(body?.note || '').trim().slice(0, 300);
+
 async function profileRequest(req: any, res: any, me: any) {
   if (me.role === 'admin') return res.status(403).json({ error: 'Réservé aux boosters.' });
   const { name, username, phone, avatar_url } = req.body || {};
@@ -311,7 +330,7 @@ async function profileRequest(req: any, res: any, me: any) {
     data: {
       id, user_id: me.id, status: 'pending', created_at: new Date().toISOString(),
       old: { name: me.name, username: me.username, phone: me.phone || '', avatar_url: me.avatar_url || '' },
-      name: nm, username: un, phone: ph, avatar_url: newAvatar,
+      name: nm, username: un, phone: ph, avatar_url: newAvatar, note: noteOf(req.body),
     },
     updated_at: new Date().toISOString(),
   });
@@ -366,7 +385,7 @@ async function forgot(req: any, res: any) {
         id,
         data: {
           id, user_id: user.id, username: uname, name: user.name, phone: user.phone || '',
-          password_hash: hashPw(password), status: 'pending', created_at: new Date().toISOString(),
+          password_hash: hashPw(password), status: 'pending', created_at: new Date().toISOString(), note: noteOf(req.body),
         },
         updated_at: new Date().toISOString(),
       });
@@ -426,7 +445,7 @@ async function signup(req: any, res: any) {
   const id = `signup-${uname}`;
   await sb.from(SIGNUPS).upsert({
     id,
-    data: { id, name, username: uname, phone: phoneClean, shift, password_hash: hashPw(password), status: 'pending', created_at: new Date().toISOString(), ip_hash: ipHash },
+    data: { id, name, username: uname, phone: phoneClean, shift, password_hash: hashPw(password), status: 'pending', created_at: new Date().toISOString(), ip_hash: ipHash, note: noteOf(req.body) },
     updated_at: new Date().toISOString(),
   });
   return res.json({ ok: true });

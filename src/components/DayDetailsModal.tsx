@@ -291,6 +291,12 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
                         {shift.notes}
                       </div>
                     )}
+                    {shift.admin_notes && (
+                      <div className="text-xs text-emerald-200 font-mono bg-emerald-950/40 p-2.5 rounded border border-emerald-800/60">
+                        <strong className="uppercase">Note de l'admin: </strong>
+                        {shift.admin_notes}
+                      </div>
+                    )}
                     {shift.rejection_reason && (
                       <div className="text-xs text-red-300 font-mono bg-red-950/40 p-2.5 rounded border border-red-800/60 flex items-start gap-2">
                         <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />

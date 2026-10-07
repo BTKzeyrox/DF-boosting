@@ -416,8 +416,8 @@ class DeltaForceStore {
   }
 
   // Mot de passe oublié (sans être connecté) : la réponse est toujours la même
-  public async requestPasswordReset(username: string, password: string): Promise<{ success: boolean; error?: string }> {
-    const r = await this.api('forgot', { method: 'POST', body: JSON.stringify({ username, password }) });
+  public async requestPasswordReset(username: string, password: string, note?: string): Promise<{ success: boolean; error?: string }> {
+    const r = await this.api('forgot', { method: 'POST', body: JSON.stringify({ username, password, note: note || '' }) });
     return r.ok ? { success: true } : { success: false, error: r.data?.error || 'Envoi impossible. Réessayez.' };
   }
 
@@ -426,10 +426,10 @@ class DeltaForceStore {
   }
 
   // Booster : propose de nouvelles infos de profil (validation admin obligatoire)
-  public async submitProfileRequest(p: { name: string; username: string; phone: string; avatarUrl?: string }): Promise<{ success: boolean; error?: string }> {
+  public async submitProfileRequest(p: { name: string; username: string; phone: string; avatarUrl?: string; note?: string }): Promise<{ success: boolean; error?: string }> {
     const r = await this.api('profile-request', {
       method: 'POST',
-      body: JSON.stringify({ name: p.name, username: p.username, phone: p.phone, avatar_url: p.avatarUrl || '' }),
+      body: JSON.stringify({ name: p.name, username: p.username, phone: p.phone, avatar_url: p.avatarUrl || '', note: p.note || '' }),
     });
     if (r.ok) await this.pull(true);
     return r.ok ? { success: true } : { success: false, error: r.data?.error || 'Envoi impossible.' };
@@ -448,7 +448,7 @@ class DeltaForceStore {
 
   // Demandes de nouveau mot de passe en attente (admin)
   // Public : un futur booster demande un compte (validation par l'admin ensuite)
-  public async requestSignup(p: { name: string; username: string; password: string; phone: string; shift: string }): Promise<{ success: boolean; error?: string }> {
+  public async requestSignup(p: { name: string; username: string; password: string; phone: string; shift: string; note?: string }): Promise<{ success: boolean; error?: string }> {
     const r = await this.api('signup', { method: 'POST', body: JSON.stringify(p) });
     return r.ok ? { success: true } : { success: false, error: r.data?.error || 'Envoi impossible. Réessayez.' };
   }
@@ -864,9 +864,10 @@ class DeltaForceStore {
   }
 
   // --- ADMIN ACTIONS ---
-  public validatePost(postId: string): { success: boolean; error?: string; payrollAr?: number } {
+  public validatePost(postId: string, note?: string): { success: boolean; error?: string; payrollAr?: number } {
     const post = this.posts.find(p => p.id === postId);
     if (!post) return { success: false, error: 'Poste introuvable' };
+    if (note && note.trim()) post.admin_notes = note.trim();
 
     const employee = this.users.find(u => u.id === post.employee_id);
 
@@ -1076,6 +1077,48 @@ class DeltaForceStore {
     };
 
     this.messages.push(newMsg);
+    this.notify();
+    return { success: true };
+  }
+
+  // Modifier, épingler, supprimer : par l'auteur du message ou par l'admin
+  private canTouchMessage(msg: ChatMessage, userId: string): boolean {
+    const u = this.users.find(x => x.id === userId);
+    return !!u && (msg.sender_id === userId || u.role === 'admin');
+  }
+
+  public editMessage(id: string, userId: string, text: string): { success: boolean; error?: string } {
+    const msg = this.messages.find(m => m.id === id);
+    if (!msg || !this.canTouchMessage(msg, userId)) return { success: false, error: 'Action non autorisée.' };
+    const clean = text.trim();
+    if (!clean && !msg.attachment_url) return { success: false, error: 'Le message ne peut pas être vide.' };
+    if (clean === msg.message) return { success: true };
+    const now = new Date();
+    msg.message = clean;
+    msg.edited_at = `${now.toISOString().split('T')[0]} ${now.toTimeString().split(' ')[0]}`;
+    this.notify();
+    return { success: true };
+  }
+
+  public togglePinMessage(id: string, userId: string): { success: boolean } {
+    const msg = this.messages.find(m => m.id === id);
+    if (!msg || !this.canTouchMessage(msg, userId)) return { success: false };
+    if (msg.pinned) {
+      msg.pinned = false;
+      delete msg.pinned_at;
+    } else {
+      const now = new Date();
+      msg.pinned = true;
+      msg.pinned_at = `${now.toISOString().split('T')[0]} ${now.toTimeString().split(' ')[0]}`;
+    }
+    this.notify();
+    return { success: true };
+  }
+
+  public deleteMessage(id: string, userId: string): { success: boolean } {
+    const msg = this.messages.find(m => m.id === id);
+    if (!msg || !this.canTouchMessage(msg, userId)) return { success: false };
+    this.messages = this.messages.filter(m => m.id !== id);
     this.notify();
     return { success: true };
   }

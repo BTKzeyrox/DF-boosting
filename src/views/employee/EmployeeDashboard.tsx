@@ -120,6 +120,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
   const [startProofPhotos, setStartProofPhotos] = useState<string[]>([]);
   const [startProofPreview, setStartProofPreview] = useState<string | null>(null);
   const [startFormError, setStartFormError] = useState<string | null>(null);
+  const [startNotes, setStartNotes] = useState(''); // description facultative envoyée à l'admin
 
   // Edit Pending Start Form states
   const [isEditingPendingStart, setIsEditingPendingStart] = useState(false);
@@ -345,7 +346,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
       postNumber: contract?.post_number,
       shiftType: contract?.recommended_shift === 'night' ? 'night' : 'day',
       status: 'pending_start',
-      notes: `Demande de début soumise par ${currentUser.name} avec ${startProofPhotos.length} photo(s)`
+      notes: `Demande de début soumise par ${currentUser.name} avec ${startProofPhotos.length} photo(s)${startNotes.trim() ? ` | ${startNotes.trim()}` : ''}`
     });
 
     if (!res.success) {
@@ -354,6 +355,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
     }
 
     setShowStartModal(false);
+    setStartNotes('');
     setHomeViewMode('details');
     if (onNavigateTab) {
       onNavigateTab('active-post');
@@ -1420,6 +1422,20 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                     />
                   </div>
                 )}
+              </div>
+
+              <div className="text-xs font-mono">
+                <div>
+                  <label className="block text-slate-300 uppercase mb-1">Description (facultatif)</label>
+                  <textarea
+                    rows={2}
+                    maxLength={300}
+                    value={startNotes}
+                    onChange={e => setStartNotes(e.target.value)}
+                    placeholder="Un mot pour l'admin (facultatif)"
+                    className="w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
               </div>
 
               {/* Bottom Actions */}

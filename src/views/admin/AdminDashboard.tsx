@@ -148,17 +148,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   }, []);
 
   // Handlers for post actions
-  const handleValidate = (postId: string, confirmed = false) => {
+  const handleValidate = (postId: string, confirmed = false, note = '') => {
     if (!confirmed) {
-      askConfirm({
+      askReason({
         title: 'Valider cette session ?',
         message: "La paie sera créditée à l'employé. Cette action ne peut pas être annulée.",
         confirmLabel: 'Valider',
-        onConfirm: () => handleValidate(postId, true),
+        optional: true,
+        onSubmit: note => handleValidate(postId, true, note),
       });
       return;
     }
-    const res = db.validatePost(postId);
+    const res = db.validatePost(postId, note);
     if (!res.success) {
       showToast(res.error || 'Erreur lors de la validation', 'error');
     } else {
@@ -826,6 +827,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <div className="text-white font-bold text-sm break-words">{r.name} <span className="text-slate-400 font-normal">(@{r.username})</span></div>
                 <div className="text-emerald-300 break-words">Téléphone : {r.phone || 'non renseigné'}</div>
                 <div className="text-slate-300">Shift souhaité : {r.shift === 'night' ? 'Nuit' : 'Jour'}</div>
+                {r.note && <div className="text-cyan-300 break-words">Description : {r.note}</div>}
                 <div className="text-slate-400">Demandé le {new Date(r.created_at).toLocaleString('fr-FR')}</div>
               </div>
               <div className="grid grid-cols-2 gap-2 sm:w-64 shrink-0">
@@ -872,6 +874,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <div className="min-w-0 flex-1 text-xs font-mono space-y-0.5">
                 <div className="text-white font-bold text-sm break-words">{r.name} <span className="text-slate-400 font-normal">(@{r.username})</span></div>
                 <div className="text-amber-300 break-words">Téléphone : {r.phone || 'non renseigné'}</div>
+                {r.note && <div className="text-cyan-300 break-words">Description : {r.note}</div>}
                 <div className="text-slate-400">Demandé le {new Date(r.created_at).toLocaleString('fr-FR')}</div>
               </div>
               <div className="grid grid-cols-2 gap-2 sm:w-64 shrink-0">
@@ -921,6 +924,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <div key={r.id} className="bg-[#0f1722] border border-slate-700 p-3 flex flex-col sm:flex-row sm:items-center gap-3">
                 <div className="min-w-0 flex-1 text-xs font-mono space-y-1">
                   <div className="text-white font-bold text-sm break-words">{r.old.name} <span className="text-slate-400 font-normal">(@{r.old.username})</span></div>
+                  {r.note && <div className="text-cyan-300 break-words">Description : {r.note}</div>}
                   {rows.map(x => (
                     <div key={x.label} className="break-words">
                       <span className="text-slate-400">{x.label} : </span>
@@ -1004,11 +1008,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={() => askConfirm({
+                  onClick={() => askReason({
                     title: "Accepter l'avance ?",
                     message: `${formatCurrencyAr(a.amount_ar)} pour ${a.employee_name}.`,
                     confirmLabel: 'Accepter',
-                    onConfirm: () => { db.reviewAdvanceRequest(a.id, true, "Validé par l'administrateur"); },
+                    optional: true,
+                    onSubmit: note => { db.reviewAdvanceRequest(a.id, true, note || "Validé par l'administrateur"); },
                   })}
                   className="px-3 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold cursor-pointer"
                 >

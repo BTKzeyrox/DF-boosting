@@ -6,6 +6,7 @@ export interface PasswordResetRequest {
   phone: string;
   status: 'pending';
   created_at: string;
+  note?: string; // description facultative du booster
 }
 
 export interface AppSettings {
@@ -32,6 +33,7 @@ export interface ProfileChangeRequest {
   username: string;
   phone: string;
   avatar_url: string;
+  note?: string; // description facultative du booster
 }
 
 export type UserRole = 'admin' | 'employee';
@@ -97,6 +99,8 @@ export interface PostSession {
   rejection_reason?: string;
   calculated_ar?: number; // 1M score = 1,000 Ar
   notes?: string;
+  start_notes?: string; // description facultative du booster au début de session
+  admin_notes?: string; // description facultative de l'admin à la validation
   demo?: boolean; // donnée de démonstration (supprimable dans Réglages)
   created_at: string;
   updated_at: string;
@@ -150,6 +154,9 @@ export interface ChatMessage {
   attachment_url?: string;
   attachment_name?: string;
   attachment_kind?: 'image' | 'file';
+  edited_at?: string; // message modifié après envoi
+  pinned?: boolean; // épinglé en haut de la conversation
+  pinned_at?: string;
 }
 
 export interface ClientContract {
@@ -200,4 +207,5 @@ export interface SignupRequest {
   shift: ShiftType;
   status: 'pending';
   created_at: string;
+  note?: string; // description facultative du booster
 }

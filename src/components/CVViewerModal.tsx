@@ -25,6 +25,7 @@ export const CVViewerModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, us
   const [fUser, setFUser] = useState('');
   const [fPhone, setFPhone] = useState('');
   const [fAvatar, setFAvatar] = useState<string>('');
+  const [fNote, setFNote] = useState('');
   const [busy, setBusy] = useState(false);
   const [info, setInfo] = useState('');
   const [editing, setEditing] = useState(false);
@@ -69,7 +70,7 @@ export const CVViewerModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, us
   const sendRequest = async () => {
     setError(''); setInfo('');
     setBusy(true);
-    const r = await db.submitProfileRequest({ name: fName, username: fUser, phone: fPhone, avatarUrl: fAvatar });
+    const r = await db.submitProfileRequest({ name: fName, username: fUser, phone: fPhone, avatarUrl: fAvatar, note: fNote.trim() });
     setBusy(false);
     if (!r.success) return setError(r.error || 'Envoi impossible.');
     setEditing(false);
@@ -198,6 +199,17 @@ export const CVViewerModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, us
                 <div>
                   <label className="block text-slate-300 uppercase mb-1">Téléphone</label>
                   <input value={fPhone} onChange={e => setFPhone(e.target.value)} inputMode="tel" className="w-full bg-[#141e2a] border border-slate-600 p-2 text-white focus:border-emerald-500 focus:outline-none" />
+                </div>
+                <div>
+                  <label className="block text-slate-300 uppercase mb-1">Description (facultatif)</label>
+                  <textarea
+                    rows={2}
+                    maxLength={300}
+                    value={fNote}
+                    onChange={e => setFNote(e.target.value)}
+                    placeholder="Un mot pour l'admin (facultatif)"
+                    className="w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white focus:border-emerald-500 focus:outline-none"
+                  />
                 </div>
                 <div className="grid grid-cols-2 gap-2 pt-1">
                   <button type="button" onClick={() => { setEditing(false); setError(''); }} className="px-3 py-2.5 bg-[#141e2a] hover:bg-[#1b2f44] border border-slate-600 text-sm font-semibold cursor-pointer">

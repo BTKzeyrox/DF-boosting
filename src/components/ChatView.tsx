@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Send, Paperclip, FileText, Users, MessageSquare, ArrowLeft } from 'lucide-react';
+import { Send, Paperclip, FileText, Users, MessageSquare, ArrowLeft, MoreVertical, Pin, PinOff, Pencil, Trash2, Copy, X } from 'lucide-react';
 import { db } from '../db/store';
 import { ChatMessage, User } from '../types';
 import { compressProofImage } from '../utils/imageUtils';
 import { Avatar } from './Avatar';
 import { markChatSeen } from '../utils/notifications';
+import { LightboxModal } from './LightboxModal';
+import { askConfirm } from './ConfirmModal';
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const OK_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf', 'text/plain'];
@@ -31,6 +33,11 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string }>
   const [showList, setShowList] = useState(true); // mobile : liste ou conversation
   const endRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [menuMsg, setMenuMsg] = useState<ChatMessage | null>(null); // menu d'actions (appui long ou ⋮)
+  const [editingId, setEditingId] = useState<string | null>(null); // message en cours de modification
+  const [viewer, setViewer] = useState<{ url: string; msg: ChatMessage } | null>(null); // visionneuse d'image
+  const [pinIdx, setPinIdx] = useState(0);
+  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const unsub = db.subscribe(() => {
@@ -73,6 +80,14 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string }>
   }, [messages.length, currentUser.id]);
 
   const send = (extra?: { url: string; name: string; kind: 'image' | 'file' }) => {
+    if (editingId) {
+      const r = db.editMessage(editingId, currentUser.id, text);
+      if (!r.success) return setError(r.error || 'Modification impossible.');
+      setEditingId(null);
+      setText('');
+      setError(null);
+      return;
+    }
     if (!text.trim() && !extra) return;
     db.sendMessage({
       senderId: currentUser.id,
@@ -105,6 +120,53 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string }>
       setBusy(false);
     }
   };
+
+  const canTouch = (m: ChatMessage) => isAdmin || m.sender_id === currentUser.id;
+  const startPress = (m: ChatMessage) => {
+    if (pressTimer.current) clearTimeout(pressTimer.current);
+    pressTimer.current = setTimeout(() => setMenuMsg(m), 450);
+  };
+  const stopPress = () => {
+    if (pressTimer.current) clearTimeout(pressTimer.current);
+    pressTimer.current = null;
+  };
+  const startEdit = (m: ChatMessage) => {
+    setMenuMsg(null);
+    setEditingId(m.id);
+    setText(m.message);
+    setError(null);
+  };
+  const cancelEdit = () => {
+    setEditingId(null);
+    setText('');
+  };
+  const confirmDelete = (m: ChatMessage) => {
+    setMenuMsg(null);
+    askConfirm({
+      title: 'Supprimer ce message pour tout le monde ?',
+      message: 'Cette action est définitive.',
+      confirmLabel: 'Supprimer',
+      danger: true,
+      onConfirm: () => {
+        if (editingId === m.id) cancelEdit();
+        db.deleteMessage(m.id, currentUser.id);
+      },
+    });
+  };
+  const copyText = async (m: ChatMessage) => {
+    setMenuMsg(null);
+    try {
+      await navigator.clipboard.writeText(m.message);
+    } catch {
+      /* copie impossible : on ignore */
+    }
+  };
+  const pinned = visible.filter(m => m.pinned).sort((a, b) => String(b.pinned_at || '').localeCompare(String(a.pinned_at || '')));
+  const pinShown = pinned.length > 0 ? pinned[pinIdx % pinned.length] : null;
+  const jumpTo = (id: string) => {
+    document.querySelector(`[data-msg-id="${id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+  const gallery = visible.filter(m => m.attachment_url && m.attachment_kind === 'image');
 
   const lastOf = (tid: string) => {
     const l = messages.filter(m =>
@@ -165,35 +227,66 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string }>
           </div>
         </div>
 
+        {pinShown && (
+          <button
+            type="button"
+            onClick={() => { jumpTo(pinShown.id); if (pinned.length > 1) setPinIdx(i => i + 1); }}
+            className="w-full px-3 py-2 bg-amber-950/40 border-b border-amber-500/30 flex items-center gap-2 text-left cursor-pointer"
+            title="Voir le message épinglé"
+          >
+            <Pin className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+            <span className="min-w-0 flex-1">
+              <span className="block text-[10px] font-mono text-amber-300">
+                Épinglé{pinned.length > 1 ? ` (${(pinIdx % pinned.length) + 1}/${pinned.length})` : ''} · {pinShown.sender_name}
+              </span>
+              <span className="block text-xs text-slate-200 truncate">{pinShown.message || pinShown.attachment_name || 'Pièce jointe'}</span>
+            </span>
+          </button>
+        )}
+
         <div className="flex-1 p-3 overflow-y-auto space-y-3 bg-[#0a0f16]">
           {visible.length === 0 && <div className="text-center text-xs text-slate-500 font-mono pt-8">Aucun message. Écris le premier.</div>}
           {visible.map(msg => {
             const isMe = msg.sender_id === currentUser.id;
+            const hasMenu = canTouch(msg) || !!msg.message;
             return (
-              <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
+              <div key={msg.id} data-msg-id={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
                 <div className="flex items-center gap-1.5 mb-1 text-[10px] font-mono text-slate-400">
                   <span className="font-semibold text-slate-300">{msg.sender_name}</span>
                   {msg.sender_role === 'admin' && <span className="px-1 bg-amber-500/20 text-amber-300 border border-amber-500/40">ADMIN</span>}
                   <span>·</span>
                   <span>{msg.timestamp}</span>
+                  {msg.edited_at && <span className="italic text-slate-500">· modifié</span>}
+                  {msg.pinned && <Pin className="w-3 h-3 text-amber-400" />}
                 </div>
-                <div
-                  className={`max-w-[85%] sm:max-w-md p-2.5 text-xs leading-relaxed break-words ${
-                    isMe ? 'bg-emerald-600 text-white' : 'bg-[#16212e] text-slate-200 border border-slate-700/80'
-                  }`}
-                >
-                  {msg.attachment_url && msg.attachment_kind === 'image' && (
-                    <a href={msg.attachment_url} target="_blank" rel="noreferrer" className="block mb-1.5">
-                      <img src={msg.attachment_url} alt={msg.attachment_name || 'photo'} className="max-h-56 w-auto max-w-full" loading="lazy" />
-                    </a>
+                <div className={`flex items-start gap-1 max-w-[92%] sm:max-w-md ${isMe ? 'flex-row-reverse' : ''}`}>
+                  <div
+                    onTouchStart={() => hasMenu && startPress(msg)}
+                    onTouchEnd={stopPress}
+                    onTouchMove={stopPress}
+                    onContextMenu={e => { if (hasMenu) { e.preventDefault(); setMenuMsg(msg); } }}
+                    className={`min-w-0 p-2.5 text-xs leading-relaxed break-words select-text ${
+                      isMe ? 'bg-emerald-600 text-white' : 'bg-[#16212e] text-slate-200 border border-slate-700/80'
+                    } ${editingId === msg.id ? 'ring-2 ring-amber-400' : ''}`}
+                  >
+                    {msg.attachment_url && msg.attachment_kind === 'image' && (
+                      <button type="button" onClick={() => setViewer({ url: msg.attachment_url!, msg })} className="block mb-1.5 cursor-zoom-in" title="Agrandir">
+                        <img src={msg.attachment_url} alt={msg.attachment_name || 'photo'} className="max-h-56 w-auto max-w-full" loading="lazy" />
+                      </button>
+                    )}
+                    {msg.attachment_url && msg.attachment_kind !== 'image' && (
+                      <a href={msg.attachment_url} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 mb-1.5 underline font-semibold">
+                        <FileText className="w-4 h-4 shrink-0" />
+                        <span className="break-all">{msg.attachment_name || 'fichier'}</span>
+                      </a>
+                    )}
+                    {msg.message && <span className="whitespace-pre-line">{msg.message}</span>}
+                  </div>
+                  {hasMenu && (
+                    <button type="button" onClick={() => setMenuMsg(msg)} className="p-1 text-slate-500 hover:text-white cursor-pointer shrink-0" title="Actions">
+                      <MoreVertical className="w-4 h-4" />
+                    </button>
                   )}
-                  {msg.attachment_url && msg.attachment_kind !== 'image' && (
-                    <a href={msg.attachment_url} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 mb-1.5 underline font-semibold">
-                      <FileText className="w-4 h-4 shrink-0" />
-                      <span className="break-all">{msg.attachment_name || 'fichier'}</span>
-                    </a>
-                  )}
-                  {msg.message && <span className="whitespace-pre-line">{msg.message}</span>}
                 </div>
               </div>
             );
@@ -203,6 +296,16 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string }>
 
         {error && <div className="px-3 py-2 bg-red-950 border-t border-red-500/60 text-red-200 text-xs font-semibold">{error}</div>}
 
+        {editingId && (
+          <div className="px-3 py-2 bg-amber-950/40 border-t border-amber-500/40 flex items-center gap-2 text-xs text-amber-200">
+            <Pencil className="w-3.5 h-3.5 shrink-0" />
+            <span className="flex-1 font-semibold">Modification du message</span>
+            <button type="button" onClick={cancelEdit} className="p-1 hover:text-white cursor-pointer" title="Annuler la modification">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
         <form
           onSubmit={e => { e.preventDefault(); send(); }}
           className="p-2.5 bg-[#131d2a] border-t border-slate-800 flex items-center gap-2"
@@ -210,7 +313,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string }>
           <input ref={fileRef} type="file" accept="image/*,application/pdf,text/plain" onChange={onFile} className="hidden" />
           <button
             type="button"
-            disabled={busy}
+            disabled={busy || !!editingId}
             onClick={() => fileRef.current?.click()}
             className="p-2.5 bg-[#0b1017] border border-slate-700 text-slate-300 hover:text-white cursor-pointer disabled:opacity-50 shrink-0"
             title="Joindre une photo ou un fichier (10 Mo max)"
@@ -229,6 +332,54 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string }>
           </button>
         </form>
       </div>
+
+      {/* Menu d'actions du message */}
+      {menuMsg && (
+        <div className="fixed inset-0 z-[80] bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-3" onClick={() => setMenuMsg(null)}>
+          <div className="w-full max-w-xs bg-[#0f1722] border border-slate-700 shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="px-3 py-2.5 border-b border-slate-800 text-[11px] font-mono text-slate-400 truncate">
+              {menuMsg.sender_name} · {menuMsg.message || menuMsg.attachment_name || 'Pièce jointe'}
+            </div>
+            {canTouch(menuMsg) && (
+              <button type="button" onClick={() => { db.togglePinMessage(menuMsg.id, currentUser.id); setMenuMsg(null); }} className="w-full px-3 py-3 flex items-center gap-2.5 text-sm text-white hover:bg-[#16212e] cursor-pointer">
+                {menuMsg.pinned ? <PinOff className="w-4 h-4 text-amber-400" /> : <Pin className="w-4 h-4 text-amber-400" />}
+                {menuMsg.pinned ? 'Désépingler' : 'Épingler'}
+              </button>
+            )}
+            {canTouch(menuMsg) && (
+              <button type="button" onClick={() => startEdit(menuMsg)} className="w-full px-3 py-3 flex items-center gap-2.5 text-sm text-white hover:bg-[#16212e] cursor-pointer">
+                <Pencil className="w-4 h-4 text-cyan-400" /> Modifier
+              </button>
+            )}
+            {menuMsg.message && (
+              <button type="button" onClick={() => copyText(menuMsg)} className="w-full px-3 py-3 flex items-center gap-2.5 text-sm text-white hover:bg-[#16212e] cursor-pointer">
+                <Copy className="w-4 h-4 text-slate-400" /> Copier le texte
+              </button>
+            )}
+            {canTouch(menuMsg) && (
+              <button type="button" onClick={() => confirmDelete(menuMsg)} className="w-full px-3 py-3 flex items-center gap-2.5 text-sm text-red-300 hover:bg-red-950/40 cursor-pointer">
+                <Trash2 className="w-4 h-4" /> Supprimer pour tous
+              </button>
+            )}
+            <button type="button" onClick={() => setMenuMsg(null)} className="w-full px-3 py-2.5 text-xs text-slate-400 border-t border-slate-800 hover:text-white cursor-pointer">
+              Fermer
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Visionneuse d'image : zoom, retour, précédent / suivant */}
+      {viewer && (
+        <LightboxModal
+          isOpen
+          onClose={() => setViewer(null)}
+          imageUrl={viewer.url}
+          gallery={gallery.map(m => m.attachment_url!)}
+          title={viewer.msg.attachment_name || 'Photo'}
+          subtitle={viewer.msg.sender_name}
+          timestamp={viewer.msg.timestamp}
+        />
+      )}
     </div>
   );
 };
