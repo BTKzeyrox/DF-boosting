@@ -225,3 +225,14 @@ html.theme-dark .df-popover {
 html.theme-light .df-popover {
   background-color: #f1f5f9 !important;
 }
+
+/* Élément atteint depuis la recherche ou une notification : contour qui clignote */
+@keyframes navflash {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34, 211, 238, 0); }
+  20%, 60% { box-shadow: 0 0 0 4px rgba(34, 211, 238, 0.95), 0 0 26px rgba(34, 211, 238, 0.55); }
+}
+.nav-flash {
+  animation: navflash 2.8s ease-in-out 1;
+  position: relative;
+  z-index: 2;
+}

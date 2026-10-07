@@ -25,6 +25,7 @@ import { User, PostSession, DayStatus, SalaryAdvanceRequest, AppSettings } from 
 import { db } from '../db/store';
 import { formatScoreM } from '../utils/formatUtils';
 import { Avatar } from '../components/Avatar';
+import { NAV_TARGET_EVENT, peekNavTarget } from '../utils/navTarget';
 
 interface CalendarViewProps {
   currentUser: User | null;
@@ -135,6 +136,20 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
     setYear(t.getFullYear());
     setMonth(t.getMonth());
   };
+
+  // Arrivée depuis la recherche (une date) : on affiche le bon mois, le jour clignote ensuite
+  useEffect(() => {
+    const apply = () => {
+      const t = peekNavTarget();
+      if (t && t.startsWith('day-')) {
+        const [y, m] = t.slice(4).split('-').map(Number);
+        if (y && m) { setYear(y); setMonth(m - 1); }
+      }
+    };
+    apply();
+    window.addEventListener(NAV_TARGET_EVENT, apply);
+    return () => window.removeEventListener(NAV_TARGET_EVENT, apply);
+  }, []);
 
   const boosters = useMemo(() => users.filter(u => u.role === 'employee'), [users]);
   const clientNames = useMemo(
@@ -432,6 +447,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ currentUser, onSelec
                   return (
                     <div
                       key={d.dateStr}
+                      data-nav={`day-${d.dateStr}`}
                       onClick={() => onSelectDay(d.dateStr, d.shifts)}
                       className={`min-h-[60px] sm:min-h-[96px] p-1 sm:p-2 cursor-pointer hover:bg-[#15202d] flex flex-col gap-1 transition-opacity ${
                         isToday ? 'ring-1 ring-emerald-500/70 bg-[#121c27]' : ''

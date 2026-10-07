@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { NAV_TARGET_EVENT, peekNavTarget } from '../utils/navTarget';
 import {
   Target,
   Search,
@@ -60,6 +61,16 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
   const [filterShift, setFilterShift] = useState<'all' | 'day' | 'night' | 'urgent'>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'active' | 'free'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  // Arrivée depuis la recherche ou une notification : on enlève les filtres pour que le poste soit visible
+  useEffect(() => {
+    const apply = () => {
+      const t = peekNavTarget();
+      if (t && t.startsWith('poste-')) { setFilterShift('all'); setFilterStatus('all'); setSearchQuery(''); }
+    };
+    apply();
+    window.addEventListener(NAV_TARGET_EVENT, apply);
+    return () => window.removeEventListener(NAV_TARGET_EVENT, apply);
+  }, []);
   const [sortBy, setSortBy] = useState<'number' | 'rest_desc' | 'obj_asc' | 'obj_desc'>('number');
 
   const isLight = theme === 'light';
@@ -359,6 +370,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
             return (
               <div
                 key={contract.id}
+                data-nav={`poste-${contract.post_number}`}
                 style={bandStyle}
                 className={`${noAccount ? 'opacity-60 grayscale ' : ''}border rounded-2xl p-3 sm:p-5 flex flex-col justify-between space-y-3 sm:space-y-4 transition-all duration-200 hover:shadow-xl relative overflow-hidden ${
                   isPending

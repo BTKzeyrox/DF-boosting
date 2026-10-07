@@ -7,6 +7,7 @@ import { Avatar } from './Avatar';
 import { markChatSeen } from '../utils/notifications';
 import { LightboxModal } from './LightboxModal';
 import { askConfirm } from './ConfirmModal';
+import { takeChatThread, CHAT_THREAD_EVENT } from '../utils/navTarget';
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const OK_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf', 'text/plain'];
@@ -31,6 +32,13 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string }>
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showList, setShowList] = useState(true); // mobile : liste ou conversation
+  // Arrivée depuis une notification : on ouvre directement la discussion concernée
+  useEffect(() => {
+    const open = () => { const t = takeChatThread(); if (t) { setThreadId(t); setShowList(false); } };
+    open();
+    window.addEventListener(CHAT_THREAD_EVENT, open);
+    return () => window.removeEventListener(CHAT_THREAD_EVENT, open);
+  }, []);
   const endRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [menuMsg, setMenuMsg] = useState<ChatMessage | null>(null); // menu d'actions (appui long ou ⋮)

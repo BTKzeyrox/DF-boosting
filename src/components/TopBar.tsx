@@ -5,6 +5,7 @@ import { useApp } from '../context/AppContext';
 import { db } from '../db/store';
 import { buildNotifications, markSeen, unreadCount, getSeen, SEEN_EVENT } from '../utils/notifications';
 import { setValFilterIntent } from '../utils/navIntent';
+import { setNavTarget, setChatThread } from '../utils/navTarget';
 import { beepIfEnabled } from '../utils/notifSound';
 
 interface TopBarProps {
@@ -80,18 +81,26 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
       });
     }
     const seenAcc = new Set<string>();
+    // « p1 », « p01 », « poste 1 », « poste 01 », « #1 » : on va exactement à ce poste (pas aux postes 10 à 19)
+    const pm = s.match(/^(?:poste|p|#)\s*0*(\d{1,3})$/);
+    const exactNum = pm ? Number(pm[1]) : null;
+    const goPoste = (n: number) => () => { setNavTarget(`poste-${n}`); onNavigate(home); };
     db.getContracts().forEach(c => {
-      if (norm(c.client_name).includes(s) || norm(`poste ${c.post_number}`).includes(s) || norm(`#${c.post_number}`).includes(s))
-        out.push({ id: `c-${c.id}`, title: `${c.client_name}`, sub: `Poste ${c.post_number}`, kind: 'poste', go: () => onNavigate(home) });
+      const byNumber = exactNum !== null ? c.post_number === exactNum : norm(`poste ${c.post_number}`).includes(s) || norm(`#${c.post_number}`).includes(s);
+      if (norm(c.client_name).includes(s) || byNumber) {
+        const hit: Hit = { id: `c-${c.id}`, title: `${c.client_name}`, sub: `Poste ${c.post_number}`, kind: 'poste', go: goPoste(c.post_number) };
+        if (exactNum !== null && c.post_number === exactNum) out.unshift(hit);
+        else out.push(hit);
+      }
       if (c.account_tag && norm(c.account_tag).includes(s) && !seenAcc.has(c.account_tag)) {
         seenAcc.add(c.account_tag);
-        out.push({ id: `a-${c.id}`, title: c.account_tag, sub: `Compte de ${c.client_name}`, kind: 'compte', go: () => onNavigate(home) });
+        out.push({ id: `a-${c.id}`, title: c.account_tag, sub: `Compte de ${c.client_name}`, kind: 'compte', go: goPoste(c.post_number) });
       }
     });
     const dates = Array.from(new Set(db.getPosts().map(p => p.date)));
     dates.forEach(d => {
       const [y, m, day] = d.split('-');
-      if (`${day}/${m}`.includes(s) || d.includes(s)) out.push({ id: `d-${d}`, title: `${day}/${m}/${y}`, sub: 'Voir au calendrier', kind: 'date', go: () => onNavigate('calendar') });
+      if (`${day}/${m}`.includes(s) || d.includes(s)) out.push({ id: `d-${d}`, title: `${day}/${m}/${y}`, sub: 'Voir au calendrier', kind: 'date', go: () => { setNavTarget(`day-${d}`); onNavigate('calendar'); } });
     });
     return out.slice(0, 8);
   }, [q, isAdmin, pages, home, onNavigate, onOpenBooster, db.getContracts().length, db.getUsers().length]);
@@ -187,7 +196,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
                   notifs.slice(0, 30).map(n => (
                     <button
                       key={n.id}
-                      onClick={() => { setBellOpen(false); if (n.filter) setValFilterIntent(n.filter); onNavigate(n.view); }}
+                      onClick={() => { setBellOpen(false); if (n.filter) setValFilterIntent(n.filter); if (n.thread) setChatThread(n.thread); if (n.nav) setNavTarget(n.nav); onNavigate(n.view); }}
                       className={`w-full text-left px-3 py-2.5 flex items-start gap-2.5 ${L ? 'hover:bg-emerald-50' : 'hover:bg-emerald-950/40'} border-b ${L ? 'border-slate-50' : 'border-slate-800'} cursor-pointer`}
                     >
                       <span className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${n.tone === 'urgent' ? 'bg-red-500' : n.tone === 'bad' ? 'bg-orange-500' : n.tone === 'ok' ? 'bg-emerald-500' : 'bg-amber-400'}`} />

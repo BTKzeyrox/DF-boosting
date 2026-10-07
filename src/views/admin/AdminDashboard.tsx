@@ -825,7 +825,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </h3>
           </div>
           {signups.map(r => (
-            <div key={r.id} className="bg-[#0f1722] border border-slate-700 p-3 flex flex-col sm:flex-row sm:items-center gap-3">
+            <div key={r.id} data-nav={`val-sig-${r.id}`} className="bg-[#0f1722] border border-slate-700 p-3 flex flex-col sm:flex-row sm:items-center gap-3">
               <div className="min-w-0 flex-1 text-xs font-mono space-y-0.5">
                 <div className="text-white font-bold text-sm break-words">{r.name} <span className="text-slate-400 font-normal">(@{r.username})</span></div>
                 <div className="text-emerald-300 break-words">Téléphone : {r.phone || 'non renseigné'}</div>
@@ -873,7 +873,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </h3>
           </div>
           {resets.map(r => (
-            <div key={r.id} className="bg-[#0f1722] border border-slate-700 p-3 flex flex-col sm:flex-row sm:items-center gap-3">
+            <div key={r.id} data-nav={`val-rst-${r.id}`} className="bg-[#0f1722] border border-slate-700 p-3 flex flex-col sm:flex-row sm:items-center gap-3">
               <div className="min-w-0 flex-1 text-xs font-mono space-y-0.5">
                 <div className="text-white font-bold text-sm break-words">{r.name} <span className="text-slate-400 font-normal">(@{r.username})</span></div>
                 <div className="text-amber-300 break-words">Téléphone : {r.phone || 'non renseigné'}</div>
@@ -924,7 +924,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             if (r.phone !== r.old.phone) rows.push({ label: 'Téléphone', from: r.old.phone || 'vide', to: r.phone || 'vide' });
             const photoChanged = r.avatar_url !== r.old.avatar_url;
             return (
-              <div key={r.id} className="bg-[#0f1722] border border-slate-700 p-3 flex flex-col sm:flex-row sm:items-center gap-3">
+              <div key={r.id} data-nav={`val-prf-${r.id}`} className="bg-[#0f1722] border border-slate-700 p-3 flex flex-col sm:flex-row sm:items-center gap-3">
                 <div className="min-w-0 flex-1 text-xs font-mono space-y-1">
                   <div className="text-white font-bold text-sm break-words">{r.old.name} <span className="text-slate-400 font-normal">(@{r.old.username})</span></div>
                   {r.note && <div className="text-cyan-300 break-words">Description : {r.note}</div>}
@@ -990,7 +990,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             {pendingAdvances.length} avance{pendingAdvances.length > 1 ? 's' : ''} en attente
           </h3>
           {pendingAdvances.map(a => (
-            <div key={a.id} className="bg-[#0f1722] border border-slate-700 p-3 flex flex-col sm:flex-row sm:items-center gap-3">
+            <div key={a.id} data-nav={`val-adv-${a.id}`} className="bg-[#0f1722] border border-slate-700 p-3 flex flex-col sm:flex-row sm:items-center gap-3">
               <div className="min-w-0 flex-1 text-xs font-mono space-y-0.5">
                 <div className="text-white font-bold text-sm break-words">{a.employee_name}</div>
                 <div className="text-amber-300 font-bold">{formatCurrencyAr(a.amount_ar)}</div>
@@ -1069,6 +1069,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 return (
                   <div
                     key={log.id}
+                    data-nav={`sec-${log.id}`}
                     className={`p-3.5 sm:p-4 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 transition-colors ${
                       log.resolved
                         ? 'bg-slate-900/50 border-slate-800/80 opacity-70'
@@ -1209,6 +1210,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 return (
                   <div
                     key={post.id}
+                    data-nav={`val-post-${post.id}`}
                     className="bg-[#131d2a] border border-slate-800 rounded-xl p-5 hover:border-slate-700 transition-colors space-y-4"
                   >
                     {/* Header line */}

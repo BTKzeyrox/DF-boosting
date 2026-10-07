@@ -9,6 +9,7 @@ import { LightboxModal } from './components/LightboxModal';
 import { ProfilePhotoGate } from './components/ProfilePhotoGate';
 import { ConfirmHost, askConfirm } from './components/ConfirmModal';
 import { ReasonHost } from './components/ReasonModal';
+import { NAV_TARGET_EVENT, peekNavTarget, flashNav } from './utils/navTarget';
 import { useApp } from './context/AppContext';
 import { LogoutTransition } from './components/LogoutTransition';
 
@@ -46,6 +47,12 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(db.getCurrentUser());
   const [activeView, setActiveView] = useState<string>('grid');
   const [focusBoosterId, setFocusBoosterId] = useState<string | null>(null); // booster ouvert depuis la recherche
+  // Recherche ou notification : défiler jusqu'à l'élément exact et le faire clignoter
+  useEffect(() => {
+    const on = () => { const t = peekNavTarget(); if (t) flashNav(t); };
+    window.addEventListener(NAV_TARGET_EVENT, on);
+    return () => window.removeEventListener(NAV_TARGET_EVENT, on);
+  }, []);
   const [isWelcomeAnimating, setIsWelcomeAnimating] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   // Admin : peut jouer son propre rôle de booster, puis revenir en admin

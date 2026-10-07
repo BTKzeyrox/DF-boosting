@@ -12,6 +12,8 @@ export interface Notif {
   at: string; // date ISO (pour le tri)
   tone: 'urgent' | 'info' | 'ok' | 'bad';
   filter?: ValFilter; // filtre de la page Validations à activer au clic
+  nav?: string; // élément exact à atteindre (data-nav) : défilement + clignotement
+  thread?: string; // messagerie : discussion à ouvrir ('all' = groupe)
 }
 
 // « 2026-10-06 12:00:00 » : on met un T pour que Safari (iPhone) le lise aussi
@@ -23,33 +25,33 @@ export const buildNotifications = (user: User): Notif[] => {
   if (user.role === 'admin') {
     db.getPosts().forEach(p => {
       if (p.status === 'pending_start' || p.status === 'pending_end')
-        out.push({ id: `post-${p.id}-${p.status}`, title: `${p.employee_name} · ${p.client_name}`, sub: p.status === 'pending_start' ? 'Début à valider' : 'Fin à valider', view: 'validations', filter: p.status === 'pending_start' ? 'starts' : 'ends', at: p.updated_at || p.date, tone: 'info' });
+        out.push({ id: `post-${p.id}-${p.status}`, title: `${p.employee_name} · ${p.client_name}`, sub: p.status === 'pending_start' ? 'Début à valider' : 'Fin à valider', view: 'validations', filter: p.status === 'pending_start' ? 'starts' : 'ends', nav: `val-post-${p.id}`, at: p.updated_at || p.date, tone: 'info' });
     });
     db.getAdvanceRequests().filter(a => a.status === 'pending').forEach(a =>
-      out.push({ id: `adv-${a.id}`, title: `${a.employee_name} · avance ${formatCurrencyAr(a.amount_ar)}`, sub: 'Avance à valider', view: 'validations', filter: 'advances', at: a.request_date, tone: 'info' }));
+      out.push({ id: `adv-${a.id}`, title: `${a.employee_name} · avance ${formatCurrencyAr(a.amount_ar)}`, sub: 'Avance à valider', view: 'validations', filter: 'advances', nav: `val-adv-${a.id}`, at: a.request_date, tone: 'info' }));
     db.getSignupRequests().forEach(r =>
-      out.push({ id: `sig-${r.id}`, title: r.name, sub: 'Inscription à valider', view: 'validations', filter: 'signups', at: r.created_at, tone: 'info' }));
+      out.push({ id: `sig-${r.id}`, title: r.name, sub: 'Inscription à valider', view: 'validations', filter: 'signups', nav: `val-sig-${r.id}`, at: r.created_at, tone: 'info' }));
     db.getPasswordResets().forEach(r =>
-      out.push({ id: `rst-${r.id}`, title: r.name, sub: 'Mot de passe oublié (urgent)', view: 'validations', filter: 'resets', at: r.created_at, tone: 'urgent' }));
+      out.push({ id: `rst-${r.id}`, title: r.name, sub: 'Mot de passe oublié (urgent)', view: 'validations', filter: 'resets', nav: `val-rst-${r.id}`, at: r.created_at, tone: 'urgent' }));
     db.getProfileRequests().filter(r => r.status === 'pending').forEach(r =>
-      out.push({ id: `prf-${r.id}`, title: r.old.name, sub: 'Changement de profil à valider', view: 'validations', filter: 'profiles', at: r.created_at, tone: 'info' }));
+      out.push({ id: `prf-${r.id}`, title: r.old.name, sub: 'Changement de profil à valider', view: 'validations', filter: 'profiles', nav: `val-prf-${r.id}`, at: r.created_at, tone: 'info' }));
     // Boosters sans poste depuis 15 min, puis 30 min
     getQueue(db.getUsers(), db.getPosts(), db.getPresence()).forEach(w => {
       const lvl = w.minutes >= 30 ? 30 : w.minutes >= 15 ? 15 : 0;
       if (lvl) out.push({ id: `wait-${w.user.id}-${lvl}-${w.waitingSince}`, title: w.user.name, sub: `Sans poste depuis ${lvl} min`, view: 'active-post', at: w.waitingSince as string, tone: lvl === 30 ? 'urgent' : 'info' });
     });
     db.getSecurityLogs().filter(l => !l.resolved).forEach(l =>
-      out.push({ id: `sec-${l.id}`, title: l.employee_name, sub: 'Alerte de sécurité', view: 'security', at: l.timestamp, tone: 'urgent' }));
+      out.push({ id: `sec-${l.id}`, title: l.employee_name, sub: 'Alerte de sécurité', view: 'security', nav: `sec-${l.id}`, at: l.timestamp, tone: 'urgent' }));
   } else {
     // Premier de la file et un poste vient de se libérer
     const q = db.getMyQueue();
     const free = q && q.position === 1 ? getFreePosts(db.getContracts(), db.getPosts()) : [];
     if (q && free.length > 0)
-      out.push({ id: `free-${q.waiting_since}-${free[0].id}`, title: 'Un poste est libre', sub: `${free[0].client_name} (poste ${free[0].post_number}) : à toi en premier`, view: 'grid', at: new Date().toISOString(), tone: 'ok' });
+      out.push({ id: `free-${q.waiting_since}-${free[0].id}`, title: 'Un poste est libre', sub: `${free[0].client_name} (poste ${free[0].post_number}) : à toi en premier`, view: 'grid', nav: `poste-${free[0].post_number}`, at: new Date().toISOString(), tone: 'ok' });
     db.getPosts().filter(p => p.employee_id === user.id && p.status === 'rejected').forEach(p =>
       out.push({ id: `rej-${p.id}-${p.updated_at}`, title: `${p.client_name} refusé`, sub: p.rejection_reason ? `Motif : ${p.rejection_reason}` : 'Soumission refusée', view: 'active-post', at: p.updated_at || p.date, tone: 'bad' }));
     db.getAdvanceRequests().filter(a => a.employee_id === user.id && a.status !== 'pending').forEach(a =>
-      out.push({ id: `advr-${a.id}-${a.status}`, title: `Avance ${formatCurrencyAr(a.amount_ar)} ${a.status === 'approved' ? 'acceptée' : 'refusée'}`, sub: a.admin_notes ? `Motif : ${a.admin_notes}` : '', view: 'advances', at: a.request_date, tone: a.status === 'approved' ? 'ok' : 'bad' }));
+      out.push({ id: `advr-${a.id}-${a.status}`, title: `Avance ${formatCurrencyAr(a.amount_ar)} ${a.status === 'approved' ? 'acceptée' : 'refusée'}`, sub: a.admin_notes ? `Motif : ${a.admin_notes}` : '', view: 'advances', nav: `adv-${a.id}`, at: a.request_date, tone: a.status === 'approved' ? 'ok' : 'bad' }));
   }
   // Messagerie : messages reçus (privés ou groupe) des 3 derniers jours, pas encore lus
   const seen = getSeen(user);
@@ -60,7 +62,7 @@ export const buildNotifications = (user: User): Notif[] => {
     .slice(-20)
     .forEach(m => {
       const group = (m.recipient_id || 'all') === 'all';
-      out.push({ id: `msg-${m.id}`, title: group ? `${m.sender_name} · groupe` : m.sender_name, sub: m.message ? m.message.slice(0, 80) : 'Pièce jointe', view: 'chat', at: m.timestamp, tone: 'info' });
+      out.push({ id: `msg-${m.id}`, title: group ? `${m.sender_name} · groupe` : m.sender_name, sub: m.message ? m.message.slice(0, 80) : 'Pièce jointe', view: 'chat', thread: group ? 'all' : m.sender_id, at: m.timestamp, tone: 'info' });
     });
   return out.sort((a, b) => ts(b.at) - ts(a.at));
 };

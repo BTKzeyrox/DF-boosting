@@ -145,7 +145,7 @@ export const AdvanceHistory: React.FC<Props> = ({ advances, showBooster = false 
       ) : (
         <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
           {list.map(a => (
-            <div key={a.id} className="bg-[#131c28] border border-slate-800 p-3 flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+            <div key={a.id} data-nav={`adv-${a.id}`} className="bg-[#131c28] border border-slate-800 p-3 flex flex-col sm:flex-row sm:items-start justify-between gap-2">
               <div className="min-w-0 space-y-1">
                 <div className="flex flex-wrap items-center gap-2">
                   {showBooster && <span className="text-white font-semibold text-sm break-words">{a.employee_name}</span>}
