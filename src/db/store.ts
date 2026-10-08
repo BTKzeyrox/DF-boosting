@@ -143,7 +143,29 @@ class DeltaForceStore {
     this.currentUser = null;
   }
 
+  // Activité réseau visible (barre de chargement) : les actions de l'utilisateur, pas la synchro automatique
+  private netBusy = 0;
+  private netListeners = new Set<(busy: number) => void>();
+  public onNetwork(fn: (busy: number) => void) {
+    this.netListeners.add(fn);
+    return () => { this.netListeners.delete(fn); };
+  }
+  private netTick(delta: number) {
+    this.netBusy = Math.max(0, this.netBusy + delta);
+    this.netListeners.forEach(fn => fn(this.netBusy));
+  }
+
   private async api(path: string, init?: RequestInit): Promise<{ ok: boolean; status: number; data: any }> {
+    const visible = path.split('?')[0] !== 'state'; // la synchro automatique (state?since=…) ne montre pas de barre
+    if (visible) this.netTick(1);
+    try {
+      return await this.apiRaw(path, init);
+    } finally {
+      if (visible) this.netTick(-1);
+    }
+  }
+
+  private async apiRaw(path: string, init?: RequestInit): Promise<{ ok: boolean; status: number; data: any }> {
     try {
       const res = await fetch(`${API_BASE}/${path}`, {
         ...init,

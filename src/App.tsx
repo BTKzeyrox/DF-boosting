@@ -3,6 +3,9 @@ import { User, PostSession, AttendanceRow } from './types';
 import { db } from './db/store';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
+import { LoadingBar } from './components/LoadingBar';
+import { PageSkeleton } from './components/PageSkeleton';
+import { prefetchViews } from './utils/prefetch';
 import { useLockBodyScroll } from './utils/useLockBodyScroll';
 import { WelcomeAnimation } from './components/WelcomeAnimation';
 import { LoginView } from './views/LoginView';
@@ -126,6 +129,17 @@ export default function App() {
   // Sync state with db store
   // La base modifie l'utilisateur « sur place » : on compare avec la dernière version affichée (pas avec l'objet lui-même,
   // sinon un changement comme la photo de profil n'était jamais vu et la fenêtre restait affichée)
+  // Préchargement des pages une fois connecté (au repos) : les clics s'ouvrent sans attente
+  const roleForPrefetch = currentUser?.role;
+  useEffect(() => {
+    if (isReady && roleForPrefetch) prefetchViews(roleForPrefetch === 'admin' ? 'admin' : 'employee');
+  }, [isReady, roleForPrefetch]);
+
+  // Fondu à chaque changement de page (sans recréer la page : on alterne deux animations identiques)
+  const viewSeq = useRef({ view: activeView, n: 0 });
+  if (viewSeq.current.view !== activeView) viewSeq.current = { view: activeView, n: viewSeq.current.n + 1 };
+  const fadeClass = viewSeq.current.n % 2 ? 'df-fade-a' : 'df-fade-b';
+
   const lastUserJson = useRef('');
   useEffect(() => {
     const unsubscribe = db.subscribe(() => {
@@ -293,6 +307,8 @@ export default function App() {
       {/* Main Container with Sidebar offset */}
       <div className="flex-1 lg:pl-72 flex flex-col min-h-screen">
         
+        <LoadingBar />
+
         {/* Barre du haut fixe : recherche globale + cloche */}
         <TopBar
           currentUser={viewUser}
@@ -303,7 +319,8 @@ export default function App() {
 
         {/* Dynamic Page Content Based on activeView */}
         <main style={activeView === 'chat' ? { top: 'calc(57px + var(--vvt, 0px))', height: 'calc(var(--vvh, 100dvh) - 57px)' } : undefined} className={activeView === 'chat' ? 'fixed left-0 right-0 lg:left-72 z-20 min-h-0 overflow-hidden p-0 sm:p-2' : 'flex-1 p-2 sm:p-3 lg:p-4 max-w-none w-full mx-auto'}>
-          <Suspense fallback={<div className="p-6 text-sm font-mono text-slate-400">Chargement…</div>}>
+          <Suspense fallback={<PageSkeleton />}>
+          <div className={`h-full min-h-0 ${fadeClass}`}>
           {viewUser.role === 'admin' ? (
             /* ================= ADMIN SEPARATED PAGES ================= */
             <>
@@ -378,6 +395,7 @@ export default function App() {
               )}
             </>
           )}
+          </div>
           </Suspense>
         </main>
       </div>

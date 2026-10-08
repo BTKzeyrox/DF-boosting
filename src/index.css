@@ -275,3 +275,26 @@ html.theme-light header.df-topbar {
 .overflow-auto {
   overscroll-behavior: contain;
 }
+
+/* ===== Retour visuel immédiat (le site paraît plus rapide) ===== */
+/* Fondu à chaque changement de page (opacité seulement : ne gêne pas les fenêtres plein écran) */
+@keyframes df-fade-a { from { opacity: 0; } to { opacity: 1; } }
+@keyframes df-fade-b { from { opacity: 0; } to { opacity: 1; } }
+.df-fade-a { animation: df-fade-a 0.18s ease-out both; }
+.df-fade-b { animation: df-fade-b 0.18s ease-out both; }
+
+/* Barre de chargement sous l'en-tête */
+@keyframes df-loadbar-run { 0% { transform: translateX(-100%); } 100% { transform: translateX(300%); } }
+.df-loadbar { background: rgba(16, 185, 129, 0.18); }
+.df-loadbar-run { animation: df-loadbar-run 1s ease-in-out infinite; }
+
+/* Appui visible sur les boutons + pas de délai du toucher sur téléphone */
+button, a, [role="button"], input, select, textarea, label { touch-action: manipulation; }
+button:not(:disabled):active, [role="button"]:active { transform: scale(0.97); transition: transform 0.06s ease-out; }
+html { -webkit-tap-highlight-color: rgba(16, 185, 129, 0.22); }
+
+@media (prefers-reduced-motion: reduce) {
+  .df-fade-a, .df-fade-b, .df-loadbar-run { animation: none; }
+  button:not(:disabled):active, [role="button"]:active { transform: none; }
+}
+
