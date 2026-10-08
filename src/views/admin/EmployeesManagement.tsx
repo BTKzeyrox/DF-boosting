@@ -27,7 +27,7 @@ import { db } from '../../db/store';
 import { askConfirm } from '../../components/ConfirmModal';
 import { AdvanceHistory } from '../../components/AdvanceHistory';
 import { useLockBodyScroll } from '../../utils/useLockBodyScroll';
-import { formatScoreM } from '../../utils/formatUtils';
+import { formatScoreM, shiftHoursLabel } from '../../utils/formatUtils';
 import { getPresenceStatus, STATUS_LABEL, STATUS_DOT, formatDuration } from '../../utils/presence';
 import { setValFilterIntent, ValFilter } from '../../utils/navIntent';
 
@@ -421,9 +421,9 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                           }`}
                         >
                           {emp.shift === 'day' ? (
-                            <span className="inline-flex items-center gap-1"><Sun className="w-3.5 h-3.5" />Shift Jour (08-18)</span>
+                            <span className="inline-flex items-center gap-1"><Sun className="w-3.5 h-3.5" />Shift Jour ({shiftHoursLabel('day', cfg)})</span>
                           ) : (
-                            <span className="inline-flex items-center gap-1"><Moon className="w-3.5 h-3.5" />Shift Nuit (20-06)</span>
+                            <span className="inline-flex items-center gap-1"><Moon className="w-3.5 h-3.5" />Shift Nuit ({shiftHoursLabel('night', cfg)})</span>
                           )}
                         </span>
                       </td>

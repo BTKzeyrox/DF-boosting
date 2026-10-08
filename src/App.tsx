@@ -1,5 +1,5 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
-import { User, PostSession } from './types';
+import { User, PostSession, AttendanceRow } from './types';
 import { db } from './db/store';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
@@ -81,10 +81,12 @@ export default function App() {
     isOpen: boolean;
     dateStr: string | null;
     shifts: PostSession[];
+    attendance: AttendanceRow[];
   }>({
     isOpen: false,
     dateStr: null,
     shifts: [],
+    attendance: [],
   });
 
 
@@ -169,6 +171,11 @@ export default function App() {
       isOpen: true,
       dateStr,
       shifts,
+      attendance: [],
+    });
+    // Arrivées du jour : chargées après l'ouverture (la fenêtre ne attend pas)
+    db.fetchAttendance(dateStr).then(rows => {
+      setDayDetailsState(prev => (prev.dateStr === dateStr ? { ...prev, attendance: rows } : prev));
     });
   };
 
@@ -380,6 +387,7 @@ export default function App() {
             onClose={() => setDayDetailsState(prev => ({ ...prev, isOpen: false }))}
             onBack={() => setDayDetailsState(prev => ({ ...prev, isOpen: false }))}
             shifts={dayDetailsState.shifts}
+            attendance={dayDetailsState.attendance}
             onOpenProofLightbox={handleOpenProofLightbox}
           />
         </Suspense>

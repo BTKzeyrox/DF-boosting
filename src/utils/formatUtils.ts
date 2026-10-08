@@ -28,5 +28,10 @@ export function formatCurrencyAr(amount: number | undefined | null): string {
 }
 
 // « 1 avance », « 2 avances » : accord du pluriel (0 et 1 = singulier)
+// « 08:00 » -> « 08 » (affichage court d'un shift : « 08-18 »)
+const hh = (t: string) => String(t || '').slice(0, 2);
+export const shiftHoursLabel = (shift: 'day' | 'night', cfg: { day_shift_start: string; day_shift_end: string; night_shift_start: string; night_shift_end: string }) =>
+  shift === 'day' ? `${hh(cfg.day_shift_start)}-${hh(cfg.day_shift_end)}` : `${hh(cfg.night_shift_start)}-${hh(cfg.night_shift_end)}`;
+
 export const plural = (n: number, one: string, many?: string): string =>
   `${n} ${n > 1 ? many || one + 's' : one}`;

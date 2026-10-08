@@ -4,6 +4,7 @@ import { User } from '../types';
 import { useLockBodyScroll } from '../utils/useLockBodyScroll';
 import { compressImageToDataUrl } from '../utils/imageUtils';
 import { db } from '../db/store';
+import { shiftHoursLabel } from '../utils/formatUtils';
 import { Avatar } from './Avatar';
 
 interface ProfileModalProps {
@@ -117,7 +118,7 @@ export const CVViewerModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, us
           {live.role === 'employee' && (
             <div className="flex items-center gap-2 text-slate-300">
               {live.shift === 'day' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-300" />}
-              {live.shift === 'day' ? 'Shift Jour (08-18)' : 'Shift Nuit (20-06)'}
+              {live.shift === 'day' ? `Shift Jour (${shiftHoursLabel('day', db.getSettings())})` : `Shift Nuit (${shiftHoursLabel('night', db.getSettings())})`}
             </div>
           )}
           {live.phone && (

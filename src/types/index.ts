@@ -222,6 +222,15 @@ export interface SignupRequest {
 }
 
 // Présence d'un booster (signe de vie, temps de connexion du jour, file d'attente « sans poste »)
+// Arrivée d'un booster un jour donné (première connexion) et temps connecté
+export interface AttendanceRow {
+  user_id: string;
+  day: string;
+  first_seen: string;
+  last_seen: string;
+  online_sec: number;
+}
+
 export interface PresenceRow {
   user_id: string;
   last_seen: string;

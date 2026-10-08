@@ -11,6 +11,7 @@ import {
   AppSettings,
   ProfileChangeRequest,
   PresenceRow,
+  AttendanceRow,
   QueueInfo,
 } from '../types';
 import { AVAILABLE_CLIENT_CONTRACTS } from './initialData';
@@ -496,6 +497,12 @@ class DeltaForceStore {
       this.emit();
     }
     return r.ok ? { success: true } : { success: false, error: r.data?.error || 'Erreur.' };
+  }
+
+  // Arrivées du jour (admin : tous les boosters ; booster : la sienne)
+  public async fetchAttendance(day: string): Promise<AttendanceRow[]> {
+    const r = await this.api(`attendance?day=${encodeURIComponent(day)}`);
+    return r.ok && Array.isArray(r.data?.rows) ? r.data.rows : [];
   }
 
   public getPresence(): PresenceRow[] {

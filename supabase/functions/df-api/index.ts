@@ -22,6 +22,7 @@ const RESETS = "df_resets";
 const SIGNUPS = "df_signups";
 const PROFILE_REQ = "df_profile_requests";
 const PRESENCE = "df_presence";
+const ATTENDANCE = "df_attendance";
 const BUCKET = "df-files";
 // Cloudinary : le nom du cloud n'est pas secret ; la clé API et le secret sont lus dans le coffre-fort (Vault)
 const CLD_CLOUD = "dirnrsy5v";
@@ -143,6 +144,38 @@ async function touchPresence(me: any) {
     if (gap > 0 && gap <= 120) sec += Math.round(gap); // on compte le temps entre deux signes de vie rapprochés
   }
   await sb.from(PRESENCE).upsert({ user_id: me.id, last_seen: now.toISOString(), day, online_sec: sec, waiting_since: row?.waiting_since ?? null });
+  try { await touchAttendance(me, now); } catch (e) { console.error('attendance error:', e); }
+}
+
+// ---------- historique d'arrivée par jour (première connexion, temps connecté) ----------
+// Jour de travail du booster : le shift de nuit commence la veille au soir, donc avant midi (heure de Madagascar) = jour précédent.
+const attendanceDay = (me: any, now: Date): string => {
+  const mada = new Date(now.getTime() + 3 * 3600 * 1000);
+  if (me.shift === 'night' && mada.getUTCHours() < 12) mada.setUTCDate(mada.getUTCDate() - 1);
+  return mada.toISOString().slice(0, 10);
+};
+const attMem = new Map<string, { day: string; at: number }>(); // limite les écritures : 1 par minute et par booster
+async function touchAttendance(me: any, now: Date) {
+  const day = attendanceDay(me, now);
+  const mem = attMem.get(me.id);
+  if (mem && mem.day === day && now.getTime() - mem.at < 60_000) return;
+  const { data: row } = await sb.from(ATTENDANCE).select('*').eq('user_id', me.id).eq('day', day).maybeSingle();
+  let sec = row?.online_sec ?? 0;
+  if (row) {
+    const gap = (now.getTime() - new Date(row.last_seen).getTime()) / 1000;
+    if (gap > 0 && gap <= 150) sec += Math.round(gap);
+  }
+  await sb.from(ATTENDANCE).upsert({ user_id: me.id, day, first_seen: row?.first_seen ?? now.toISOString(), last_seen: now.toISOString(), online_sec: sec });
+  attMem.set(me.id, { day, at: now.getTime() });
+}
+// L'admin voit tous les boosters du jour demandé ; un booster ne voit que le sien.
+async function attendanceRoute(req: any, res: any, me: any) {
+  const day = String(req.query.day || '');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return res.status(400).json({ error: 'Jour invalide.' });
+  let q = sb.from(ATTENDANCE).select('user_id,day,first_seen,last_seen,online_sec').eq('day', day);
+  if (me.role !== 'admin') q = q.eq('user_id', me.id);
+  const { data } = await q;
+  return res.json({ rows: data || [] });
 }
 const queueOf = (rows: any[], meId: string) => {
   const now = Date.now();
@@ -717,7 +750,7 @@ Deno.serve(async (request: Request) => {
   const req: any = {
     method: request.method,
     body,
-    query: { since: url.searchParams.get("since") || "" },
+    query: { since: url.searchParams.get("since") || "", day: url.searchParams.get("day") || "" },
     headers: {
       authorization: request.headers.get("authorization") || "",
       ip: (request.headers.get("x-forwarded-for") || "").split(",")[0].trim(),
@@ -734,6 +767,7 @@ Deno.serve(async (request: Request) => {
       if (!acc.ok) return res.status(401).json({ error: acc.message, code: 'shift' });
     }
     if (action === "state" && req.method === "GET") return await state(req, res, me);
+    if (action === "attendance" && req.method === "GET") return await attendanceRoute(req, res, me);
     if (action === "sync" && req.method === "POST") return await sync(req, res, me);
     if (action === "create-user" && req.method === "POST") return await createUser(req, res, me);
     if (action === "set-password" && req.method === "POST") return await setPassword(req, res, me);

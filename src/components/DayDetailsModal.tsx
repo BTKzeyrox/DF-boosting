@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, ArrowLeft, Calendar, Clock, Trophy, Eye, CheckCircle2, AlertTriangle, Lock } from 'lucide-react';
-import { PostSession } from '../types';
+import { PostSession, AttendanceRow } from '../types';
+import { formatDuration } from '../utils/presence';
 import { useLockBodyScroll } from '../utils/useLockBodyScroll';
 import { formatScoreM } from '../utils/formatUtils';
 import { proofsOf } from '../utils/proofs';
@@ -12,6 +13,7 @@ interface DayDetailsModalProps {
   onClose: () => void;
   onBack?: () => void;
   shifts: PostSession[];
+  attendance?: AttendanceRow[]; // arrivées du jour (première connexion, temps connecté)
   onOpenProofLightbox: (params: {
     imageUrl: string;
     gallery?: string[];
@@ -30,6 +32,7 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
   onClose,
   onBack,
   shifts,
+  attendance = [],
   onOpenProofLightbox,
 }) => {
   useLockBodyScroll(isOpen);
@@ -48,6 +51,23 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
   }, 0);
 
   const totalPayrollAr = shifts.reduce((acc, s) => acc + (s.calculated_ar || 0), 0);
+
+  // Présence du jour : arrivée = première connexion ; départ = fin de la dernière session ; connecté = temps cumulé
+  const hm = (iso: string) => new Date(new Date(iso).getTime() + 3 * 3600 * 1000).toISOString().slice(11, 16); // heure de Madagascar
+  const presenceIds = Array.from(new Set([...attendance.map(a => a.user_id), ...shifts.map(s => s.employee_id)]));
+  const presenceRows = presenceIds.map(id => {
+    const att = attendance.find(a => a.user_id === id);
+    const mine = shifts.filter(s => s.employee_id === id).sort((a, b) => a.start_time.localeCompare(b.start_time));
+    const last = mine[mine.length - 1];
+    const departure = !last ? '—' : !last.end_time ? 'En cours' : last.end_time.slice(0, 5);
+    return {
+      id,
+      name: db.getUsers().find(u => u.id === id)?.name || mine[0]?.employee_name || '—',
+      arrival: att ? hm(att.first_seen) : 'non enregistrée',
+      departure,
+      online: att ? formatDuration(att.online_sec) : '—',
+    };
+  });
 
   return (
     <div
@@ -99,6 +119,20 @@ export const DayDetailsModal: React.FC<DayDetailsModalProps> = ({
 
         {/* Content Body */}
         <div className="p-3.5 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto flex-1">
+          {presenceRows.length > 0 && (
+            <div className="bg-slate-900/60 border border-slate-700/80 rounded-lg p-3 space-y-1.5">
+              <div className="text-[11px] font-mono font-bold text-emerald-400 uppercase">Présence du jour</div>
+              {presenceRows.map(r => (
+                <div key={r.id} className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs font-mono text-slate-300">
+                  {isAdmin && <span className="font-bold text-white">{r.name}</span>}
+                  <span>Arrivée : <strong className="text-slate-100">{r.arrival}</strong></span>
+                  <span>Départ : <strong className="text-slate-100">{r.departure}</strong></span>
+                  <span>Connecté : <strong className="text-slate-100">{r.online}</strong></span>
+                </div>
+              ))}
+            </div>
+          )}
+
           {shifts.length === 0 ? (
             <div className="text-center py-12 border border-dashed border-slate-800 rounded-xl bg-slate-900/30">
               <Clock className="w-10 h-10 text-slate-600 mx-auto mb-3" />
