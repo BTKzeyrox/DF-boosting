@@ -6,6 +6,7 @@ import { compressProofImage } from '../utils/imageUtils';
 import { Avatar } from './Avatar';
 import { markChatSeen } from '../utils/notifications';
 import { LightboxModal } from './LightboxModal';
+import { FileViewerModal } from './FileViewerModal';
 import { askConfirm } from './ConfirmModal';
 import { takeChatThread, CHAT_THREAD_EVENT } from '../utils/navTarget';
 
@@ -44,6 +45,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string }>
   const [menuMsg, setMenuMsg] = useState<ChatMessage | null>(null); // menu d'actions (appui long ou ⋮)
   const [editingId, setEditingId] = useState<string | null>(null); // message en cours de modification
   const [viewer, setViewer] = useState<{ url: string; msg: ChatMessage } | null>(null); // visionneuse d'image
+  const [fileViewer, setFileViewer] = useState<ChatMessage | null>(null); // visionneuse de fiche (PDF, texte)
   const [pinIdx, setPinIdx] = useState(0);
   const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -225,8 +227,8 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string }>
 
       {/* Conversation */}
       <div className={`${showList ? 'hidden' : 'flex'} md:flex flex-col flex-1 min-w-0 min-h-0`}>
-        <div className="px-3 py-3 bg-[#131d2a] border-b border-slate-800 flex items-center gap-2.5">
-          <button type="button" onClick={() => setShowList(true)} className="md:hidden p-1.5 text-slate-300 cursor-pointer" title="Retour">
+        <div className="px-3 py-3 bg-[#131d2a] border-b border-slate-800 flex items-center gap-2.5 shrink-0">
+          <button type="button" onClick={() => setShowList(true)} className="md:hidden min-w-[44px] min-h-[44px] flex items-center justify-center text-slate-300 cursor-pointer" title="Retour">
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="min-w-0">
@@ -283,15 +285,15 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string }>
                       </button>
                     )}
                     {msg.attachment_url && msg.attachment_kind !== 'image' && (
-                      <a href={msg.attachment_url} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 mb-1.5 underline font-semibold">
+                      <button type="button" onClick={() => setFileViewer(msg)} className="flex items-center gap-1.5 mb-1.5 min-h-[40px] underline font-semibold text-left cursor-pointer">
                         <FileText className="w-4 h-4 shrink-0" />
                         <span className="break-all">{msg.attachment_name || 'fichier'}</span>
-                      </a>
+                      </button>
                     )}
                     {msg.message && <span className="whitespace-pre-line">{msg.message}</span>}
                   </div>
                   {hasMenu && (
-                    <button type="button" onClick={() => setMenuMsg(msg)} className="p-1 text-slate-500 hover:text-white cursor-pointer shrink-0" title="Actions">
+                    <button type="button" onClick={() => setMenuMsg(msg)} className="min-w-[40px] min-h-[40px] flex items-center justify-center text-slate-400 hover:text-white cursor-pointer shrink-0" title="Actions">
                       <MoreVertical className="w-4 h-4" />
                     </button>
                   )}
@@ -316,7 +318,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string }>
 
         <form
           onSubmit={e => { e.preventDefault(); send(); }}
-          className="p-2.5 bg-[#131d2a] border-t border-slate-800 flex items-center gap-2"
+          className="p-2.5 bg-[#131d2a] border-t border-slate-800 flex items-center gap-2 shrink-0"
         >
           <input ref={fileRef} type="file" accept="image/*,application/pdf,text/plain" onChange={onFile} className="hidden" />
           <button
@@ -386,6 +388,19 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string }>
           title={viewer.msg.attachment_name || 'Photo'}
           subtitle={viewer.msg.sender_name}
           timestamp={viewer.msg.timestamp}
+          canDelete={u => { const m = gallery.find(g => g.attachment_url === u); return !!m && canTouch(m); }}
+          onDelete={u => { const m = gallery.find(g => g.attachment_url === u); if (m) { setViewer(null); confirmDelete(m); } }}
+        />
+      )}
+
+      {/* Visionneuse de fiche : retour et suppression */}
+      {fileViewer && fileViewer.attachment_url && (
+        <FileViewerModal
+          url={fileViewer.attachment_url}
+          name={fileViewer.attachment_name || 'fichier'}
+          subtitle={fileViewer.sender_name}
+          onClose={() => setFileViewer(null)}
+          onDelete={canTouch(fileViewer) ? () => { const m = fileViewer; setFileViewer(null); confirmDelete(m); } : undefined}
         />
       )}
     </div>

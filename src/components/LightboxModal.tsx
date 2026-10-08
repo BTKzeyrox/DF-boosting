@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, ZoomIn, ZoomOut, RotateCcw, Download, ShieldCheck, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, ZoomIn, ZoomOut, RotateCcw, Download, ShieldCheck, ArrowLeft, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import { useLockBodyScroll } from '../utils/useLockBodyScroll';
 import { formatScoreM } from '../utils/formatUtils';
 
@@ -14,6 +14,8 @@ interface LightboxModalProps {
   clientTag?: string;
   operatorName?: string;
   timestamp?: string;
+  canDelete?: (url: string) => boolean; // affiche « Supprimer » pour l'image affichée
+  onDelete?: (url: string) => void;
 }
 
 const MIN = 1;
@@ -31,6 +33,8 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
   clientTag,
   operatorName,
   timestamp,
+  canDelete,
+  onDelete,
 }) => {
   const imgs = gallery && gallery.length > 0 ? gallery : [imageUrl];
   const startIdx = Math.max(0, imgs.indexOf(imageUrl));
@@ -147,6 +151,11 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
             <button type="button" onClick={() => zoomBy(1.3)} className={iconBtn} title="Zoom avant"><ZoomIn className="w-4 h-4" /></button>
             <button type="button" onClick={resetView} className={`${iconBtn} border-l border-slate-700`} title="100 %"><RotateCcw className="w-4 h-4" /></button>
           </div>
+          {onDelete && (!canDelete || canDelete(current)) && (
+            <button type="button" onClick={() => onDelete(current)} className="flex items-center gap-1.5 px-3 min-h-[40px] bg-red-950 hover:bg-red-900 border border-red-700 text-red-200 text-xs font-bold cursor-pointer" title="Supprimer">
+              <Trash2 className="w-4 h-4" /> <span>Supprimer</span>
+            </button>
+          )}
           <a href={current} download="preuve.png" className="p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white" title="Télécharger l'image">
             <Download className="w-4 h-4" />
           </a>
