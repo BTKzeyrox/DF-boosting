@@ -79,6 +79,7 @@ Rien n'a été testé à l'écran par Claude (seulement build + tests de rendu l
 6. **Petits défauts connus** : aucun ouvert. Réglés : pluriels, filtres des notifications, sous-titre du menu, anti-spam, messagerie dans la cloche, `Navbar.tsx` et `generateDeltaForcePoster` supprimés.
 7. **Nettoyage Supabase (non urgent, constat du 2026-10-08)** : 5 anciennes fonctions SQL d'une version précédente du projet (`create_employee`, `delete_employee`, `take_slot`, `is_admin`, `new_profile`) sont encore appelables par l'API publique ; elles refusent si l'appelant n'est pas admin (risque faible) et ne sont plus utilisées par ce site. À supprimer après vérification que rien d'autre (autre projet dans « Replay » : `market_candles`, TradingView Clone) ne s'en sert. Les tables `df_*` ont la sécurité par ligne activée sans politique : voulu, seul `df-api` y accède.
 8. **Textes chinois** : environ 70 phrases ajoutées par Claude, jamais relues par une personne qui lit le chinois.
+10. **Plan de secours (pannes et bugs)** : planifié, **rien codé**, attend le « GO lot 1 » de BTK : voir § 3 nonies.
 9. **Règles de Madagascar sur les retenues de salaire et pénalités** : non vérifiées (la recherche donne surtout du droit français). Valider avec un comptable ou l'Inspection du travail avant d'activer les retenues.
 
 **Vérification en lecture seule du 2026-10-08 (session « vérification »)** : build et types OK, 40 cas de logique OK, aucun secret dans le dépôt ; `df-api` v14 ; `df_attendance` = 3 lignes (vraies connexions `sarah`, `kiot`, `potato`) ; `df_payroll` = **0 ligne** (la paie n'a jamais servi, donc jamais testée) ; 50 contrats ; journaux des 24 h : 259 réponses 200, un 403, un 401, **aucune erreur 500**. À savoir en test : un booster de **nuit** qui se connecte avant midi est compté au **jour précédent** (règle voulue pour l'arrivée), donc l'arrivée de `kiot` à 08:36 apparaît au 7 octobre.
@@ -170,6 +171,39 @@ Un seul Claude travaille à la fois. Faire `git pull` avant tout. Recap court pu
 - B. Personnel : **planning à l'avance** (semaine, repos, remplacements, échange de shift validé par l'admin) ; **congés et absences justifiées** (BTK : « pas encore dans l'option ») ; **rapports et statistiques** (aucun classement ni page de performance trouvés : score par heure, taux de validation, rapport mensuel) ; **exports CSV** de l'historique, du calendrier et des boosters (aujourd'hui seulement la paie).
 - C. Contrôle : **rôles** supplémentaires (aujourd'hui seulement « admin » et « booster » : superviseur, comptable) ; **journal des actions** pour tout (aujourd'hui seulement la paie) ; **archiver** un booster au lieu de le supprimer (à vérifier si `deleteUser` efface son historique) ; nettoyage des vieilles fonctions SQL.
 - D. Confort : notifications hors du site (le site est installable, `manifest.webmanifest`, mais aucun service worker ni notification push) ; page « santé du système » ; version réutilisable (stock, boutique, communauté, lots 4 et 5 du plan collé par BTK).
+
+## 3 nonies. Plan de secours : pannes, plantages, erreurs à corriger (2026-10-08, demande de BTK, **PLANIFIÉ, RIEN CODÉ, attend « GO lot 1 »**)
+**Demande de BTK** : des options de secours si le site bugue, se fige ou ne marche plus, et qu'il affiche l'erreur, pour qu'elle serve de source pour l'améliorer.
+
+**Constat (vérifié dans le code le 2026-10-08)** : aucun `ErrorBoundary` ni gestionnaire d'erreurs global (`src/main.tsx` monte `<AppProvider><App /></AppProvider>` sans protection) → un plantage d'un composant = **page blanche** pour toute l'application. Aucune table ni route d'erreurs, aucun mode maintenance. Les pages sont chargées par `lazy()` (`App.tsx`) : après un déploiement, un onglet resté ouvert peut échouer au chargement d'une page (module introuvable), cas non géré. Hors ligne : `store.ts` saute seulement le rechargement (`navigator.onLine`), aucun message à l'utilisateur.
+
+**Lot 1 — écran de secours (site seul, aucun serveur, Vercel uniquement)**
+- `ErrorBoundary` autour de l'application **et** de chaque page (le menu reste utilisable si une page plante). Écran « Un problème est survenu » : erreur résumée, **numéro d'incident**, boutons Réessayer / Vider le cache et recharger / Se déconnecter / **Copier le rapport** (à envoyer par WhatsApp).
+- Échec de chargement d'une page après mise à jour : rechargement automatique **une seule fois** avec le message « Nouvelle version ».
+- Bandeau « Connexion perdue, nouvelle tentative dans X s » avec bouton Réessayer ; ce que l'utilisateur a saisi (notes, photos) n'est pas perdu.
+- Les 20 dernières erreurs gardées dans le navigateur (`localStorage`) pour le bouton « Copier le rapport » quand Supabase est lui-même en panne.
+
+**Lot 2 — rapport automatique et journal (nouvelle table Supabase + routes `df-api` → redéploiement)**
+- Chaque plantage ou erreur serveur (5xx) est envoyé : message, début de la pile (sans jeton), page, rôle et identifiant (jamais de mot de passe ni de photo), appareil et navigateur, **version du site**, heure.
+- Table `df_errors` (migration à faire, RLS activée comme les autres), routes `report-error` (sans connexion, car la page de connexion peut planter aussi ; **limitée** : 3 rapports max par session, regroupement des erreurs identiques par empreinte, limite par adresse), liste et « marquer résolue » (admin).
+- Page admin **« Journal des erreurs »** : erreurs regroupées (nombre, boosters touchés, première et dernière fois, appareil), bouton **« Copier pour Claude »** (tout ce qu'il faut pour corriger). Bouton **« Signaler un problème »** pour les boosters (texte libre, capture facultative via Cloudinary, infos techniques ajoutées automatiquement).
+- **Contrainte plan gratuit** (§ 3 octies) : chaque rapport est un appel au serveur ; d'où les limites ci-dessus.
+
+**Lot 3 — mode maintenance et procédure de panne**
+- Interrupteur « Site en maintenance » + message dans Réglages : les boosters voient l'écran de maintenance, l'admin entre toujours (contrôle côté serveur, comme `shiftAccess`).
+- Page statique `secours.html` qui marche même si l'application est cassée (vider le cache, recharger, contact).
+- Section « Que faire en cas de panne » (ci-dessous, à compléter par ce lot).
+
+**Réglages prévus (tout réglable, demande de BTK)** : rapports automatiques oui/non, maximum de rapports par session, détails techniques cachés aux boosters (ils ne voient que le numéro), bouton « Signaler » visible oui/non, maintenance + message, délai des nouvelles tentatives.
+
+**Limite honnête** : si Supabase tombe, le rapport ne peut pas partir ; l'erreur reste dans le téléphone, d'où « Copier le rapport ».
+
+**Procédure de panne : ce qu'on peut faire AUJOURD'HUI (avant les lots)**
+1. Page blanche pour tous : demander de recharger en vidant le cache ; regarder si le **dernier déploiement du site** est en échec sur Vercel ; revenir à la version précédente depuis Vercel (Deployments, puis promouvoir un déploiement précédent : **à confirmer sur l'interface, non vérifié par Claude**).
+2. Connexion ou données qui échouent : regarder les journaux de `df-api` (Supabase, Edge Functions, journaux ; ou l'outil `query_logs` : codes de réponse 200 / 401 / 403 / 500) et l'état de Supabase.
+3. **Retour arrière du serveur** : redéployer `df-api` avec l'import d'un commit précédent (versions et commits dans le § 1 et les sections 3 sexies / 3 septies). Déployer le serveur sans les bons réglages ne perd aucune donnée.
+4. Données : **pas de sauvegarde** sur le plan gratuit (voir « Pas fait ») : le bouton « Télécharger une sauvegarde » est le complément indispensable du plan de secours.
+5. Quota dépassé (§ 3 octies) : le serveur est ralenti ; réduire la fréquence des appels est la seule solution gratuite.
 
 ## 3 quinquies. Photos : Cloudinary (2026-10-07)
 - **Pourquoi** : Supabase gratuit = 1 Go de fichiers. BTK n'a pas d'argent : R2 et Firebase demandent une carte. Cloudinary gratuit : 25 crédits/mois partagés (1 crédit = 1 Go de stockage ou de transfert), sans carte.
