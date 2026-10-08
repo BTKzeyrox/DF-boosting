@@ -31,13 +31,21 @@ export const ProfilePhotoGate: React.FC<Props> = ({ user, onDone, onLogout }) =>
     }
   };
 
-  const save = () => {
+  const save = async () => {
+    if (busy) return;
     if (!photo) {
       setError('Ajoutez votre photo pour continuer.');
       return;
     }
     setBusy(true);
-    db.updateUser(user.id, { avatar_url: photo });
+    setError('');
+    // La photo est envoyée au stockage (lien court) ; si l'envoi échoue, on garde la photo dans le compte
+    let avatar = photo;
+    try {
+      const url = await db.uploadFile(photo);
+      if (url) avatar = url;
+    } catch { /* on garde la photo locale */ }
+    db.updateUser(user.id, { avatar_url: avatar });
     setBusy(false);
     onDone();
   };
@@ -83,7 +91,7 @@ export const ProfilePhotoGate: React.FC<Props> = ({ user, onDone, onLogout }) =>
           disabled={busy}
           className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold disabled:opacity-60"
         >
-          <Check className="w-4 h-4" /> Enregistrer et continuer
+          <Check className="w-4 h-4" /> {busy ? 'Enregistrement…' : 'Enregistrer et continuer'}
         </button>
         <button
           type="button"

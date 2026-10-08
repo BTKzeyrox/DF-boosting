@@ -1,4 +1,4 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { User, PostSession, AttendanceRow } from './types';
 import { db } from './db/store';
 import { Sidebar } from './components/Sidebar';
@@ -100,13 +100,15 @@ export default function App() {
   }, []);
 
   // Sync state with db store
+  // La base modifie l'utilisateur « sur place » : on compare avec la dernière version affichée (pas avec l'objet lui-même,
+  // sinon un changement comme la photo de profil n'était jamais vu et la fenêtre restait affichée)
+  const lastUserJson = useRef('');
   useEffect(() => {
     const unsubscribe = db.subscribe(() => {
       const user = db.getCurrentUser();
-      setCurrentUser(prev => {
-        if (!user) return null;
-        return prev && JSON.stringify(prev) === JSON.stringify(user) ? prev : { ...user };
-      });
+      if (!user) { lastUserJson.current = ''; setCurrentUser(null); return; }
+      const json = JSON.stringify(user);
+      if (json !== lastUserJson.current) { lastUserJson.current = json; setCurrentUser({ ...user }); }
     });
     return unsubscribe;
   }, []);
@@ -360,7 +362,12 @@ export default function App() {
       {currentUser && currentUser.role === 'employee' && !currentUser.avatar_url && (
         <ProfilePhotoGate
           user={currentUser}
-          onDone={() => setCurrentUser(db.getCurrentUser())}
+          onDone={() => {
+            const u = db.getCurrentUser();
+            if (u) setCurrentUser({ ...u });
+            setFocusBoosterId(null);
+            setActiveView('grid'); // photo enregistrée : on arrive sur l'accueil du booster
+          }}
           onLogout={handleLogout}
         />
       )}
