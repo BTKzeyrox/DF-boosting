@@ -31,6 +31,11 @@ export const DEFAULT_SETTINGS: AppSettings = {
   access_before_min: 60,
   access_after_min: 60,
   show_activity_column: true,
+  pay_period: 'month',
+  advance_cap_pct: 0,
+  advance_repay_pct: 100,
+  pay_methods: ['MVola', 'Orange Money', 'Airtel Money', 'Espèces'],
+  penalties_enabled: false,
   badge_start: true,
   badge_end: true,
   badge_advance: true,
@@ -427,6 +432,12 @@ class DeltaForceStore {
     });
     this.notify();
     return before - (this.posts.length + this.advanceRequests.length);
+  }
+
+  // Paie : appel générique aux routes payroll-* du serveur
+  public async payrollCall(route: string, body: unknown = {}): Promise<{ success: boolean; data?: any; error?: string }> {
+    const r = await this.api(route, { method: 'POST', body: JSON.stringify(body) });
+    return r.ok ? { success: true, data: r.data } : { success: false, error: r.data?.error || 'Erreur. Réessaie.' };
   }
 
   public getSettings(): AppSettings {

@@ -20,6 +20,11 @@ export interface AppSettings {
   access_before_min: number; // connexion permise X min avant le début du shift
   access_after_min: number; // connexion permise X min après la fin du shift
   show_activity_column: boolean; // colonne « Activité » sur la page Employés
+  pay_period?: 'month' | 'half'; // paie : mensuelle ou par quinzaine
+  advance_cap_pct?: number; // plafond des avances : % de ce qui est gagné dans la période (0 = pas de plafond)
+  advance_repay_pct?: number; // part de la paie qui peut servir à rembourser les avances (%)
+  pay_methods?: string[]; // modes de paiement proposés
+  penalties_enabled?: boolean; // retenues / pénalités : désactivées par défaut
   badge_start: boolean; // pastille « Début à valider »
   badge_end: boolean; // pastille « Fin à valider »
   badge_advance: boolean; // pastille « Avance à valider »

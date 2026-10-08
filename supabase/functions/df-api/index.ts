@@ -334,7 +334,15 @@ async function sync(req: any, res: any, me: any) {
             (!existing || (existing.employee_id === me.id && OPEN_STATUS.includes(existing.status)));
           if (ok) toSave = { ...rec, calculated_ar: existing?.calculated_ar, admin_notes: existing?.admin_notes };
         } else if (col === 'advances') {
-          ok = !existing && rec.employee_id === me.id && rec.status === 'pending';
+          ok = !existing && rec.employee_id === me.id && rec.status === 'pending' &&
+            Number.isFinite(rec.amount_ar) && rec.amount_ar > 0 && rec.amount_ar <= 100_000_000;
+          if (ok) {
+            const cfg = await payCfg();
+            if (cfg.capPct > 0) {
+              const room = await advanceRoom(me.id, cfg);
+              if (room.available !== null && rec.amount_ar > room.available) ok = false; // au-dessus du plafond
+            }
+          }
         } else if (col === 'messages') {
           if (existing) {
             // Modifier / épingler son propre message : seuls le texte et l'épingle changent
@@ -615,6 +623,299 @@ async function signupDecision(req: any, res: any, me: any) {
   return res.json({ ok: true });
 }
 
+// ---------- paie : périodes, fiches figées, primes, retenues, paiement (table df_payroll) ----------
+const PAYROLL = "df_payroll";
+type PayCfg = { mode: 'month' | 'half'; capPct: number; repayPct: number; methods: string[]; penalties: boolean };
+const num = (v: any, def: number, lo: number, hi: number) => { const n = Number(v); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : def; };
+async function payCfg(): Promise<PayCfg> {
+  const { data: st } = await sb.from(T.settings).select('data').eq('id', 'general').maybeSingle();
+  const d: any = st?.data || {};
+  const methods = Array.isArray(d.pay_methods) ? d.pay_methods.map((x: any) => String(x).trim()).filter(Boolean).slice(0, 10) : [];
+  return {
+    mode: d.pay_period === 'half' ? 'half' : 'month',
+    capPct: num(d.advance_cap_pct, 0, 0, 100), // 0 = pas de plafond
+    repayPct: num(d.advance_repay_pct, 100, 0, 100),
+    methods: methods.length ? methods : ['MVola', 'Orange Money', 'Airtel Money', 'Espèces'],
+    penalties: d.penalties_enabled === true,
+  };
+}
+const todayMada = () => new Date(Date.now() + 3 * 3600 * 1000).toISOString().slice(0, 10);
+const p2 = (n: number) => (n < 10 ? `0${n}` : `${n}`);
+const lastDay = (y: number, m: number) => new Date(Date.UTC(y, m, 0)).getUTCDate();
+function pidInfo(pid: string) {
+  const m = /^(\d{4})-(\d{2})(?:-([AB]))?$/.exec(String(pid));
+  if (!m) return null;
+  const y = Number(m[1]), mo = Number(m[2]);
+  if (mo < 1 || mo > 12) return null;
+  const ym = `${m[1]}-${m[2]}`;
+  if (m[3] === 'A') return { pid, start: `${ym}-01`, end: `${ym}-15` };
+  if (m[3] === 'B') return { pid, start: `${ym}-16`, end: `${ym}-${p2(lastDay(y, mo))}` };
+  return { pid, start: `${ym}-01`, end: `${ym}-${p2(lastDay(y, mo))}` };
+}
+const periodOfDate = (date: string, mode: 'month' | 'half') =>
+  pidInfo(mode === 'half' ? `${date.slice(0, 7)}-${Number(date.slice(8, 10)) <= 15 ? 'A' : 'B'}` : date.slice(0, 7))!;
+function prevPid(pid: string): string {
+  const m = /^(\d{4})-(\d{2})(?:-([AB]))?$/.exec(pid)!;
+  if (m[3] === 'B') return `${m[1]}-${m[2]}-A`;
+  let y = Number(m[1]), mo = Number(m[2]) - 1;
+  if (mo === 0) { mo = 12; y -= 1; }
+  return m[3] === 'A' ? `${y}-${p2(mo)}-B` : `${y}-${p2(mo)}`;
+}
+async function fetchAll(build: (a: number, b: number) => any): Promise<any[]> {
+  const out: any[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await build(from, from + 999);
+    if (error) throw error;
+    out.push(...(data || []));
+    if (!data || data.length < 1000) break;
+  }
+  return out;
+}
+const sumOf = (a: any[]) => a.reduce((t, x) => t + (Number(x.amount) || 0), 0);
+const audit = (pid: string, action: string, me: any, detail: string) =>
+  sb.from(PAYROLL).upsert({
+    id: `audit-${Date.now()}-${randomBytes(3).toString('hex')}`,
+    data: { kind: 'audit', pid, action, by: me.id, by_name: me.name || me.username || '', at: new Date().toISOString(), detail: String(detail).slice(0, 300) },
+    updated_at: new Date().toISOString(),
+  });
+
+// Calcule les fiches d'une période (aperçu, ou base de la clôture). Les montants par session viennent de calculated_ar (figé à la validation).
+async function computeSlips(info: { pid: string; start: string; end: string }, cfg: PayCfg, onlyUser?: string) {
+  const posts = await fetchAll((a, b) => {
+    let q = sb.from(T.posts).select('data').gte('data->>date', info.start).lte('data->>date', info.end).eq('data->>status', 'completed');
+    if (onlyUser) q = q.eq('data->>employee_id', onlyUser);
+    return q.order('id').range(a, b);
+  });
+  const bonusRows = await fetchAll((a, b) => {
+    let q = sb.from(PAYROLL).select('data').eq('data->>kind', 'bonus').eq('data->>pid', info.pid);
+    if (onlyUser) q = q.eq('data->>user_id', onlyUser);
+    return q.order('id').range(a, b);
+  });
+  const advRows = await fetchAll((a, b) => {
+    let q = sb.from(T.advances).select('data').eq('data->>status', 'approved').lte('data->>request_date', info.end + '~');
+    if (onlyUser) q = q.eq('data->>employee_id', onlyUser);
+    return q.order('id').range(a, b);
+  });
+  const slipRows = await fetchAll((a, b) => {
+    let q = sb.from(PAYROLL).select('data').eq('data->>kind', 'slip').lt('data->>period_end', info.start);
+    if (onlyUser) q = q.eq('data->>user_id', onlyUser);
+    return q.order('id').range(a, b);
+  });
+  const { data: urows } = await sb.from(T.users).select('data');
+  const users = new Map<string, any>((urows || []).map((r: any) => [r.data.id, r.data]));
+
+  const acc = new Map<string, any>();
+  const get = (uid: string) => {
+    if (!acc.has(uid)) acc.set(uid, { lines: [], bonuses: [], penalties: [], approved: 0, deducted: 0 });
+    return acc.get(uid);
+  };
+  for (const r of posts) {
+    const p = r.data;
+    const amount = Math.max(0, Math.round(Number(p.calculated_ar) || 0));
+    const score = Math.max(0, (Number(p.final_score ?? p.current_score) || 0) - (Number(p.initial_score) || 0));
+    get(p.employee_id).lines.push({ post_id: p.id, date: p.date, client: p.client_name, post_number: p.post_number ?? null, score, rate: score > 0 ? Math.round((amount / score) * 1_000_000) : 0, amount });
+  }
+  for (const r of bonusRows) {
+    const b = r.data;
+    const e = { id: b.id, amount: Number(b.amount) || 0, reason: b.reason, at: b.at };
+    (b.type === 'penalty' ? get(b.user_id).penalties : get(b.user_id).bonuses).push(e);
+  }
+  for (const r of advRows) get(r.data.employee_id).approved += Math.max(0, Math.round(Number(r.data.amount_ar) || 0));
+  for (const r of slipRows) get(r.data.user_id).deducted += Math.round(Number(r.data.advance_deducted) || 0);
+
+  const slips: any[] = [];
+  for (const [uid, a] of acc) {
+    const u = users.get(uid);
+    if (!u || u.role === 'admin') continue;
+    const gross = a.lines.reduce((t: number, l: any) => t + l.amount, 0);
+    const bon = sumOf(a.bonuses), pen = sumOf(a.penalties);
+    const due = Math.max(0, a.approved - a.deducted);
+    if (gross === 0 && bon === 0 && pen === 0 && due === 0) continue;
+    const total = gross + bon;
+    const penApplied = Math.min(pen, total);
+    const afterPen = total - penApplied;
+    const advDeducted = Math.min(due, Math.floor((afterPen * cfg.repayPct) / 100)); // jamais plus que le dû, jamais de net négatif
+    slips.push({
+      id: `slip-${info.pid}-${uid}`, kind: 'slip', pid: info.pid, period_start: info.start, period_end: info.end,
+      user_id: uid, name: u.name, username: u.username, phone: u.phone || '',
+      lines: a.lines.sort((x: any, y: any) => String(x.date).localeCompare(String(y.date))),
+      gross, bonuses: a.bonuses, penalties: a.penalties, penalty_applied: penApplied,
+      advance_due_before: due, advance_deducted: advDeducted, advance_carry: due - advDeducted,
+      net: afterPen - advDeducted, paid: null,
+    });
+  }
+  return slips.sort((x, y) => String(x.name).localeCompare(String(y.name)));
+}
+
+// Avance possible : plafond = % de ce que le booster a gagné dans la période en cours (0 = pas de plafond)
+async function advanceRoom(uid: string, cfg: PayCfg) {
+  const info = periodOfDate(todayMada(), cfg.mode);
+  const mine = (await computeSlips(info, cfg, uid)).find(x => x.user_id === uid);
+  const base = (mine?.gross || 0) + sumOf(mine?.bonuses || []);
+  const advs = await fetchAll((a, b) =>
+    sb.from(T.advances).select('data').eq('data->>employee_id', uid).in('data->>status', ['approved', 'pending'])
+      .gte('data->>request_date', info.start).lte('data->>request_date', info.end + '~').order('id').range(a, b));
+  const used = advs.reduce((t, r) => t + (Number(r.data.amount_ar) || 0), 0);
+  const max = cfg.capPct > 0 ? Math.floor((base * cfg.capPct) / 100) : null;
+  return {
+    pid: info.pid, start: info.start, end: info.end, gross: mine?.gross || 0, bonuses: sumOf(mine?.bonuses || []),
+    due: mine?.advance_due_before || 0, cap_pct: cfg.capPct, max, used, available: max === null ? null : Math.max(0, max - used),
+  };
+}
+
+const adminOnly = (res: any, me: any) => (me.role !== 'admin' ? res.status(403).json({ error: "Réservé à l'administrateur." }) : null);
+const reasonText = (b: any) => String(b?.reason || '').trim().slice(0, 200);
+
+async function payrollPeriod(req: any, res: any, me: any) {
+  const no = adminOnly(res, me); if (no) return no;
+  const info = pidInfo(req.body?.pid);
+  if (!info) return res.status(400).json({ error: 'Période invalide.' });
+  const cfg = await payCfg();
+  const { data: pd } = await sb.from(PAYROLL).select('data').eq('id', `period-${info.pid}`).maybeSingle();
+  const slips = pd
+    ? (await fetchAll((a, b) => sb.from(PAYROLL).select('data').eq('data->>kind', 'slip').eq('data->>pid', info.pid).order('id').range(a, b))).map(r => r.data)
+        .sort((x: any, y: any) => String(x.name).localeCompare(String(y.name)))
+    : await computeSlips(info, cfg);
+  const status = pd ? pd.data.status : info.end < todayMada() ? 'to_check' : 'open';
+  const { count } = await sb.from(T.posts).select('id', { count: 'exact', head: true })
+    .gte('data->>date', info.start).lte('data->>date', info.end).in('data->>status', ['pending_start', 'pending_end', 'active']);
+  const { data: au } = await sb.from(PAYROLL).select('data').eq('data->>kind', 'audit').eq('data->>pid', info.pid).order('updated_at', { ascending: false }).limit(30);
+  const { data: idx } = await sb.from(PAYROLL).select('data').eq('data->>kind', 'period').order('id', { ascending: false }).limit(60);
+  return res.json({
+    pid: info.pid, start: info.start, end: info.end, status, closed_at: pd?.data.closed_at || null, closed_by_name: pd?.data.closed_by_name || '',
+    slips, pending_validation: count || 0, audit: (au || []).map((r: any) => r.data),
+    index: (idx || []).map((r: any) => ({ pid: r.data.pid, status: r.data.status })),
+    cfg: { methods: cfg.methods, penalties: cfg.penalties, cap_pct: cfg.capPct, repay_pct: cfg.repayPct, mode: cfg.mode },
+  });
+}
+
+async function payrollClose(req: any, res: any, me: any) {
+  const no = adminOnly(res, me); if (no) return no;
+  const info = pidInfo(req.body?.pid);
+  if (!info) return res.status(400).json({ error: 'Période invalide.' });
+  const cfg = await payCfg();
+  const { data: ex } = await sb.from(PAYROLL).select('id').eq('id', `period-${info.pid}`).maybeSingle();
+  if (ex) return res.status(409).json({ error: 'Cette période est déjà clôturée.' });
+  if (info.end >= todayMada()) return res.status(400).json({ error: "Cette période n'est pas terminée. Clôture-la après son dernier jour." });
+  const { count: pend } = await sb.from(T.posts).select('id', { count: 'exact', head: true })
+    .gte('data->>date', info.start).lte('data->>date', info.end).in('data->>status', ['pending_start', 'pending_end', 'active']);
+  if ((pend || 0) > 0) return res.status(409).json({ error: `${pend} session(s) de cette période sont encore à valider ou en cours. Valide-les d'abord.` });
+  const prev = pidInfo(prevPid(info.pid))!;
+  const { count: prevDone } = await sb.from(T.posts).select('id', { count: 'exact', head: true })
+    .gte('data->>date', prev.start).lte('data->>date', prev.end).eq('data->>status', 'completed');
+  if ((prevDone || 0) > 0) {
+    const { data: pp } = await sb.from(PAYROLL).select('id').eq('id', `period-${prev.pid}`).maybeSingle();
+    if (!pp) return res.status(409).json({ error: `Clôture d'abord la période précédente (${prev.pid}).` });
+  }
+  const slips = await computeSlips(info, cfg);
+  const now = new Date().toISOString();
+  for (const sl of slips) await sb.from(PAYROLL).upsert({ id: sl.id, data: { ...sl, closed_at: now }, updated_at: now });
+  await sb.from(PAYROLL).upsert({
+    id: `period-${info.pid}`,
+    data: { kind: 'period', pid: info.pid, period_start: info.start, period_end: info.end, status: 'closed', closed_at: now, closed_by: me.id, closed_by_name: me.name || '', gross: slips.reduce((t, x) => t + x.gross, 0), net: slips.reduce((t, x) => t + x.net, 0), count: slips.length },
+    updated_at: now,
+  });
+  await audit(info.pid, 'close', me, `Clôture : ${slips.length} fiche(s), net total ${slips.reduce((t, x) => t + x.net, 0)} Ar`);
+  return res.json({ ok: true });
+}
+
+async function payrollReopen(req: any, res: any, me: any) {
+  const no = adminOnly(res, me); if (no) return no;
+  const info = pidInfo(req.body?.pid);
+  if (!info) return res.status(400).json({ error: 'Période invalide.' });
+  const reason = reasonText(req.body);
+  if (reason.length < 3) return res.status(400).json({ error: 'Écris un motif (3 caractères minimum).' });
+  const { data: pd } = await sb.from(PAYROLL).select('data').eq('id', `period-${info.pid}`).maybeSingle();
+  if (!pd) return res.status(404).json({ error: "Cette période n'est pas clôturée." });
+  const slips = await fetchAll((a, b) => sb.from(PAYROLL).select('data').eq('data->>kind', 'slip').eq('data->>pid', info.pid).order('id').range(a, b));
+  if (slips.some(r => r.data.paid)) return res.status(409).json({ error: 'Une fiche est déjà payée. Annule le paiement avant de rouvrir.' });
+  await sb.from(PAYROLL).delete().eq('data->>kind', 'slip').eq('data->>pid', info.pid);
+  await sb.from(PAYROLL).delete().eq('id', `period-${info.pid}`);
+  await audit(info.pid, 'reopen', me, `Réouverture. Motif : ${reason}`);
+  return res.json({ ok: true });
+}
+
+async function payrollPay(req: any, res: any, me: any) {
+  const no = adminOnly(res, me); if (no) return no;
+  const info = pidInfo(req.body?.pid);
+  const uid = String(req.body?.user_id || '');
+  if (!info || !uid) return res.status(400).json({ error: 'Demande invalide.' });
+  const cfg = await payCfg();
+  const { data: row } = await sb.from(PAYROLL).select('data').eq('id', `slip-${info.pid}-${uid}`).maybeSingle();
+  const { data: pd } = await sb.from(PAYROLL).select('data').eq('id', `period-${info.pid}`).maybeSingle();
+  if (!row || !pd) return res.status(404).json({ error: 'Fiche introuvable. La période doit être clôturée.' });
+  const slip = row.data;
+  const now = new Date().toISOString();
+  if (req.body?.undo === true) {
+    const reason = reasonText(req.body);
+    if (reason.length < 3) return res.status(400).json({ error: 'Écris un motif (3 caractères minimum).' });
+    if (!slip.paid) return res.status(409).json({ error: "Cette fiche n'est pas marquée payée." });
+    await sb.from(PAYROLL).upsert({ id: slip.id, data: { ...slip, paid: null }, updated_at: now });
+    await sb.from(PAYROLL).upsert({ id: `period-${info.pid}`, data: { ...pd.data, status: 'closed' }, updated_at: now });
+    await audit(info.pid, 'unpay', me, `Paiement annulé pour ${slip.name}. Motif : ${reason}`);
+    return res.json({ ok: true });
+  }
+  const method = String(req.body?.method || '');
+  if (!cfg.methods.includes(method)) return res.status(400).json({ error: 'Mode de paiement invalide.' });
+  const date = String(req.body?.date || todayMada());
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date > todayMada()) return res.status(400).json({ error: 'Date de paiement invalide.' });
+  if (slip.net <= 0) return res.status(400).json({ error: 'Rien à payer sur cette fiche (net à 0).' });
+  if (slip.paid) return res.status(409).json({ error: 'Cette fiche est déjà payée.' });
+  const ref = String(req.body?.ref || '').trim().slice(0, 60);
+  await sb.from(PAYROLL).upsert({ id: slip.id, data: { ...slip, paid: { at: date, method, ref, by: me.id, by_name: me.name || '' } }, updated_at: now });
+  const all = await fetchAll((a, b) => sb.from(PAYROLL).select('data').eq('data->>kind', 'slip').eq('data->>pid', info.pid).order('id').range(a, b));
+  const allPaid = all.every(r => (r.data.id === slip.id ? true : r.data.net <= 0 || !!r.data.paid));
+  if (allPaid) await sb.from(PAYROLL).upsert({ id: `period-${info.pid}`, data: { ...pd.data, status: 'paid' }, updated_at: now });
+  await audit(info.pid, 'pay', me, `${slip.name} : ${slip.net} Ar payé par ${method}${ref ? ` (réf. ${ref})` : ''}`);
+  return res.json({ ok: true });
+}
+
+async function payrollBonus(req: any, res: any, me: any) {
+  const no = adminOnly(res, me); if (no) return no;
+  const info = pidInfo(req.body?.pid);
+  const uid = String(req.body?.user_id || '');
+  const type = req.body?.type === 'penalty' ? 'penalty' : 'bonus';
+  const amount = Math.round(Number(req.body?.amount));
+  const reason = reasonText(req.body);
+  if (!info || !uid) return res.status(400).json({ error: 'Demande invalide.' });
+  if (!Number.isFinite(amount) || amount < 1 || amount > 10_000_000) return res.status(400).json({ error: 'Montant invalide (1 à 10 000 000 Ar).' });
+  if (reason.length < 3) return res.status(400).json({ error: 'Écris un motif (3 caractères minimum).' });
+  const cfg = await payCfg();
+  if (type === 'penalty' && !cfg.penalties) return res.status(403).json({ error: 'Les pénalités sont désactivées dans les Réglages.' });
+  const { data: pd } = await sb.from(PAYROLL).select('id').eq('id', `period-${info.pid}`).maybeSingle();
+  if (pd) return res.status(409).json({ error: 'Cette période est clôturée. Rouvre-la pour la modifier.' });
+  const u = await getUserRow(uid);
+  if (!u || u.role === 'admin') return res.status(404).json({ error: 'Booster introuvable.' });
+  const now = new Date().toISOString();
+  const id = `bonus-${info.pid}-${uid}-${Date.now()}`;
+  await sb.from(PAYROLL).upsert({ id, data: { kind: 'bonus', type, id, pid: info.pid, user_id: uid, user_name: u.name, amount, reason, by: me.id, by_name: me.name || '', at: now }, updated_at: now });
+  await audit(info.pid, type === 'penalty' ? 'penalty' : 'bonus', me, `${type === 'penalty' ? 'Retenue' : 'Prime'} de ${amount} Ar pour ${u.name}. Motif : ${reason}`);
+  return res.json({ ok: true });
+}
+
+async function payrollBonusDelete(req: any, res: any, me: any) {
+  const no = adminOnly(res, me); if (no) return no;
+  const id = String(req.body?.id || '');
+  const reason = reasonText(req.body);
+  if (reason.length < 3) return res.status(400).json({ error: 'Écris un motif (3 caractères minimum).' });
+  const { data: row } = await sb.from(PAYROLL).select('data').eq('id', id).maybeSingle();
+  if (!row || row.data.kind !== 'bonus') return res.status(404).json({ error: 'Introuvable.' });
+  const { data: pd } = await sb.from(PAYROLL).select('id').eq('id', `period-${row.data.pid}`).maybeSingle();
+  if (pd) return res.status(409).json({ error: 'Cette période est clôturée. Rouvre-la pour la modifier.' });
+  await sb.from(PAYROLL).delete().eq('id', id);
+  await audit(row.data.pid, 'bonus-delete', me, `${row.data.type === 'penalty' ? 'Retenue' : 'Prime'} de ${row.data.amount} Ar supprimée (${row.data.user_name}). Motif : ${reason}`);
+  return res.json({ ok: true });
+}
+
+// Pour le booster : ses fiches clôturées + sa période en cours (avec le plafond d'avance possible)
+async function payrollMine(_req: any, res: any, me: any) {
+  const cfg = await payCfg();
+  const rows = await fetchAll((a, b) => sb.from(PAYROLL).select('data').eq('data->>kind', 'slip').eq('data->>user_id', me.id).order('id', { ascending: false }).range(a, b));
+  const slips = rows.map(r => r.data).sort((x: any, y: any) => String(y.pid).localeCompare(String(x.pid))).slice(0, 24);
+  const current = await advanceRoom(me.id, cfg);
+  return res.json({ slips, current, cfg: { methods: cfg.methods, mode: cfg.mode } });
+}
+
 // ---------- fichiers (photos, pièces jointes) ----------
 // ---------- Cloudinary (photos) ----------
 let cldCache: { key: string; secret: string; at: number } | null = null;
@@ -774,6 +1075,13 @@ Deno.serve(async (request: Request) => {
     if (action === "logout" && req.method === "POST") return await logout(req, res, me);
     if (action === "reset-decision" && req.method === "POST") return await resetDecision(req, res, me);
     if (action === "signup-decision" && req.method === "POST") return await signupDecision(req, res, me);
+    if (action === "payroll-period" && req.method === "POST") return await payrollPeriod(req, res, me);
+    if (action === "payroll-close" && req.method === "POST") return await payrollClose(req, res, me);
+    if (action === "payroll-reopen" && req.method === "POST") return await payrollReopen(req, res, me);
+    if (action === "payroll-pay" && req.method === "POST") return await payrollPay(req, res, me);
+    if (action === "payroll-bonus" && req.method === "POST") return await payrollBonus(req, res, me);
+    if (action === "payroll-bonus-delete" && req.method === "POST") return await payrollBonusDelete(req, res, me);
+    if (action === "payroll-mine" && req.method === "POST") return await payrollMine(req, res, me);
     if (action === "queue" && req.method === "POST") return await queueRoute(req, res, me);
     if (action === "upload" && req.method === "POST") return await upload(req, res, me);
     if (action === "profile-request" && req.method === "POST") return await profileRequest(req, res, me);

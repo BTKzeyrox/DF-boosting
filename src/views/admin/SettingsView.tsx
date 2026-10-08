@@ -49,6 +49,9 @@ export const SettingsView: React.FC = () => {
     setError(null);
     if (!s.price_per_million || s.price_per_million < 1) return setError('Le prix du 1M doit être supérieur à 0.');
     if (s.retention_days < 1) return setError('Conservation des photos : 1 jour minimum.');
+    if ((s.advance_cap_pct ?? 0) < 0 || (s.advance_cap_pct ?? 0) > 100) return setError('Plafond des avances : entre 0 et 100 %.');
+    if ((s.advance_repay_pct ?? 100) < 0 || (s.advance_repay_pct ?? 100) > 100) return setError('Remboursement des avances : entre 0 et 100 %.');
+    if (!(s.pay_methods || []).length) return setError('Ajoute au moins un mode de paiement.');
     if (s.late_tolerance_min < 0) return setError('La tolérance ne peut pas être négative.');
     if (s.access_before_min < 0 || s.access_after_min < 0) return setError("La tolérance d'accès ne peut pas être négative.");
     if (s.alert_idle_1_min < 1) return setError('La 1re alerte doit être de 1 minute ou plus.');
@@ -189,6 +192,39 @@ export const SettingsView: React.FC = () => {
           </button>
         </div>
         <p className="text-[11px] text-slate-500">Retirer un type de la liste ne change pas les postes qui l'utilisent déjà.</p>
+      </section>
+
+      <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3">
+        <h3 className="font-tactical font-bold text-white">Paie et avances</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className={labelCls}>Période de paie</label>
+            <select value={s.pay_period || 'month'} onChange={e => set('pay_period', e.target.value === 'half' ? 'half' : 'month')} className={inputCls}>
+              <option value="month">Mensuelle</option>
+              <option value="half">Par quinzaine (1-15 et 16-fin)</option>
+            </select>
+            <p className="text-[11px] text-slate-500 mt-1">Les périodes déjà clôturées gardent leur format.</p>
+          </div>
+          <div>
+            <label className={labelCls}>Plafond des avances (%)</label>
+            <input type="number" min={0} max={100} value={s.advance_cap_pct ?? 0} onChange={e => set('advance_cap_pct', Number(e.target.value))} className={inputCls} />
+            <p className="text-[11px] text-slate-500 mt-1">% de ce que le booster a gagné dans la période. 0 = pas de plafond.</p>
+          </div>
+          <div>
+            <label className={labelCls}>Remboursement des avances (%)</label>
+            <input type="number" min={0} max={100} value={s.advance_repay_pct ?? 100} onChange={e => set('advance_repay_pct', Number(e.target.value))} className={inputCls} />
+            <p className="text-[11px] text-slate-500 mt-1">Part maximale de la paie retenue à la clôture. Le net n'est jamais négatif, le reste est reporté.</p>
+          </div>
+          <div>
+            <label className={labelCls}>Modes de paiement (séparés par une virgule)</label>
+            <input type="text" value={(s.pay_methods || []).join(', ')} onChange={e => set('pay_methods', e.target.value.split(',').map(x => x.trim()).filter(Boolean))} className={inputCls} />
+          </div>
+        </div>
+        <label className="flex items-center gap-2 text-sm text-slate-200 cursor-pointer">
+          <input type="checkbox" checked={s.penalties_enabled === true} onChange={e => set('penalties_enabled', e.target.checked)} className="w-4 h-4 accent-emerald-500" />
+          Activer les retenues / pénalités (désactivé par défaut)
+        </label>
+        <p className="text-[11px] text-amber-300">Les règles de Madagascar sur les retenues de salaire n'ont pas été vérifiées. Demande à un comptable ou à l'Inspection du travail avant de les activer. Chaque retenue est saisie à la main avec un motif.</p>
       </section>
 
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3">

@@ -36,6 +36,8 @@ import { db } from '../../db/store';
 import { proofsOf } from '../../utils/proofs';
 import { askConfirm } from '../../components/ConfirmModal';
 import { AdvanceHistory } from '../../components/AdvanceHistory';
+import { MyPayroll, AdvanceRoomInfo, useAdvanceRoom } from '../../components/MyPayroll';
+import { AdvPayTabs } from '../../components/AdvPayTabs';
 import { compressProofImage } from '../../utils/imageUtils';
 import { AVAILABLE_CLIENT_CONTRACTS } from '../../db/initialData';
 import { PostsGrid20 } from '../../components/PostsGrid20';
@@ -137,6 +139,8 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
 
   // Salary Advance states
   const [advanceAmount, setAdvanceAmount] = useState<number>(10000);
+  const [advTab, setAdvTab] = useState<'advances' | 'payroll'>('advances');
+  const advanceRoom = useAdvanceRoom(activeSubTab === 'advances' && advTab === 'advances');
   const [advanceReason, setAdvanceReason] = useState('');
   const [advanceSuccess, setAdvanceSuccess] = useState(false);
 
@@ -459,6 +463,10 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
   const handleSubmitAdvance = (e: React.FormEvent, confirmed = false) => {
     e.preventDefault();
     if (advanceAmount <= 0) return;
+    if (advanceRoom && advanceRoom.available !== null && advanceAmount > advanceRoom.available) {
+      alert(`Le plafond d'avance est dépassé : tu peux demander au maximum ${advanceRoom.available.toLocaleString('fr-FR')} Ar pour l'instant.`);
+      return;
+    }
     if (!advanceReason.trim()) {
       alert('Veuillez indiquer le motif de l\'avance sur salaire.');
       return;
@@ -912,6 +920,9 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
 
       {/* SUB-VIEW 2: SALARY ADVANCE REQUESTS ("DMD d'avance") */}
       {activeSubTab === 'advances' && (
+        <div>
+        <AdvPayTabs value={advTab} onChange={setAdvTab} payLabel="Ma paie" />
+        {advTab === 'payroll' ? <MyPayroll /> : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Submit New Advance */}
           <div className="bg-[#0f1722] border border-slate-800 rounded-xl p-4 sm:p-6 shadow-xl lg:col-span-1">
@@ -930,6 +941,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
               </div>
             )}
 
+            <AdvanceRoomInfo room={advanceRoom} />
             <form onSubmit={handleSubmitAdvance} className="space-y-4 text-xs font-mono">
               <div>
                 <label className="block text-slate-300 uppercase mb-1">
@@ -985,6 +997,8 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
 
             <AdvanceHistory advances={userAdvances} />
           </div>
+        </div>
+        )}
         </div>
       )}
 

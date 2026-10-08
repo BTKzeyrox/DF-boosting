@@ -30,6 +30,8 @@ import { useLockBodyScroll } from '../../utils/useLockBodyScroll';
 import { formatScoreM, shiftHoursLabel } from '../../utils/formatUtils';
 import { getPresenceStatus, STATUS_LABEL, STATUS_DOT, formatDuration } from '../../utils/presence';
 import { setValFilterIntent, ValFilter } from '../../utils/navIntent';
+import { PayrollAdmin } from '../../components/PayrollAdmin';
+import { AdvPayTabs } from '../../components/AdvPayTabs';
 
 interface EmployeesManagementProps {
   onOpenEmployeeCV: (employee: User) => void;
@@ -57,6 +59,7 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
   section = 'employees',
 }) => {
   const [users, setUsers] = useState<User[]>(db.getUsers());
+  const [advTab, setAdvTab] = useState<'advances' | 'payroll'>('advances');
   const [advances, setAdvances] = useState<SalaryAdvanceRequest[]>(db.getAdvanceRequests());
   const [posts, setPosts] = useState<PostSession[]>(db.getPosts());
   const [presence, setPresence] = useState<PresenceRow[]>(db.getPresence());
@@ -590,6 +593,9 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
 
       {section === 'advances' && (
         <>
+      <AdvPayTabs value={advTab} onChange={setAdvTab} payLabel="Paie" />
+      {advTab === 'payroll' ? <PayrollAdmin /> : (
+        <>
       {/* SECTION: SALARY ADVANCE APPROVALS (DMD d'avance) */}
       <div id="advances-section" className="bg-[#0f1722] border border-slate-800 rounded-xl p-4 sm:p-6 shadow-xl">
         <h3 className="font-tactical font-bold text-white text-base flex items-center gap-2 mb-2">
@@ -651,6 +657,8 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
         <AdvanceHistory advances={advances} showBooster />
       </div>
 
+        </>
+      )}
         </>
       )}
 
