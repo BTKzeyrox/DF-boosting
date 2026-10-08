@@ -50,11 +50,18 @@ export const SettingsView: React.FC = () => {
     if (!s.price_per_million || s.price_per_million < 1) return setError('Le prix du 1M doit être supérieur à 0.');
     if (s.retention_days < 1) return setError('Conservation des photos : 1 jour minimum.');
     if (s.late_tolerance_min < 0) return setError('La tolérance ne peut pas être négative.');
+    if (s.access_before_min < 0 || s.access_after_min < 0) return setError("La tolérance d'accès ne peut pas être négative.");
+    if (s.alert_idle_1_min < 1) return setError('La 1re alerte doit être de 1 minute ou plus.');
+    if (s.alert_idle_2_min <= s.alert_idle_1_min) return setError('La 2e alerte doit être plus longue que la 1re.');
     db.updateSettings({
       ...s,
       price_per_million: Math.round(s.price_per_million),
       retention_days: Math.round(s.retention_days),
       late_tolerance_min: Math.round(s.late_tolerance_min),
+      access_before_min: Math.round(s.access_before_min),
+      access_after_min: Math.round(s.access_after_min),
+      alert_idle_1_min: Math.round(s.alert_idle_1_min),
+      alert_idle_2_min: Math.round(s.alert_idle_2_min),
     });
     setTouched(false);
     setSaved(true);
@@ -105,6 +112,56 @@ export const SettingsView: React.FC = () => {
         <div>
           <label className={labelCls}>Tolérance de retard (minutes)</label>
           <input type="number" min={0} value={s.late_tolerance_min} onChange={e => set('late_tolerance_min', Number(e.target.value))} className={inputCls} />
+        </div>
+      </section>
+
+      <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3">
+        <h3 className="font-tactical font-bold text-white">Accès et suivi des boosters</h3>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className={labelCls}>Connexion permise avant le shift (min)</label>
+            <input type="number" min={0} value={s.access_before_min} onChange={e => set('access_before_min', Number(e.target.value))} className={inputCls} />
+          </div>
+          <div>
+            <label className={labelCls}>Connexion permise après le shift (min)</label>
+            <input type="number" min={0} value={s.access_after_min} onChange={e => set('access_after_min', Number(e.target.value))} className={inputCls} />
+          </div>
+          <div>
+            <label className={labelCls}>1re alerte « sans poste » (min)</label>
+            <input type="number" min={1} value={s.alert_idle_1_min} onChange={e => set('alert_idle_1_min', Number(e.target.value))} className={inputCls} />
+          </div>
+          <div>
+            <label className={labelCls}>2e alerte « sans poste » (min)</label>
+            <input type="number" min={2} value={s.alert_idle_2_min} onChange={e => set('alert_idle_2_min', Number(e.target.value))} className={inputCls} />
+          </div>
+        </div>
+        <p className="text-[11px] text-slate-500">Un booster hors de son shift est refusé à la connexion et déconnecté, sauf s'il a une session en cours. Chaque booster peut aussi avoir « toute heure » ou « bloqué » sur la page Employés. Ces durées sont appliquées par le serveur en environ 1 minute.</p>
+
+        <div className="pt-1 space-y-2">
+          <label className="flex items-center gap-2 text-sm text-slate-200 cursor-pointer">
+            <input type="checkbox" checked={s.show_activity_column} onChange={e => set('show_activity_column', e.target.checked)} className="w-4 h-4 accent-emerald-500" />
+            Afficher la colonne « Activité » sur la page Employés
+          </label>
+          <div className="pl-6 space-y-2">
+            <div className="text-xs font-mono text-slate-400 uppercase">Pastilles « à valider » à afficher</div>
+            <div className="grid grid-cols-2 gap-2">
+              {([
+                ['badge_start', 'Début de session'],
+                ['badge_end', 'Fin de session'],
+                ['badge_advance', 'Avance'],
+                ['badge_profile', 'Profil'],
+              ] as const).map(([k, label]) => (
+                <label key={k} className="flex items-center gap-2 text-sm text-slate-200 cursor-pointer">
+                  <input type="checkbox" checked={s[k]} onChange={e => set(k, e.target.checked)} className="w-4 h-4 accent-emerald-500" />
+                  {label}
+                </label>
+              ))}
+            </div>
+            <label className="flex items-center gap-2 text-sm text-slate-200 cursor-pointer">
+              <input type="checkbox" checked={s.badges_clickable} onChange={e => set('badges_clickable', e.target.checked)} className="w-4 h-4 accent-emerald-500" />
+              Pastilles cliquables (ouvre la page Validations)
+            </label>
+          </div>
         </div>
       </section>
 

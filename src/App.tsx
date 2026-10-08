@@ -275,7 +275,7 @@ export default function App() {
               {activeView === 'settings' ? (
                 <SettingsView />
               ) : activeView === 'employees' ? (
-                <EmployeesManagement onOpenEmployeeCV={handleOpenEmployeeCV} />
+                <EmployeesManagement onOpenEmployeeCV={handleOpenEmployeeCV} onNavigate={view => setActiveView(view)} />
               ) : activeView === 'advances' ? (
                 <EmployeesManagement section="advances" onOpenEmployeeCV={handleOpenEmployeeCV} />
               ) : activeView === 'history' ? (

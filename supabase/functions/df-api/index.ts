@@ -94,14 +94,23 @@ const toMin = (s: unknown, dflt: number) => {
   const m = /^(\d{1,2}):(\d{2})$/.exec(String(s || ''));
   return m ? Number(m[1]) * 60 + Number(m[2]) : dflt;
 };
-// Vrai si l'heure `now` est dans le shift (la tolérance ouvre l'accès un peu avant le début ; le shift de nuit passe minuit)
+// Vrai si l'heure `now` est dans le shift, élargi de `access_before_min` avant le début et de
+// `access_after_min` après la fin (60 min par défaut). Le shift de nuit passe minuit.
+const accessMargins = (st: any) => {
+  const n = (v: unknown) => (v === undefined || v === null || v === '' || !Number.isFinite(Number(v)) ? 60 : Math.max(0, Number(v)));
+  return { before: n(st.access_before_min), after: n(st.access_after_min) };
+};
+const fmtMin = (m: number) => `${String(Math.floor(((m % 1440) + 1440) % 1440 / 60)).padStart(2, '0')}:${String(((m % 60) + 60) % 60).padStart(2, '0')}`;
 const inShiftWindow = (shift: 'day' | 'night', st: any, now: Date): boolean => {
   const s = shift === 'night' ? toMin(st.night_shift_start, 20 * 60) : toMin(st.day_shift_start, 8 * 60);
   const e = shift === 'night' ? toMin(st.night_shift_end, 6 * 60) : toMin(st.day_shift_end, 18 * 60);
-  const tol = Math.max(0, Number(st.late_tolerance_min) || 0);
-  const from = (s - tol + 1440) % 1440;
+  const { before, after } = accessMargins(st);
+  const len = ((e - s + 1440) % 1440) || 1440;
+  if (len + before + after >= 1440) return true;
+  const from = (s - before + 1440) % 1440;
+  const to = (e + after) % 1440;
   const m = (now.getUTCHours() * 60 + now.getUTCMinutes() + 180) % 1440;
-  return from <= e ? m >= from && m < e : m >= from || m < e;
+  return from <= to ? m >= from && m < to : m >= from || m < to;
 };
 // Booster : « auto » = seulement pendant son shift ; « allow » = toute heure ; « block » = jamais.
 // Une session en cours (début ou fin à valider) garde l'accès jusqu'à sa fin.
@@ -116,7 +125,9 @@ async function shiftAccess(user: any): Promise<{ ok: boolean; message?: string }
   if (open && open.length) return { ok: true };
   const from = shift === 'night' ? st.night_shift_start || '20:00' : st.day_shift_start || '08:00';
   const to = shift === 'night' ? st.night_shift_end || '06:00' : st.day_shift_end || '18:00';
-  return { ok: false, message: `Ton shift ${shift === 'night' ? 'de nuit' : 'de jour'} est de ${from} à ${to}. Reviens à ce moment.` };
+  const startMin = toMin(shift === 'night' ? st.night_shift_start : st.day_shift_start, shift === 'night' ? 20 * 60 : 8 * 60);
+  const opens = fmtMin(startMin - accessMargins(st).before);
+  return { ok: false, message: `Ton shift ${shift === 'night' ? 'de nuit' : 'de jour'} est de ${from} à ${to}. Tu peux te connecter à partir de ${opens}.` };
 }
 
 // ---------- présence (en ligne, temps de connexion, file d'attente « sans poste ») ----------

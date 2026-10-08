@@ -16,7 +16,17 @@ export interface AppSettings {
   day_shift_end: string;
   night_shift_start: string;
   night_shift_end: string;
-  late_tolerance_min: number;
+  late_tolerance_min: number; // tolérance de retard (calendrier)
+  access_before_min: number; // connexion permise X min avant le début du shift
+  access_after_min: number; // connexion permise X min après la fin du shift
+  show_activity_column: boolean; // colonne « Activité » sur la page Employés
+  badge_start: boolean; // pastille « Début à valider »
+  badge_end: boolean; // pastille « Fin à valider »
+  badge_advance: boolean; // pastille « Avance à valider »
+  badge_profile: boolean; // pastille « Profil à valider »
+  badges_clickable: boolean; // un clic sur une pastille ouvre Validations
+  alert_idle_1_min: number; // 1re alerte « booster sans poste » (minutes)
+  alert_idle_2_min: number; // 2e alerte
   retention_days: number;
   rules: string;
   post_types: string[];

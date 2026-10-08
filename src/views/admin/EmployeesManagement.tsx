@@ -21,17 +21,19 @@ import {
   Moon,
   X,
 } from 'lucide-react';
-import { User, ShiftType, SalaryAdvanceRequest } from '../../types';
+import { User, ShiftType, SalaryAdvanceRequest, PostSession, PresenceRow, ProfileChangeRequest, AppSettings } from '../../types';
 import { Avatar } from '../../components/Avatar';
 import { db } from '../../db/store';
 import { askConfirm } from '../../components/ConfirmModal';
 import { AdvanceHistory } from '../../components/AdvanceHistory';
 import { useLockBodyScroll } from '../../utils/useLockBodyScroll';
 import { formatScoreM } from '../../utils/formatUtils';
-import { getPresenceStatus, STATUS_LABEL, STATUS_DOT } from '../../utils/presence';
+import { getPresenceStatus, STATUS_LABEL, STATUS_DOT, formatDuration } from '../../utils/presence';
+import { setValFilterIntent, ValFilter } from '../../utils/navIntent';
 
 interface EmployeesManagementProps {
   onOpenEmployeeCV: (employee: User) => void;
+  onNavigate?: (view: string) => void; // pastilles « à valider » cliquables
   section?: 'employees' | 'advances';
 }
 
@@ -51,10 +53,16 @@ const phoneIsComplete = (v: string) => phoneDigits(v).length === 12;
 
 export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
   onOpenEmployeeCV,
+  onNavigate,
   section = 'employees',
 }) => {
   const [users, setUsers] = useState<User[]>(db.getUsers());
   const [advances, setAdvances] = useState<SalaryAdvanceRequest[]>(db.getAdvanceRequests());
+  const [posts, setPosts] = useState<PostSession[]>(db.getPosts());
+  const [presence, setPresence] = useState<PresenceRow[]>(db.getPresence());
+  const [profileReqs, setProfileReqs] = useState<ProfileChangeRequest[]>(db.getProfileRequests());
+  const [cfg, setCfg] = useState<AppSettings>(db.getSettings());
+  const [, setTick] = useState(0); // rafraîchit les statuts même sans nouvelle donnée
   const [shiftFilter, setShiftFilter] = useState<'all' | 'day' | 'night' | 'blocked'>('all');
   const [searchFilter, setSearchFilter] = useState('');
 
@@ -94,9 +102,27 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
     const unsubscribe = db.subscribe(() => {
       setUsers(db.getUsers());
       setAdvances(db.getAdvanceRequests());
+      setPosts(db.getPosts());
+      setPresence(db.getPresence());
+      setProfileReqs(db.getProfileRequests());
+      setCfg(db.getSettings());
     });
-    return unsubscribe;
+    const timer = setInterval(() => setTick(t => t + 1), 20000);
+    return () => {
+      unsubscribe();
+      clearInterval(timer);
+    };
   }, []);
+
+  // Ce qui attend la décision de l'admin pour un booster
+  const pendingOf = (empId: string) => {
+    const items: { key: string; label: string; filter: ValFilter; n: number }[] = [];
+    if (cfg.badge_start) items.push({ key: 'start', label: 'Début à valider', filter: 'starts', n: posts.filter(p => p.employee_id === empId && p.status === 'pending_start').length });
+    if (cfg.badge_end) items.push({ key: 'end', label: 'Fin à valider', filter: 'ends', n: posts.filter(p => p.employee_id === empId && p.status === 'pending_end').length });
+    if (cfg.badge_advance) items.push({ key: 'adv', label: 'Avance à valider', filter: 'advances', n: advances.filter(a => a.employee_id === empId && a.status === 'pending').length });
+    if (cfg.badge_profile) items.push({ key: 'prf', label: 'Profil à valider', filter: 'profiles', n: profileReqs.filter(r => r.user_id === empId && r.status === 'pending').length });
+    return items.filter(i => i.n > 0);
+  };
 
   const handleToggleBlock = (userId: string) => {
     db.toggleUserBlock(userId);
@@ -340,13 +366,14 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                 <th className="p-3">Score Total</th>
                 <th className="p-3">Payroll Cumulé</th>
                 <th className="p-3">Statut Système</th>
+                {cfg.show_activity_column && <th className="p-3">Activité</th>}
                 <th className="p-3 pr-4 sm:pr-6 text-right">Actions Opérationnelles</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/80">
               {employees.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-slate-500">
+                  <td colSpan={cfg.show_activity_column ? 8 : 7} className="p-8 text-center text-slate-500">
                     Aucun employé ne correspond aux filtres sélectionnés.
                   </td>
                 </tr>
@@ -440,6 +467,42 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
                           {isBlocked ? 'Compte Bloqué' : 'Actif'}
                         </span>
                       </td>
+
+                      {/* Activité : statut en direct, temps connecté, actions à valider */}
+                      {cfg.show_activity_column && (() => {
+                        const pr = getPresenceStatus(emp, posts, presence);
+                        const pend = pendingOf(emp.id);
+                        return (
+                          <td className="p-3 align-top">
+                            <div className="flex items-center gap-1.5 whitespace-nowrap">
+                              <span className={`w-2 h-2 rounded-full ${STATUS_DOT[pr.status]}`} />
+                              <span className="text-[11px] font-bold text-slate-200">{STATUS_LABEL[pr.status]}</span>
+                            </div>
+                            <div className="text-[10px] text-slate-500 mt-0.5 whitespace-nowrap">Connecté aujourd'hui : {formatDuration(pr.onlineSec)}</div>
+                            {pend.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-1.5">
+                                {pend.map(b => {
+                                  const cls = 'px-1.5 py-0.5 text-[10px] font-bold uppercase border bg-amber-950/70 border-amber-500/60 text-amber-300 whitespace-nowrap';
+                                  const text = `${b.label}${b.n > 1 ? ` (${b.n})` : ''}`;
+                                  return cfg.badges_clickable && onNavigate ? (
+                                    <button
+                                      key={b.key}
+                                      type="button"
+                                      onClick={() => { setValFilterIntent(b.filter); onNavigate('validations'); }}
+                                      className={`${cls} cursor-pointer hover:bg-amber-900`}
+                                      title="Ouvrir la page Validations"
+                                    >
+                                      {text}
+                                    </button>
+                                  ) : (
+                                    <span key={b.key} className={cls}>{text}</span>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </td>
+                        );
+                      })()}
 
                       {/* Profile Actions: [ View CV ], [ Edit Info ], [ Block/Unblock ], [ Delete Profile ] */}
                       <td className="p-3 pr-4 sm:pr-6 text-right whitespace-nowrap">

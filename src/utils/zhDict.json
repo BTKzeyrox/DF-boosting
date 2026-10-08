@@ -756,5 +756,22 @@
 "Accès : shift": "权限：按班次",
 "Accès : toute heure": "权限：任何时间",
 "Accès : bloqué": "权限：已禁止",
-"Accès selon l'heure du shift": "按班次时间的登录权限"
+"Accès selon l'heure du shift": "按班次时间的登录权限",
+"Activité": "动态",
+"Début à valider": "开始待审核",
+"Fin à valider": "结束待审核",
+"Avance à valider": "预支待审核",
+"Profil à valider": "资料待审核",
+"Ouvrir la page Validations": "打开审核页面",
+"Accès et suivi des boosters": "代练员访问与跟踪",
+"Connexion permise avant le shift (min)": "班次开始前允许登录（分钟）",
+"Connexion permise après le shift (min)": "班次结束后允许登录（分钟）",
+"1re alerte « sans poste » (min)": "第1次「无工位」提醒（分钟）",
+"2e alerte « sans poste » (min)": "第2次「无工位」提醒（分钟）",
+"Afficher la colonne « Activité » sur la page Employés": "在员工页面显示「动态」列",
+"Pastilles « à valider » à afficher": "要显示的「待审核」标记",
+"Début de session": "会话开始",
+"Fin de session": "会话结束",
+"Avance": "预支",
+"Pastilles cliquables (ouvre la page Validations)": "标记可点击（打开审核页面）"
 }
