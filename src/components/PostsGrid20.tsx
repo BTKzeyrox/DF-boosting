@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { NAV_TARGET_EVENT, peekNavTarget } from '../utils/navTarget';
 import {
   Target,
@@ -101,26 +101,32 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
     return unsub;
   }, []);
 
+  // Une seule passe sur les sessions (au lieu d'une recherche dans toute la liste pour chaque carte)
+  const { pendingBy, activeBy, liveBy } = useMemo(() => {
+    const pendingBy = new Map<string, (typeof allPosts)[number]>();
+    const activeBy = new Map<string, (typeof allPosts)[number]>();
+    const liveBy = new Map<string, (typeof allPosts)[number]>();
+    for (const p of allPosts) {
+      if (p.status !== 'active' && p.status !== 'pending_start' && p.status !== 'pending_end') continue;
+      if (!liveBy.has(p.client_name)) liveBy.set(p.client_name, p);
+      if (p.status === 'active') {
+        if (!activeBy.has(p.client_name)) activeBy.set(p.client_name, p);
+      } else if (!pendingBy.has(p.client_name)) pendingBy.set(p.client_name, p);
+    }
+    return { pendingBy, activeBy, liveBy };
+  }, [allPosts]);
+
   // Calculate live stats for the header and filters
   const pendingContracts = contractsList.filter(c => {
-    const s = allPosts.find(
-      p => p.client_name === c.client_name && (p.status === 'pending_start' || p.status === 'pending_end')
-    );
-    return !!s;
+    return !!pendingBy.get(c.client_name);
   });
 
   const activeContracts = contractsList.filter(c => {
-    const s = allPosts.find(p => p.client_name === c.client_name && p.status === 'active');
-    return !!s;
+    return !!activeBy.get(c.client_name);
   });
 
   const freeContracts = contractsList.filter(c => {
-    const s = allPosts.find(
-      p =>
-        p.client_name === c.client_name &&
-        (p.status === 'active' || p.status === 'pending_start' || p.status === 'pending_end')
-    );
-    return !s;
+    return !liveBy.get(c.client_name);
   });
 
   const filteredContracts = contractsList.filter(contract => {
@@ -139,11 +145,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
     if (filterShift === 'urgent' && contract.priority !== 'Urgente') return false;
 
     // Status Filter
-    const session = allPosts.find(
-      p =>
-        p.client_name === contract.client_name &&
-        (p.status === 'active' || p.status === 'pending_start' || p.status === 'pending_end')
-    );
+    const session = liveBy.get(contract.client_name);
 
     if (filterStatus === 'pending') {
       if (!session || (session.status !== 'pending_start' && session.status !== 'pending_end')) return false;
@@ -158,9 +160,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
 
   // Reste et Objectif d'un poste (mêmes formules que sur la carte)
   const restOf = (c: ClientContract) => {
-    const session = allPosts.find(
-      p => p.client_name === c.client_name && (p.status === 'active' || p.status === 'pending_start' || p.status === 'pending_end')
-    );
+    const session = liveBy.get(c.client_name);
     const objective = Math.max(1, c.target_score - c.initial_score);
     const current = Number(session ? session.final_score ?? session.current_score : c.current_score ?? c.initial_score) || 0;
     return Math.max(0, objective - Math.max(0, current - c.initial_score));
@@ -333,11 +333,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
         <div className="grid grid-cols-2 gap-2.5 sm:gap-4">
           {sortedContracts.map(contract => {
             const isMyActive = activePost?.client_name === contract.client_name;
-            const activeSessionOnThis = allPosts.find(
-              p =>
-                p.client_name === contract.client_name &&
-                (p.status === 'active' || p.status === 'pending_start' || p.status === 'pending_end')
-            );
+            const activeSessionOnThis = liveBy.get(contract.client_name);
             const isTakenByOther = activeSessionOnThis && activeSessionOnThis.employee_id !== currentUser.id;
             const isPending =
               activeSessionOnThis?.status === 'pending_start' || activeSessionOnThis?.status === 'pending_end';
@@ -372,7 +368,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
                 key={contract.id}
                 data-nav={`poste-${contract.post_number}`}
                 style={bandStyle}
-                className={`${noAccount ? 'opacity-60 grayscale ' : ''}border rounded-2xl p-3 sm:p-5 flex flex-col justify-between space-y-3 sm:space-y-4 transition-all duration-200 hover:shadow-xl relative overflow-hidden ${
+                className={`${noAccount ? 'opacity-60 grayscale ' : ''}df-card-lazy border rounded-2xl p-3 sm:p-5 flex flex-col justify-between space-y-3 sm:space-y-4 transition-shadow duration-200 hover:shadow-xl relative overflow-hidden ${
                   isPending
                     ? isLight
                       ? 'border-amber-500 ring-2 ring-amber-500/20 bg-amber-50/40'

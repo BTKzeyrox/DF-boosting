@@ -67,12 +67,20 @@ html.theme-dark aside {
 html.theme-dark header {
   background-image: linear-gradient(90deg, rgba(16, 185, 129, 0.10), rgba(6, 182, 212, 0.05)) !important;
 }
-html.theme-dark [class*="bg-[#"][class*="rounded-xl"],
-html.theme-dark [class*="bg-[#"][class*="rounded-2xl"],
-html.theme-dark aside,
-html.theme-dark header {
+/* Le flou (backdrop-filter) est très lourd : il ne reste que sur le menu de gauche.
+   Sur les cartes et la barre du haut il faisait tomber le défilement à ~20 images/s. */
+html.theme-dark aside {
   -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
+}
+html.theme-dark header {
+  background-color: #0a111a !important;
+}
+
+/* Cartes longues : le navigateur ne dessine que celles qui sont proches de l'écran */
+.df-card-lazy {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 480px;
 }
 html.theme-dark button[class*="bg-[#"]:hover,
 html.theme-dark a[class*="bg-[#"]:hover {
@@ -228,8 +236,8 @@ html.theme-light .df-popover {
 
 /* Élément atteint depuis la recherche ou une notification : contour qui clignote */
 @keyframes navflash {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(34, 211, 238, 0); }
-  20%, 60% { box-shadow: 0 0 0 4px rgba(34, 211, 238, 0.95), 0 0 26px rgba(34, 211, 238, 0.55); }
+  0%, 100% { box-shadow: inset 0 0 0 0 rgba(34, 211, 238, 0); }
+  20%, 60% { box-shadow: inset 0 0 0 4px rgba(34, 211, 238, 0.95), inset 0 0 26px rgba(34, 211, 238, 0.55); }
 }
 .nav-flash {
   animation: navflash 2.8s ease-in-out 1;
