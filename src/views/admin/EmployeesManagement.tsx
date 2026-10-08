@@ -359,7 +359,76 @@ export const EmployeesManagement: React.FC<EmployeesManagementProps> = ({
           <span className="text-emerald-400">{employees.length} opérateur(s)</span>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Téléphone : une carte par booster, gros boutons avec texte */}
+        <div className="md:hidden divide-y divide-slate-800/80">
+          {employees.length === 0 ? (
+            <div className="p-6 text-center text-xs text-slate-500">Aucun employé ne correspond aux filtres sélectionnés.</div>
+          ) : (
+            employees.map(emp => {
+              const isBlocked = emp.status === 'blocked';
+              const btn = 'flex items-center justify-center gap-2 min-h-[46px] px-3 text-sm font-bold rounded cursor-pointer';
+              return (
+                <div key={emp.id} className={`p-3 space-y-3 ${isBlocked ? 'bg-red-950/20' : ''}`}>
+                  <div className="flex items-center gap-3">
+                    <Avatar src={emp.avatar_url} name={emp.name} className="w-11 h-11 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <div className="font-bold text-white text-sm break-words">{emp.name}</div>
+                      <div className="text-[11px] text-slate-400 break-all">@{emp.username} · {emp.phone}</div>
+                    </div>
+                    <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase shrink-0 ${isBlocked ? 'bg-red-600 text-white' : 'bg-emerald-950 text-emerald-400 border border-emerald-800'}`}>
+                      {isBlocked ? 'Bloqué' : 'Actif'}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 text-[11px] font-mono">
+                    <span className={`px-2 py-1 rounded font-bold border ${emp.shift === 'day' ? 'bg-amber-950/70 border-amber-600/40 text-amber-300' : 'bg-indigo-950/70 border-indigo-600/40 text-indigo-300'}`}>
+                      {emp.shift === 'day' ? `Jour (${shiftHoursLabel('day', cfg)})` : `Nuit (${shiftHoursLabel('night', cfg)})`}
+                    </span>
+                    <span className="px-2 py-1 rounded bg-slate-800 border border-slate-700 text-slate-200 font-bold">{emp.performance_badge}</span>
+                    <span className="text-emerald-400 font-bold">{formatScoreM(emp.total_score_boosted)} pts</span>
+                    <span className="text-amber-400 font-bold">{emp.total_earnings_ar.toLocaleString()} Ar</span>
+                  </div>
+                  <select
+                    value={emp.access_mode || 'auto'}
+                    onChange={e => db.setAccessMode(emp.id, e.target.value as 'auto' | 'allow' | 'block')}
+                    className="w-full min-h-[46px] px-3 text-sm font-mono rounded border bg-slate-800 text-slate-100 border-slate-600 cursor-pointer"
+                  >
+                    <option value="auto">Accès : shift</option>
+                    <option value="allow">Accès : toute heure</option>
+                    <option value="block">Accès : bloqué</option>
+                  </select>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button type="button" onClick={() => onOpenEmployeeCV(emp)} className={`${btn} bg-slate-800 hover:bg-slate-700 text-cyan-300`}>
+                      <FileText className="w-5 h-5" /> Profil
+                    </button>
+                    <button type="button" onClick={() => handleOpenEdit(emp)} className={`${btn} bg-slate-800 hover:bg-slate-700 text-slate-100`}>
+                      <Edit className="w-5 h-5" /> Modifier
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        askConfirm({
+                          title: isBlocked ? `Débloquer ${emp.name} ?` : `Bloquer ${emp.name} ?`,
+                          message: isBlocked ? "L'employé pourra de nouveau se connecter." : "L'employé ne pourra plus se connecter tant qu'il est bloqué.",
+                          confirmLabel: isBlocked ? 'Débloquer' : 'Bloquer',
+                          danger: !isBlocked,
+                          onConfirm: () => handleToggleBlock(emp.id),
+                        })
+                      }
+                      className={`${btn} ${isBlocked ? 'bg-emerald-700 hover:bg-emerald-600 text-white' : 'bg-amber-950 hover:bg-amber-900 text-amber-300 border border-amber-700'}`}
+                    >
+                      {isBlocked ? <UserCheck className="w-5 h-5" /> : <Ban className="w-5 h-5" />} {isBlocked ? 'Débloquer' : 'Bloquer'}
+                    </button>
+                    <button type="button" onClick={() => handleDeleteUser(emp)} className={`${btn} bg-red-950/80 hover:bg-red-900 text-red-300 border border-red-800`}>
+                      <Trash2 className="w-5 h-5" /> Supprimer
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full min-w-[780px] text-left text-xs font-mono text-slate-300">
             <thead className="bg-[#121c27] text-slate-400 uppercase text-[10px] tracking-wider border-b border-slate-800">
               <tr>
