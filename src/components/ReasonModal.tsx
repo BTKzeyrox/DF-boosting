@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useLockBodyScroll } from '../utils/useLockBodyScroll';
 import { XCircle, CheckCircle } from 'lucide-react';
 
 export interface ReasonOptions {
@@ -15,6 +16,7 @@ const MAX = 300;
 const ReasonModal: React.FC<{ options: ReasonOptions | null; onClose: () => void }> = ({ options, onClose }) => {
   const [text, setText] = useState('');
   useEffect(() => { setText(''); }, [options]);
+  useLockBodyScroll(!!options);
   if (!options) return null;
   const clean = text.trim();
   const optional = !!options.optional;

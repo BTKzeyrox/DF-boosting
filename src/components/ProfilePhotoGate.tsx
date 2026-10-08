@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { useLockBodyScroll } from '../utils/useLockBodyScroll';
 import { Camera, Image as ImageIcon, Check, LogOut } from 'lucide-react';
 import { User } from '../types';
 import { db } from '../db/store';
@@ -16,6 +17,7 @@ export const ProfilePhotoGate: React.FC<Props> = ({ user, onDone, onLogout }) =>
   const [photo, setPhoto] = useState<string>('');
   const [error, setError] = useState<string>('');
   const [busy, setBusy] = useState(false);
+  useLockBodyScroll(true);
   const camRef = useRef<HTMLInputElement>(null);
   const galRef = useRef<HTMLInputElement>(null);
 

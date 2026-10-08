@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useLockBodyScroll } from '../utils/useLockBodyScroll';
 import { Lock, Unlock, Download, Printer, Plus, Wallet, X, BadgeCheck, MinusCircle } from 'lucide-react';
 import { db } from '../db/store';
 import { askConfirm } from './ConfirmModal';
@@ -48,6 +49,7 @@ export const PayrollAdmin: React.FC = () => {
   const [open, setOpen] = useState<Slip | null>(null);
   const [amountFor, setAmountFor] = useState<{ slip: Slip; type: 'bonus' | 'penalty' } | null>(null);
   const [payFor, setPayFor] = useState<Slip | null>(null);
+  useLockBodyScroll(!!open || !!amountFor || !!payFor);
 
   const load = useCallback(async () => {
     setBusy(true);

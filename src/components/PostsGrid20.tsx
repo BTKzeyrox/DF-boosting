@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useLockBodyScroll } from '../utils/useLockBodyScroll';
 import { NAV_TARGET_EVENT, peekNavTarget } from '../utils/navTarget';
 import {
   Target,
@@ -77,6 +78,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
 
   // Admin : ajout d'un poste
   const [showAdd, setShowAdd] = useState(false);
+  useLockBodyScroll(showAdd);
   const [addName, setAddName] = useState('');
   const [addInitial, setAddInitial] = useState(0);
   const [addObjective, setAddObjective] = useState(0);

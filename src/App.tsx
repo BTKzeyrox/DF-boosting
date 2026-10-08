@@ -49,6 +49,30 @@ export default function App() {
   const [activeView, setActiveView] = useState<string>('grid');
   const [focusBoosterId, setFocusBoosterId] = useState<string | null>(null); // booster ouvert depuis la recherche
   useLockBodyScroll(activeView === 'chat'); // Messagerie : la page ne défile pas, seules les listes défilent
+  // iPhone : le clavier déplace la vue ; on suit la vue visible pour garder la barre du haut et la messagerie en place
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const root = document.documentElement;
+    const sync = () => {
+      if (vv.scale > 1.01) {
+        root.style.removeProperty('--vvh');
+        root.style.removeProperty('--vvt');
+        return;
+      }
+      root.style.setProperty('--vvh', `${vv.height}px`);
+      root.style.setProperty('--vvt', `${vv.offsetTop}px`);
+    };
+    sync();
+    vv.addEventListener('resize', sync);
+    vv.addEventListener('scroll', sync);
+    return () => {
+      vv.removeEventListener('resize', sync);
+      vv.removeEventListener('scroll', sync);
+      root.style.removeProperty('--vvh');
+      root.style.removeProperty('--vvt');
+    };
+  }, []);
   // Recherche ou notification : défiler jusqu'à l'élément exact et le faire clignoter
   useEffect(() => {
     const on = () => { const t = peekNavTarget(); if (t) flashNav(t); };
@@ -278,7 +302,7 @@ export default function App() {
         />
 
         {/* Dynamic Page Content Based on activeView */}
-        <main className={activeView === 'chat' ? 'fixed top-[57px] bottom-0 left-0 right-0 lg:left-72 z-20 min-h-0 overflow-hidden p-0 sm:p-2' : 'flex-1 p-2 sm:p-3 lg:p-4 max-w-none w-full mx-auto'}>
+        <main style={activeView === 'chat' ? { top: 'calc(57px + var(--vvt, 0px))', height: 'calc(var(--vvh, 100dvh) - 57px)' } : undefined} className={activeView === 'chat' ? 'fixed left-0 right-0 lg:left-72 z-20 min-h-0 overflow-hidden p-0 sm:p-2' : 'flex-1 p-2 sm:p-3 lg:p-4 max-w-none w-full mx-auto'}>
           <Suspense fallback={<div className="p-6 text-sm font-mono text-slate-400">Chargement…</div>}>
           {viewUser.role === 'admin' ? (
             /* ================= ADMIN SEPARATED PAGES ================= */

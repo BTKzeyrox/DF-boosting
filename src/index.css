@@ -261,3 +261,17 @@ html.theme-light header.df-topbar {
   background-color: #d1fae5 !important;
   border-color: #6ee7b7 !important;
 }
+
+/* ===== iPhone : plus de zoom dans les champs, défilement qui reste dans les fenêtres ===== */
+@media (hover: none) and (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+.fixed.inset-0,
+.overflow-y-auto,
+.overflow-auto {
+  overscroll-behavior: contain;
+}

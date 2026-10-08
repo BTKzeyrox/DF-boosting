@@ -196,3 +196,5 @@ Un seul Claude travaille à la fois. Faire `git pull` avant tout. Recap court pu
 3. Rien d'autre côté Vercel : le déploiement est automatique à chaque push sur `main` (on pousse toujours directement sur `main`, jamais sur `design`).
 4. Les mots de passe des comptes de test : à demander à BTK, jamais à écrire dans le repo.
 5. BTK doit **supprimer l'ancien token** sur https://github.com/settings/tokens et en créer un nouveau (`repo`, 7 jours) pour la session suivante.
+
+- **iPhone (08/10)** : page figée en position fixe quand une fenêtre ou le menu est ouvert (`useLockBodyScroll`, toutes les fenêtres l'utilisent) ; champs à 16 px sur écran tactile (plus de zoom) ; la barre du haut et la messagerie suivent la vue visible quand le clavier s'ouvre (variables `--vvt` / `--vvh` posées dans `App.tsx`) ; gestion des boosters en cartes sur téléphone ; fiches ouvertes dans l'app (`FileViewerModal`) avec Retour et Supprimer ; Supprimer dans la visionneuse d'images.

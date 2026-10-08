@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useLockBodyScroll } from '../utils/useLockBodyScroll';
 import { Pencil, X } from 'lucide-react';
 import { db } from '../db/store';
 import { PostSession } from '../types';
@@ -9,6 +10,7 @@ import { compressProofImage } from '../utils/imageUtils';
 // Boutons « Modifier » et « Annuler » directement sur la carte d'un poste en attente de validation (booster)
 export const PendingPostActions: React.FC<{ post: PostSession; onGoToPost: () => void }> = ({ post, onGoToPost }) => {
   const [editing, setEditing] = useState(false);
+  useLockBodyScroll(editing);
   const [score, setScore] = useState(post.initial_score);
   const [photo, setPhoto] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useLockBodyScroll } from '../utils/useLockBodyScroll';
 import { AlertTriangle } from 'lucide-react';
 
 export interface ConfirmOptions {
@@ -16,6 +17,7 @@ interface ConfirmModalProps {
 }
 
 export const ConfirmModal: React.FC<ConfirmModalProps> = ({ options, onClose }) => {
+  useLockBodyScroll(!!options);
   if (!options) return null;
   return (
     <div
