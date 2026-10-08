@@ -83,7 +83,9 @@ Déploiement Vercel = Ready ; pages admin (Accueil, Validations, Surveillance, E
 **Pièges appris**
 - **Défilement de la page** : un seul mécanisme, `useLockBodyScroll` (compteur, gère body et html). Ne jamais écrire `document.body.style.overflow` à la main : deux blocages ensemble laissent la page figée à la fermeture (bug évité dans `Sidebar`, 2026-10-08).
 - **Survol** : dans `index.css`, toute règle `:hover` doit être dans `@media (hover: hover)` (sinon, sur téléphone, le premier appui compte comme un survol : double appui). Les `hover:` Tailwind v4 sont déjà protégés.
-- **Messagerie** : `<main>` prend `h-[calc(100dvh-57px)]` quand `activeView === 'chat'` ; `ChatView` est en `h-full` ; seules les 2 listes défilent. Le fond du menu de gauche est plein (plus de flou).
+- **Messagerie** : quand `activeView === 'chat'`, `<main>` est en `fixed top-[57px] bottom-0` (ancré juste sous la barre, 57 px = hauteur de la barre ; si la barre change de hauteur, changer aussi ce chiffre et le `h-[57px]` de `TopBar`). `ChatView` est en `h-full` ; seules les 2 listes défilent. Le fond du menu de gauche est plein (plus de flou).
+- **Barre du haut** : classe `df-topbar` (couleur unie : sombre `#0c2f29`, clair `#d1fae5`). Ne jamais lui remettre une classe `bg-[#...]` (le thème « verre » la rendrait translucide).
+- **`content-visibility` sur les cartes de postes** : retiré (il causait un vide noir au défilement rapide). Ne pas le remettre.
 - **Fonds en thème sombre** : `index.css` rend à moitié transparent (verre) tout élément dont la classe contient `bg-[#`. Pour une petite fenêtre déroulante (menu, notifications, suggestions), ne pas utiliser `bg-[#...]` : utiliser `bg-slate-900 df-popover` (fond plein). Les fenêtres plein écran (`fixed inset-0 bg-black/..`) ont déjà leur correctif.
 - `git commit -am` n'ajoute pas les fichiers neufs : utiliser `git add -A`, puis builder un clone propre de `origin/main`.
 - Vérifier qu'un composant est vraiment utilisé (`grep -rn`) avant de le modifier.

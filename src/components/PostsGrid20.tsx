@@ -368,7 +368,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
                 key={contract.id}
                 data-nav={`poste-${contract.post_number}`}
                 style={bandStyle}
-                className={`${noAccount ? 'opacity-60 grayscale ' : ''}df-card-lazy border rounded-2xl p-3 sm:p-5 flex flex-col justify-between space-y-3 sm:space-y-4 transition-shadow duration-200 hover:shadow-xl relative overflow-hidden ${
+                className={`${noAccount ? 'opacity-60 grayscale ' : ''}border rounded-2xl p-3 sm:p-5 flex flex-col justify-between space-y-3 sm:space-y-4 transition-shadow duration-200 hover:shadow-xl relative overflow-hidden ${
                   isPending
                     ? isLight
                       ? 'border-amber-500 ring-2 ring-amber-500/20 bg-amber-50/40'

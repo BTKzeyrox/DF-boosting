@@ -276,7 +276,7 @@ export default function App() {
         />
 
         {/* Dynamic Page Content Based on activeView */}
-        <main className={activeView === 'chat' ? 'h-[calc(100dvh-57px)] min-h-0 overflow-hidden p-0 sm:p-2 w-full' : 'flex-1 p-2 sm:p-3 lg:p-4 max-w-none w-full mx-auto'}>
+        <main className={activeView === 'chat' ? 'fixed top-[57px] bottom-0 left-0 right-0 lg:left-72 z-20 min-h-0 overflow-hidden p-0 sm:p-2' : 'flex-1 p-2 sm:p-3 lg:p-4 max-w-none w-full mx-auto'}>
           <Suspense fallback={<div className="p-6 text-sm font-mono text-slate-400">Chargement…</div>}>
           {viewUser.role === 'admin' ? (
             /* ================= ADMIN SEPARATED PAGES ================= */

@@ -78,11 +78,7 @@ html.theme-dark header {
   background-color: #0a111a !important;
 }
 
-/* Cartes longues : le navigateur ne dessine que celles qui sont proches de l'écran */
-.df-card-lazy {
-  content-visibility: auto;
-  contain-intrinsic-size: auto 480px;
-}
+/* (content-visibility retiré : il laissait un « vide noir » quand on défilait vite sur les postes) */
 /* Survol : seulement avec une souris. Sur téléphone, le premier appui comptait comme un « survol »
    et il fallait appuyer deux fois pour ouvrir une page. */
 @media (hover: hover) {
@@ -248,4 +244,20 @@ html.theme-light .df-popover {
   animation: navflash 2.8s ease-in-out 1;
   position: relative;
   z-index: 2;
+}
+
+/* Barre du haut : couleur UNIE (pas de verre, pas de dégradé, pas de reflet, pas de flou) */
+header.df-topbar {
+  background-image: none !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+html.theme-dark header.df-topbar {
+  background-color: #0c2f29 !important;
+  border-color: #17594e !important;
+}
+html.theme-light header.df-topbar {
+  background-color: #d1fae5 !important;
+  border-color: #6ee7b7 !important;
 }

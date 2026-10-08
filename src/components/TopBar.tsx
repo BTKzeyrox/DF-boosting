@@ -133,9 +133,9 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
     <>
     {/* Place réservée : la barre est en position fixe, le contenu ne passe pas dessous */}
     <div className="h-[57px] shrink-0" aria-hidden="true" />
-    <header className={`fixed top-0 left-0 right-0 lg:left-72 z-30 ${L ? 'bg-white' : 'bg-[#0a111a]'} border-b ${L ? 'border-slate-200' : 'border-slate-800'} ${L ? 'text-slate-800' : 'text-slate-100'} shadow-sm`}>
+    <header className={`fixed top-0 left-0 right-0 lg:left-72 z-30 df-topbar border-b ${L ? 'border-slate-200' : 'border-slate-800'} ${L ? 'text-slate-800' : 'text-slate-100'} shadow-sm`}>
       <div className="h-14 px-2.5 sm:px-4 flex items-center gap-2.5 sm:gap-4">
-        <button onClick={onOpenMenu} title="Ouvrir le menu" className={`lg:hidden p-2 rounded-xl border ${L ? 'border-slate-200' : 'border-slate-700'} ${L ? 'bg-slate-50' : 'bg-[#111a26]'} ${L ? 'text-slate-700' : 'text-slate-300'} cursor-pointer`}>
+        <button onClick={onOpenMenu} title="Ouvrir le menu" className={`lg:hidden p-2 rounded-xl border ${L ? 'border-slate-200' : 'border-slate-700'} ${L ? 'bg-slate-50' : 'bg-slate-800'} ${L ? 'text-slate-700' : 'text-slate-300'} cursor-pointer`}>
           <Menu className={`w-5 h-5 ${L ? 'text-emerald-600' : 'text-emerald-500'}`} />
         </button>
         <div className="flex items-center gap-1.5 shrink-0 lg:hidden">
@@ -151,7 +151,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
             onFocus={() => setOpen(true)}
             onKeyDown={e => { if (e.key === 'Enter' && hits[0]) pick(hits[0]); if (e.key === 'Escape') setOpen(false); }}
             placeholder={isAdmin ? 'Rechercher un poste, booster, compte, page…' : 'Rechercher un poste, une page…'}
-            className={`w-full h-9 pl-9 pr-3 rounded-lg ${L ? 'bg-slate-100' : 'bg-[#111a26]'} border ${L ? 'border-slate-200' : 'border-slate-700'} text-sm ${L ? 'text-slate-800' : 'text-slate-100'} placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 ${L ? 'focus:bg-white' : 'focus:bg-[#0f1722]'}`}
+            className={`w-full h-9 pl-9 pr-3 rounded-lg ${L ? 'bg-slate-100' : 'bg-slate-800'} border ${L ? 'border-slate-200' : 'border-slate-700'} text-sm ${L ? 'text-slate-800' : 'text-slate-100'} placeholder:text-slate-400 focus:outline-none focus:border-emerald-500 ${L ? 'focus:bg-white' : 'focus:bg-slate-900'}`}
           />
           {open && q.trim() && (
             <div className={`absolute left-0 right-0 top-full mt-1 df-popover ${L ? 'bg-white' : 'bg-slate-900'} border ${L ? 'border-slate-200' : 'border-slate-700'} rounded-lg shadow-xl overflow-hidden z-40`}>
@@ -180,7 +180,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
           <button
             onClick={toggleBell}
             title="Notifications"
-            className={`relative p-2 rounded-xl border ${L ? 'border-slate-200' : 'border-slate-700'} ${L ? 'bg-slate-50' : 'bg-[#111a26]'} ${L ? 'text-slate-700' : 'text-slate-300'} ${L ? 'hover:bg-emerald-50' : 'hover:bg-emerald-950/40'} cursor-pointer`}
+            className={`relative p-2 rounded-xl border ${L ? 'border-slate-200' : 'border-slate-700'} ${L ? 'bg-slate-50' : 'bg-slate-800'} ${L ? 'text-slate-700' : 'text-slate-300'} ${L ? 'hover:bg-emerald-50' : 'hover:bg-emerald-950/40'} cursor-pointer`}
           >
             <Bell className="w-5 h-5" />
             {count > 0 && (
