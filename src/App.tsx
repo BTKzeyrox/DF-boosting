@@ -58,7 +58,10 @@ export default function App() {
     if (!vv) return;
     const root = document.documentElement;
     const sync = () => {
-      if (vv.scale > 1.01) {
+      // On suit la vue visible seulement si le clavier est ouvert (la vue rétrécit de plus de 100 px).
+      // Sans clavier (ou en zoom), la barre reste fixe en haut : l'effet élastique de l'iPhone ne la déplace plus.
+      const keyboardOpen = window.innerHeight - vv.height > 100;
+      if (vv.scale > 1.01 || !keyboardOpen) {
         root.style.removeProperty('--vvh');
         root.style.removeProperty('--vvt');
         return;

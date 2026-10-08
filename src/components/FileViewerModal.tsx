@@ -14,7 +14,7 @@ interface FileViewerModalProps {
 export const FileViewerModal: React.FC<FileViewerModalProps> = ({ url, name, subtitle, onClose, onDelete }) => {
   useLockBodyScroll(true);
   return (
-    <div className="fixed inset-0 z-[9999] flex flex-col bg-[#0a111a]" role="dialog" aria-modal="true">
+    <div className="fixed inset-0 z-[9999] flex flex-col bg-[#0a111a]" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }} role="dialog" aria-modal="true">
       <header className="shrink-0 px-2 sm:px-4 py-2.5 border-b border-slate-800 flex items-center justify-between gap-2">
         <button type="button" onClick={onClose} className="flex items-center gap-2 px-3 min-h-[44px] bg-slate-900 hover:bg-slate-800 border border-slate-700 text-white text-xs font-bold shrink-0 cursor-pointer">
           <ArrowLeft className="w-4 h-4 text-emerald-400" /> Retour

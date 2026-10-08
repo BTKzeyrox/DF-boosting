@@ -7,6 +7,7 @@ import { Avatar } from './Avatar';
 import { markChatSeen } from '../utils/notifications';
 import { LightboxModal } from './LightboxModal';
 import { FileViewerModal } from './FileViewerModal';
+import { createPortal } from 'react-dom';
 import { askConfirm } from './ConfirmModal';
 import { takeChatThread, CHAT_THREAD_EVENT } from '../utils/navTarget';
 
@@ -344,7 +345,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string }>
       </div>
 
       {/* Menu d'actions du message */}
-      {menuMsg && (
+      {menuMsg && createPortal(
         <div className="fixed inset-0 z-[80] bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-3" onClick={() => setMenuMsg(null)}>
           <div className="w-full max-w-xs bg-[#0f1722] border border-slate-700 shadow-2xl" onClick={e => e.stopPropagation()}>
             <div className="px-3 py-2.5 border-b border-slate-800 text-[11px] font-mono text-slate-400 truncate">
@@ -376,10 +377,10 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string }>
             </button>
           </div>
         </div>
-      )}
+      , document.body)}
 
       {/* Visionneuse d'image : zoom, retour, précédent / suivant */}
-      {viewer && (
+      {viewer && createPortal(
         <LightboxModal
           isOpen
           onClose={() => setViewer(null)}
@@ -390,18 +391,20 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string }>
           timestamp={viewer.msg.timestamp}
           canDelete={u => { const m = gallery.find(g => g.attachment_url === u); return !!m && canTouch(m); }}
           onDelete={u => { const m = gallery.find(g => g.attachment_url === u); if (m) { setViewer(null); confirmDelete(m); } }}
-        />
+        />,
+        document.body
       )}
 
       {/* Visionneuse de fiche : retour et suppression */}
-      {fileViewer && fileViewer.attachment_url && (
+      {fileViewer && fileViewer.attachment_url && createPortal(
         <FileViewerModal
           url={fileViewer.attachment_url}
           name={fileViewer.attachment_name || 'fichier'}
           subtitle={fileViewer.sender_name}
           onClose={() => setFileViewer(null)}
           onDelete={canTouch(fileViewer) ? () => { const m = fileViewer; setFileViewer(null); confirmDelete(m); } : undefined}
-        />
+        />,
+        document.body
       )}
     </div>
   );

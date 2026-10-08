@@ -131,7 +131,7 @@ export const LightboxModal: React.FC<LightboxModalProps> = ({
   const iconBtn = 'p-1.5 hover:bg-slate-800 text-slate-300 hover:text-white cursor-pointer';
 
   return (
-    <div className="fixed inset-0 z-[9999] flex flex-col bg-black/95 backdrop-blur-md" role="dialog" aria-modal="true">
+    <div className="fixed inset-0 z-[9999] flex flex-col bg-black/95 backdrop-blur-md" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }} role="dialog" aria-modal="true">
       {/* Barre du haut */}
       <header className="w-full shrink-0 px-2 sm:px-4 py-2.5 bg-[#0a111a]/95 border-b border-slate-800 flex items-center justify-between gap-2">
         <button type="button" onClick={onClose} className="flex items-center gap-2 px-3 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-white text-xs font-bold shrink-0" title="Retour (ESC)">
