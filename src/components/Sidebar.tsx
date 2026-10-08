@@ -1,6 +1,6 @@
 import { Avatar } from './Avatar';
 import { db } from '../db/store';
-import React, { useEffect } from 'react';
+import React from 'react';
 import {
   Layers,
   Gamepad2,
@@ -27,6 +27,7 @@ import {
 import { User } from '../types';
 import { countPending } from '../utils/pendingCount';
 import { useSoundPrefs } from '../utils/notifSound';
+import { useLockBodyScroll } from '../utils/useLockBodyScroll';
 import { useApp } from '../context/AppContext';
 
 interface SidebarProps {
@@ -56,19 +57,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const { theme, toggleTheme, lang, setLang, t, startLogoutAnimation } = useApp();
   const [sound, setSound] = useSoundPrefs();
+  useLockBodyScroll(!!isOpenMobile); // menu ouvert : la page derrière ne défile plus
   const isAdmin = currentUser.role === 'admin';
   const isLight = theme === 'light';
-
-  // Prevent background scrolling when mobile menu drawer is open
-  useEffect(() => {
-    if (isOpenMobile) {
-      const originalStyle = window.getComputedStyle(document.body).overflow;
-      document.body.style.overflow = 'hidden';
-      return () => {
-        document.body.style.overflow = originalStyle;
-      };
-    }
-  }, [isOpenMobile]);
 
   // Bilingual Navigation Items
   const navItems = [

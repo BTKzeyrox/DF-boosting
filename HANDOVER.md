@@ -81,6 +81,9 @@ Rien n'a été testé à l'écran par Claude (seulement build + tests de rendu l
 Déploiement Vercel = Ready ; pages admin (Accueil, Validations, Surveillance, Employés, Avances, Suivi) ; avance booster → pastille/cloche admin + bip ; refus avec motif ; son (Réglages, iPhone) ; téléphone.
 
 **Pièges appris**
+- **Défilement de la page** : un seul mécanisme, `useLockBodyScroll` (compteur, gère body et html). Ne jamais écrire `document.body.style.overflow` à la main : deux blocages ensemble laissent la page figée à la fermeture (bug évité dans `Sidebar`, 2026-10-08).
+- **Survol** : dans `index.css`, toute règle `:hover` doit être dans `@media (hover: hover)` (sinon, sur téléphone, le premier appui compte comme un survol : double appui). Les `hover:` Tailwind v4 sont déjà protégés.
+- **Messagerie** : `<main>` prend `h-[calc(100dvh-57px)]` quand `activeView === 'chat'` ; `ChatView` est en `h-full` ; seules les 2 listes défilent. Le fond du menu de gauche est plein (plus de flou).
 - **Fonds en thème sombre** : `index.css` rend à moitié transparent (verre) tout élément dont la classe contient `bg-[#`. Pour une petite fenêtre déroulante (menu, notifications, suggestions), ne pas utiliser `bg-[#...]` : utiliser `bg-slate-900 df-popover` (fond plein). Les fenêtres plein écran (`fixed inset-0 bg-black/..`) ont déjà leur correctif.
 - `git commit -am` n'ajoute pas les fichiers neufs : utiliser `git add -A`, puis builder un clone propre de `origin/main`.
 - Vérifier qu'un composant est vraiment utilisé (`grep -rn`) avant de le modifier.

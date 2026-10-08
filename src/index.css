@@ -67,11 +67,12 @@ html.theme-dark aside {
 html.theme-dark header {
   background-image: linear-gradient(90deg, rgba(16, 185, 129, 0.10), rgba(6, 182, 212, 0.05)) !important;
 }
-/* Le flou (backdrop-filter) est très lourd : il ne reste que sur le menu de gauche.
-   Sur les cartes et la barre du haut il faisait tomber le défilement à ~20 images/s. */
+/* Le flou (backdrop-filter) est très lourd : plus aucun flou sur le menu, les cartes et la barre du haut.
+   Le menu de gauche a un fond PLEIN (on ne voit plus la page passer derrière). */
 html.theme-dark aside {
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
+  background-color: #090f17 !important;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 html.theme-dark header {
   background-color: #0a111a !important;
@@ -82,9 +83,13 @@ html.theme-dark header {
   content-visibility: auto;
   contain-intrinsic-size: auto 480px;
 }
-html.theme-dark button[class*="bg-[#"]:hover,
-html.theme-dark a[class*="bg-[#"]:hover {
-  background-color: rgba(30, 58, 84, 0.72) !important;
+/* Survol : seulement avec une souris. Sur téléphone, le premier appui comptait comme un « survol »
+   et il fallait appuyer deux fois pour ouvrir une page. */
+@media (hover: hover) {
+  html.theme-dark button[class*="bg-[#"]:hover,
+  html.theme-dark a[class*="bg-[#"]:hover {
+    background-color: rgba(30, 58, 84, 0.72) !important;
+  }
 }
 html.theme-dark [class*="border-slate-"] {
   border-color: rgba(148, 163, 184, 0.18);

@@ -3,6 +3,7 @@ import { User, PostSession, AttendanceRow } from './types';
 import { db } from './db/store';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
+import { useLockBodyScroll } from './utils/useLockBodyScroll';
 import { WelcomeAnimation } from './components/WelcomeAnimation';
 import { LoginView } from './views/LoginView';
 import { LightboxModal } from './components/LightboxModal';
@@ -47,6 +48,7 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(db.getCurrentUser());
   const [activeView, setActiveView] = useState<string>('grid');
   const [focusBoosterId, setFocusBoosterId] = useState<string | null>(null); // booster ouvert depuis la recherche
+  useLockBodyScroll(activeView === 'chat'); // Messagerie : la page ne défile pas, seules les listes défilent
   // Recherche ou notification : défiler jusqu'à l'élément exact et le faire clignoter
   useEffect(() => {
     const on = () => { const t = peekNavTarget(); if (t) flashNav(t); };
@@ -274,7 +276,7 @@ export default function App() {
         />
 
         {/* Dynamic Page Content Based on activeView */}
-        <main className="flex-1 p-2 sm:p-3 lg:p-4 max-w-none w-full mx-auto">
+        <main className={activeView === 'chat' ? 'h-[calc(100dvh-57px)] min-h-0 overflow-hidden p-0 sm:p-2 w-full' : 'flex-1 p-2 sm:p-3 lg:p-4 max-w-none w-full mx-auto'}>
           <Suspense fallback={<div className="p-6 text-sm font-mono text-slate-400">Chargement…</div>}>
           {viewUser.role === 'admin' ? (
             /* ================= ADMIN SEPARATED PAGES ================= */

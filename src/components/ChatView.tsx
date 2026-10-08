@@ -186,13 +186,13 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string }>
   };
 
   return (
-    <div className="bg-[#0f1722] border border-slate-800 overflow-hidden shadow-xl flex h-[calc(100vh-7rem)] min-h-[420px] max-h-[720px]">
+    <div className="bg-[#0f1722] border border-slate-800 overflow-hidden shadow-xl flex h-full min-h-0 w-full">
       {/* Liste des conversations */}
-      <div className={`${showList ? 'flex' : 'hidden'} md:flex flex-col w-full md:w-64 shrink-0 border-r border-slate-800 bg-[#0c131c]`}>
+      <div className={`${showList ? 'flex' : 'hidden'} md:flex flex-col min-h-0 w-full md:w-64 shrink-0 border-r border-slate-800 bg-[#0c131c]`}>
         <div className="px-3 py-3 border-b border-slate-800 font-tactical font-bold text-white text-sm flex items-center gap-2">
           <MessageSquare className="w-4 h-4 text-emerald-400" /> Messagerie
         </div>
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
           {threads.map(t => {
             const last = lastOf(t.id);
             return (
@@ -224,7 +224,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string }>
       </div>
 
       {/* Conversation */}
-      <div className={`${showList ? 'hidden' : 'flex'} md:flex flex-col flex-1 min-w-0`}>
+      <div className={`${showList ? 'hidden' : 'flex'} md:flex flex-col flex-1 min-w-0 min-h-0`}>
         <div className="px-3 py-3 bg-[#131d2a] border-b border-slate-800 flex items-center gap-2.5">
           <button type="button" onClick={() => setShowList(true)} className="md:hidden p-1.5 text-slate-300 cursor-pointer" title="Retour">
             <ArrowLeft className="w-5 h-5" />
@@ -252,7 +252,7 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string }>
           </button>
         )}
 
-        <div className="flex-1 p-3 overflow-y-auto space-y-3 bg-[#0a0f16]">
+        <div className="flex-1 min-h-0 p-3 overflow-y-auto overscroll-contain space-y-3 bg-[#0a0f16]">
           {visible.length === 0 && <div className="text-center text-xs text-slate-500 font-mono pt-8">Aucun message. Écris le premier.</div>}
           {visible.map(msg => {
             const isMe = msg.sender_id === currentUser.id;
