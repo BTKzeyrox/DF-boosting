@@ -290,3 +290,10 @@ Un seul Claude travaille à la fois. Faire `git pull` avant tout. Recap court pu
 - **Mail** : Resend, clé dans le coffre-fort Supabase sous `resend_api_key` (lue par `df_get_secret`). Sans domaine à lui, Resend envoie seulement vers l'adresse du compte Resend (le Gmail de BTK). Pour envoyer ailleurs, vérifier un domaine dans Resend.
 - **La remise à zéro efface** : boosters (sauf l'admin) et leurs identifiants, sessions, avances, paie, messages, journaux de sécurité, présence, présence/jours, demandes (inscription, mot de passe, profil). **Elle garde** : l'admin, les Réglages, les postes (Actuel remis au Début, preuves du compte retirées), le journal des erreurs. Les photos déjà envoyées (Cloudinary et stockage) ne sont pas supprimées.
 - **Non testé de bout en bout** (l'envoi réel du mail doit être essayé depuis le site).
+
+## Animations (niveau C, 2026-10-09, non testé à l'écran)
+- Changement de page : fondu + glissement de 0,3 s (`.df-fade-a/b`, fill `backwards` : un `transform` final casserait les fenêtres en position fixe).
+- Boutons d'action : `src/utils/buttonFeedback.ts` (lancé dans `main.tsx`). Écoute les clics, suit `db.onNetwork` ; si un envoi part dans les 0,4 s : rond qui tourne + bouton bloqué, puis coche verte 0,5 s. Aucun envoi = aucune animation. Exclus : menu, barre du haut, messagerie (`main.fixed`), `[data-no-anim]`.
+- Fenêtres : fond en fondu + fenêtre qui grandit (CSS global sur `.fixed.inset-0.flex`). **Pas d'animation de fermeture** (React retire la fenêtre tout de suite).
+- Grille des postes : classe `df-stagger` (apparition l'une après l'autre, 12 premières décalées). Pas appliqué aux listes de boosters ni aux messages.
+- Tout est coupé si le téléphone est réglé sur « réduire les animations ».
