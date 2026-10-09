@@ -239,7 +239,7 @@ class DeltaForceStore {
   // Délai entre deux rechargements : 20 s normalement, plus court seulement quand la messagerie est ouverte
   private pollMs = 20000;
   public setFastPoll(on: boolean) {
-    const ms = on ? 4000 : 20000;
+    const ms = on ? 8000 : 20000;
     if (ms === this.pollMs) return;
     this.pollMs = ms;
     if (this.token && this.pollTimer) this.startPolling();
