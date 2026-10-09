@@ -40,7 +40,7 @@ import { getPresenceStatus, getQueue, STATUS_LABEL, STATUS_DOT } from '../../uti
 import { PostsGrid20 } from '../../components/PostsGrid20';
 import { formatScoreM, formatCurrencyAr, plural } from '../../utils/formatUtils';
 import { takeValFilterIntent, VAL_INTENT_EVENT } from '../../utils/navIntent';
-import { generateDeltaForceScreenshot } from '../../utils/imageUtils';
+import { generateDeltaForceScreenshot, compressProofImage } from '../../utils/imageUtils';
 import { useLockBodyScroll } from '../../utils/useLockBodyScroll';
 import { ScoreInput } from '../../components/ScoreInput';
 
@@ -114,9 +114,43 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [editClientName, setEditClientName] = useState('');
   const [editAccountTag, setEditAccountTag] = useState('');
   const [editInitialScore, setEditInitialScore] = useState<number>(0);
-  const [editObjective, setEditObjective] = useState<number>(0);
-  // Le score final = départ + objectif (points à gagner)
-  const editTargetScore = editInitialScore + editObjective;
+  // Champs liés : Cible = Début + Objectif ; Reste = Cible − Actuel
+  const [editTargetScore, setEditTargetScore] = useState<number>(0);
+  const [editCurrentScore, setEditCurrentScore] = useState<number>(0);
+  const editObjective = Math.max(0, editTargetScore - editInitialScore);
+  const editReste = Math.max(0, editTargetScore - editCurrentScore);
+  const [editAccountProofs, setEditAccountProofs] = useState<string[]>([]); // preuves du compte client (5 max)
+  const [accountProofBusy, setAccountProofBusy] = useState(false);
+  // Début modifié : la Cible suit (l'Objectif reste le même), l'Actuel ne peut pas passer sous le Début
+  const changeInitial = (n: number) => {
+    setEditTargetScore(t => t + (n - editInitialScore));
+    setEditCurrentScore(c => (c < n ? n : c));
+    setEditInitialScore(n);
+  };
+  const changeObjective = (n: number) => setEditTargetScore(editInitialScore + n);
+  const changeReste = (n: number) => setEditCurrentScore(editTargetScore - n);
+  const handleAddAccountProofs = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = '';
+    const slots = 5 - editAccountProofs.length;
+    if (files.length === 0) return;
+    if (slots <= 0) {
+      setAssignErrorMsg('Maximum 5 photos de preuve du compte client.');
+      return;
+    }
+    setAccountProofBusy(true);
+    try {
+      for (const f of files.slice(0, slots)) {
+        const small = await compressProofImage(f);
+        const url = (await db.uploadFile(small)) || small;
+        setEditAccountProofs(prev => (prev.length >= 5 ? prev : [...prev, url]));
+      }
+    } catch {
+      setAssignErrorMsg("Une photo n'a pas pu être envoyée. Réessayez.");
+    } finally {
+      setAccountProofBusy(false);
+    }
+  };
   const [editGameMode, setEditGameMode] = useState('');
   const [editShift, setEditShift] = useState<ShiftType | 'any'>('any');
   const [editNotes, setEditNotes] = useState('');
@@ -181,8 +215,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setAssignErrorMsg('Le nom du compte client ne peut pas être vide.');
       return;
     }
-    if (editObjective <= 0) {
-      setAssignErrorMsg('L\'objectif doit être supérieur à 0.');
+    if (editTargetScore <= editInitialScore) {
+      setAssignErrorMsg('La cible doit être supérieure au début.');
+      return;
+    }
+    if (editCurrentScore < editInitialScore) {
+      setAssignErrorMsg('L\'actuel ne peut pas être inférieur au début.');
+      return;
+    }
+    if (editCurrentScore > editTargetScore) {
+      setAssignErrorMsg('Le reste ne peut pas être négatif : l\'actuel dépasse la cible.');
       return;
     }
 
@@ -192,6 +234,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       account_tag: editAccountTag.trim(),
       initial_score: editInitialScore,
       target_score: editTargetScore,
+      current_score: editCurrentScore,
+      account_proof_urls: editAccountProofs,
       game_mode: editGameMode.trim(),
       description: editDescription.trim(),
       no_account: false,
@@ -204,6 +248,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         client_name: editClientName.trim(),
         account_tag: editAccountTag.trim(),
         target_score: editTargetScore,
+        current_score: editCurrentScore,
         employee_id: assignedBoosterId,
         shift_type: editShift === 'night' ? 'night' : 'day',
         notes: editNotes.trim(),
@@ -375,7 +420,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             setEditClientName(contract.client_name);
             setEditAccountTag(contract.account_tag);
             setEditInitialScore(contract.initial_score);
-            setEditObjective(Math.max(0, contract.target_score - contract.initial_score));
+            setEditTargetScore(contract.target_score);
+            setEditCurrentScore(Math.max(contract.initial_score, contract.current_score ?? contract.initial_score));
+            setEditAccountProofs(contract.account_proof_urls || []);
             setEditGameMode(contract.game_mode);
             setEditShift(contract.recommended_shift);
             setAssignedBoosterId(session ? session.employee_id : (availableBoosters[0]?.id || ''));
@@ -581,27 +628,50 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-slate-300 uppercase mb-1">
-                        Score de Début (Départ Relevé)
-                      </label>
+                      <label className="block text-slate-300 uppercase mb-1">Début (Départ Relevé)</label>
                       <ScoreInput
                         value={editInitialScore}
-                        onChange={setEditInitialScore}
+                        onChange={changeInitial}
                         className="w-full bg-[#0d1622] border border-slate-600 rounded-lg p-2 text-emerald-400 font-bold"
                       />
-                      <span className="text-[10px] text-slate-500 mt-0.5 block">
-                        {formatScoreM(editInitialScore)}
-                      </span>
+                      <span className="text-[10px] text-slate-500 mt-0.5 block">{formatScoreM(editInitialScore)}</span>
                     </div>
                     <div>
                       <label className="block text-slate-300 uppercase mb-1">Objectif (points à gagner)</label>
                       <ScoreInput
                         value={editObjective}
-                        onChange={setEditObjective}
+                        onChange={changeObjective}
                         className="w-full bg-[#0d1622] border border-slate-600 rounded-lg p-2 text-amber-400 font-bold"
                       />
+                      <span className="text-[10px] text-slate-500 mt-0.5 block">{formatScoreM(editObjective)}</span>
+                    </div>
+                    <div>
+                      <label className="block text-slate-300 uppercase mb-1">Cible (score final)</label>
+                      <ScoreInput
+                        value={editTargetScore}
+                        onChange={setEditTargetScore}
+                        className="w-full bg-[#0d1622] border border-slate-600 rounded-lg p-2 text-cyan-400 font-bold"
+                      />
+                      <span className="text-[10px] text-slate-500 mt-0.5 block">{formatScoreM(editTargetScore)}</span>
+                    </div>
+                    <div>
+                      <label className="block text-slate-300 uppercase mb-1">Actuel (score du compte)</label>
+                      <ScoreInput
+                        value={editCurrentScore}
+                        onChange={setEditCurrentScore}
+                        className="w-full bg-[#0d1622] border border-slate-600 rounded-lg p-2 text-white font-bold"
+                      />
+                      <span className="text-[10px] text-slate-500 mt-0.5 block">{formatScoreM(editCurrentScore)}</span>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="block text-slate-300 uppercase mb-1">Reste (Cible − Actuel)</label>
+                      <ScoreInput
+                        value={editReste}
+                        onChange={changeReste}
+                        className={`w-full bg-[#0d1622] border rounded-lg p-2 font-bold ${editCurrentScore > editTargetScore ? 'border-red-500 text-red-400' : 'border-slate-600 text-orange-400'}`}
+                      />
                       <span className="text-[10px] text-slate-500 mt-0.5 block">
-                        {formatScoreM(editObjective)}
+                        {formatScoreM(editReste)} · liés automatiquement : Cible = Début + Objectif, Reste = Cible − Actuel
                       </span>
                     </div>
                   </div>
@@ -622,6 +692,58 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         ))}
                       </select>
                     </div>
+                  </div>
+
+                  {/* Preuves du compte client : 5 photos max, visibles par les boosters */}
+                  <div className="bg-[#0d1622] border border-slate-700 rounded-lg p-3 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-300 uppercase font-bold flex items-center gap-1.5">
+                        <Camera className="w-4 h-4 text-amber-400" />
+                        <span>Preuves du compte client</span>
+                      </span>
+                      <span className="text-[11px] font-mono text-amber-300 font-bold bg-amber-950/70 border border-amber-500/40 px-2 py-0.5 rounded">
+                        {editAccountProofs.length} / 5 photos
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                      {editAccountProofs.map((url, i) => (
+                        <div key={i} className="relative aspect-square rounded-lg overflow-hidden border border-slate-600">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              onOpenProofLightbox({
+                                imageUrl: url,
+                                gallery: editAccountProofs,
+                                title: `Preuve du compte - ${editClientName}`,
+                                clientTag: editClientName,
+                              })
+                            }
+                            className="w-full h-full cursor-pointer"
+                            title="Agrandir la photo"
+                          >
+                            <img src={url} alt={`Preuve du compte ${i + 1}`} className="w-full h-full object-cover" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditAccountProofs(prev => prev.filter((_, k) => k !== i))}
+                            className="absolute top-1 right-1 min-w-[32px] min-h-[32px] flex items-center justify-center bg-black/80 border border-red-600 text-red-400 rounded cursor-pointer"
+                            title="Retirer cette photo"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                      {editAccountProofs.length < 5 && (
+                        <label className="aspect-square border-2 border-dashed border-slate-600 hover:border-amber-500 rounded-lg flex flex-col items-center justify-center text-[11px] text-slate-400 cursor-pointer text-center p-1">
+                          <Camera className="w-5 h-5 mb-1" />
+                          <span>{accountProofBusy ? 'Envoi…' : 'Ajouter'}</span>
+                          <input type="file" accept="image/*" multiple onChange={handleAddAccountProofs} className="hidden" disabled={accountProofBusy} />
+                        </label>
+                      )}
+                    </div>
+                    <span className="text-[10px] text-slate-500 block">
+                      Le lien des photos est public : évitez les mots de passe sur les captures. Enregistrez le poste pour valider les changements.
+                    </span>
                   </div>
 
                   <div>

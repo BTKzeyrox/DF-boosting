@@ -117,9 +117,9 @@ export interface PostSession {
   end_time?: string; // HH:MM:SS
   post_number?: number;
   start_proof_url: string;
-  start_proof_urls?: string[]; // 1 to 4 proof photos
+  start_proof_urls?: string[]; // 1 to 5 proof photos
   end_proof_url?: string;
-  end_proof_urls?: string[]; // 1 to 4 proof photos
+  end_proof_urls?: string[]; // 1 to 5 proof photos
   rejection_reason?: string;
   calculated_ar?: number; // 1M score = 1,000 Ar
   notes?: string;
@@ -196,6 +196,7 @@ export interface ClientContract {
   target_rank: string;
   initial_score: number; // Début : modifiable par l'admin seulement
   current_score?: number; // Actuel du compte (mis à jour à la validation d'une fin de session)
+  account_proof_urls?: string[]; // Preuves du compte client (5 photos max) : l'admin les gère, les boosters les voient
   target_score: number;
   recommended_shift: ShiftType | 'any';
   estimated_reward_ar: number;
