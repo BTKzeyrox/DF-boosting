@@ -280,20 +280,20 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
     if (!result) return;
     if (target === 'start') {
       setStartProofPreview(result);
-      setStartProofPhotos(prev => (prev.length >= 4 ? prev : [...prev, result]));
+      setStartProofPhotos(prev => (prev.length >= 5 ? prev : [...prev, result]));
     }
     if (target === 'end') setEndProofPreview(result);
     if (target === 'edit') setEditProofPreview(result);
   };
 
-  // Multi-photo handler for 1 to 4 photos
+  // Multi-photo handler for 1 to 5 photos
   const handleMultipleStartPhotos = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    const availableSlots = 4 - startProofPhotos.length;
+    const availableSlots = 5 - startProofPhotos.length;
     if (availableSlots <= 0) {
-      setStartFormError('Vous pouvez envoyer au maximum 4 photos pour ce poste.');
+      setStartFormError('Vous pouvez envoyer au maximum 5 photos pour ce poste.');
       return;
     }
 
@@ -301,7 +301,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
     e.target.value = '';
     for (const file of filesToRead) {
       const result = await prepareProof(file);
-      if (result) setStartProofPhotos(prev => (prev.length >= 4 ? prev : [...prev, result]));
+      if (result) setStartProofPhotos(prev => (prev.length >= 5 ? prev : [...prev, result]));
     }
   };
 
@@ -323,7 +323,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
       return;
     }
     if (startProofPhotos.length === 0) {
-      setStartFormError('Veuillez ajouter au moins 1 capture ou photo de début (1 à 4 photos autorisées).');
+      setStartFormError('Veuillez ajouter au moins 1 capture ou photo de début (1 à 5 photos autorisées).');
       return;
     }
     if (!confirmed) {
@@ -769,7 +769,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                     })()}
                   </div>
 
-                  {/* Thumbnails (1 to 4 photos) & Simulation */}
+                  {/* Thumbnails (1 to 5 photos) & Simulation */}
                   <div className="mt-6 pt-4 border-t border-slate-800 flex flex-wrap items-center justify-between gap-4">
                     <div className="space-y-1.5">
                       <div className="text-[10px] text-slate-400 uppercase font-mono flex items-center gap-1.5">
@@ -1266,20 +1266,55 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
 
               </div>
 
+              {/* PREUVES DU COMPTE CLIENT (ajoutées par l'admin, lecture seule) */}
+              {selectedContract?.account_proof_urls && selectedContract.account_proof_urls.length > 0 && (
+                <div className="bg-[#121c27] border border-amber-700/50 rounded-xl p-3.5 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-amber-300 uppercase font-bold flex items-center gap-1.5">
+                      <Eye className="w-4 h-4" />
+                      <span>Preuves du compte client</span>
+                    </span>
+                    <span className="text-[11px] font-mono text-amber-300 font-bold bg-amber-950/70 border border-amber-500/40 px-2 py-0.5 rounded">
+                      {selectedContract.account_proof_urls.length} / 5
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                    {selectedContract.account_proof_urls.map((url, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() =>
+                          onOpenProofLightbox({
+                            imageUrl: url,
+                            gallery: selectedContract.account_proof_urls,
+                            title: `Preuve du compte - ${selectedContract.client_name}`,
+                            clientTag: selectedContract.client_name,
+                          })
+                        }
+                        className="relative aspect-square rounded-lg overflow-hidden border border-amber-700/50 cursor-pointer"
+                        title="Agrandir la photo"
+                      >
+                        <img src={url} alt={`Preuve du compte ${i + 1}`} className="w-full h-full object-cover" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* 1 TO 4 PROOF PHOTOS UPLOAD (Camera or Screenshot Gallery) */}
               <div className="bg-[#121c27] border border-slate-700 rounded-xl p-3.5 space-y-3">
                 <div className="flex items-center justify-between">
                   <label className="text-slate-300 uppercase font-bold flex items-center gap-1.5 text-emerald-400">
                     <Camera className="w-4 h-4" />
-                    <span>1. Capture d'écran (1 à 4 photos) *</span>
+                    <span>1. Capture d'écran (1 à 5 photos) *</span>
                   </label>
                   <span className="text-[11px] font-mono text-amber-300 font-bold bg-amber-950/70 border border-amber-500/40 px-2 py-0.5 rounded">
-                    {startProofPhotos.length} / 4 photos
+                    {startProofPhotos.length} / 5 photos
                   </span>
                 </div>
 
                 {/* Upload action buttons */}
-                {startProofPhotos.length < 4 && (
+                {startProofPhotos.length < 5 && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {/* Camera Button */}
                     <label className="cursor-pointer bg-[#142333] hover:bg-[#1b2f44] border border-cyan-500/50 hover:border-cyan-400 p-2.5 rounded-xl flex items-center justify-center gap-2 text-cyan-300 text-xs font-mono font-bold transition-all shadow cursor-pointer">
@@ -1366,8 +1401,8 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                       </div>
                     ))}
 
-                    {/* Placeholder slot if less than 4 */}
-                    {startProofPhotos.length < 4 && (
+                    {/* Placeholder slot if less than 5 */}
+                    {startProofPhotos.length < 5 && (
                       <label className="border-2 border-dashed border-slate-700 hover:border-emerald-500/70 rounded-lg aspect-video flex flex-col items-center justify-center text-center p-2 cursor-pointer bg-[#0c1420] hover:bg-[#101b2a] transition-all">
                         <Upload className="w-4 h-4 text-slate-400 mb-1" />
                         <span className="text-[10px] text-slate-400 font-mono">+ Photo #{startProofPhotos.length + 1}</span>
@@ -1386,7 +1421,7 @@ export const EmployeeDashboard: React.FC<EmployeeDashboardProps> = ({
                     <Camera className="w-6 h-6 text-slate-500 mx-auto" />
                     <p className="text-xs font-bold text-slate-300">Aucune photo ajoutée pour l'instant</p>
                     <p className="text-[11px] text-slate-500">
-                      Vous devez importer ou prendre entre 1 et 4 photos de preuve avant d'envoyer pour validation.
+                      Vous devez importer ou prendre entre 1 et 5 photos de preuve avant d'envoyer pour validation.
                     </p>
                   </div>
                 )}

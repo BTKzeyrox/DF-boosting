@@ -259,7 +259,7 @@ Un seul Claude travaille à la fois. Faire `git pull` avant tout. Recap court pu
 - Gros titre « P09 » + nom du booster qui prend le poste ; le reste en plus petit.
 - Réglages > « Grille des postes » : 2 à 10 colonnes (`grid_columns`, défaut 2).
 
-## À FAIRE (décidé le 08/10, pas encore fait) : formulaire « Modifier Tout Dans ce Poste »
+## FAIT le 09/10 : formulaire « Modifier Tout Dans ce Poste » (AdminDashboard.tsx)
 
 **Carte du poste** : ne rien ajouter. Elle montre seulement P01, nom du client, rouge ou non, Début, Actuel, Reste, Cible, description, bouton d'état (Prendre / En attente / nom du booster) et Modifier. Aucun bouton de preuve sur la carte.
 
@@ -280,3 +280,5 @@ Un seul Claude travaille à la fois. Faire `git pull` avant tout. Recap court pu
 **Technique** : aucun changement de serveur ni de base (juste de nouveaux champs). Pousser sur `main` avec un build propre.
 
 **Pas à faire** : les 2 corrections iPhone « Retour de l'image caché par la barre » et « header qui bouge en bas de la dernière page » ont été mises de côté à la demande de BTK (il juge l'état actuel correct).
+
+**État (09/10)** : fait et poussé. `account_proof_urls` (5 max) sur le contrat, champs Début/Objectif/Cible/Actuel/Reste liés dans le formulaire admin, preuves du compte client visibles en lecture seule dans le formulaire de début du booster, preuves de début du booster passées de 4 à 5. La capture de **fin** de session reste à 1 photo (à passer à 5 si BTK le demande : `submitEndPost` accepte déjà `endProofUrls`). Non testé sur un vrai téléphone.
