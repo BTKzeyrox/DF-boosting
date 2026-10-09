@@ -1,6 +1,7 @@
 import React from 'react';
 import { AlertTriangle, RefreshCw, RotateCcw, LogOut, Copy, LifeBuoy } from 'lucide-react';
 import { db } from '../db/store';
+import { hideSplash } from '../utils/splash';
 import { captureCrash, reportToText, copyText, clearCacheAndReload, isChunkError, autoReloadForUpdate, ErrorReport } from '../utils/errorReport';
 
 interface Props {
@@ -22,6 +23,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
+    hideSplash(true); // l'écran de secours doit être visible tout de suite
     // Après une mise à jour du site, une page peut échouer à charger : on recharge une seule fois
     if (isChunkError(error?.message || '') && autoReloadForUpdate()) return;
     const report = captureCrash(error, info?.componentStack || undefined);

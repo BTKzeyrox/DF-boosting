@@ -7,6 +7,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { ConnectionBanner } from './components/ConnectionBanner';
 import { ReportProblemModal } from './components/ReportProblemModal';
 import { setCurrentPage } from './utils/errorReport';
+import { hideSplash } from './utils/splash';
 import { LoadingBar } from './components/LoadingBar';
 import { PageSkeleton } from './components/PageSkeleton';
 import { prefetchViews } from './utils/prefetch';
@@ -58,6 +59,7 @@ export default function App() {
   const [focusBoosterId, setFocusBoosterId] = useState<string | null>(null); // booster ouvert depuis la recherche
   const [showReport, setShowReport] = useState(false); // fenêtre « Signaler un problème »
   useEffect(() => { setCurrentPage(activeView); }, [activeView]); // la page est jointe aux rapports d'erreur
+  useEffect(() => { if (isReady) hideSplash(); }, [isReady]); // retire l'écran de démarrage une fois les données prêtes
   useLockBodyScroll(activeView === 'chat'); // Messagerie : la page ne défile pas, seules les listes défilent
   // iPhone : le clavier déplace la vue ; on suit la vue visible pour garder la barre du haut et la messagerie en place
   useEffect(() => {
@@ -233,11 +235,7 @@ export default function App() {
 
   // 1. NOT LOGGED IN -> SHOW ONLY LOGIN PAGE (SIMPLE, MODERN & INTUITIVE)
   if (!isReady) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-slate-400 text-sm font-mono">
-        Chargement…
-      </div>
-    );
+    return null; // l'écran de démarrage « BTK » (index.html) reste affiché
   }
 
   if (!currentUser) {
