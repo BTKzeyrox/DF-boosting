@@ -258,3 +258,25 @@ Un seul Claude travaille à la fois. Faire `git pull` avant tout. Recap court pu
 - Barre de progression retirée, « Objectif » devenu « Obj. ».
 - Gros titre « P09 » + nom du booster qui prend le poste ; le reste en plus petit.
 - Réglages > « Grille des postes » : 2 à 10 colonnes (`grid_columns`, défaut 2).
+
+## À FAIRE (décidé le 08/10, pas encore fait) : formulaire « Modifier Tout Dans ce Poste »
+
+**Carte du poste** : ne rien ajouter. Elle montre seulement P01, nom du client, rouge ou non, Début, Actuel, Reste, Cible, description, bouton d'état (Prendre / En attente / nom du booster) et Modifier. Aucun bouton de preuve sur la carte.
+
+**Formulaire : les 5 champs liés** (tout reste automatique, l'admin corrige en cas de besoin)
+- Début et Objectif : modifiables (existent déjà).
+- Cible = Début + Objectif. Affichée et modifiable : si l'admin la change, l'Objectif s'ajuste.
+- Actuel : modifiable (score actuel du compte). Si une session est en cours sur ce poste, le score de la session suit.
+- Reste = Cible − Actuel. Affiché et modifiable : si l'admin le change, l'Actuel s'ajuste (Actuel = Cible − Reste).
+- Mise à jour en direct entre les champs, format « 12,5M ».
+- Contrôles : Cible > Début, Actuel ≥ Début, Reste ≥ 0. Les couleurs rouge et orange suivent le nouveau Reste.
+
+**Formulaire : deux types de preuves, 5 photos maximum chacun**
+1. Preuves du compte client : admin ajoute, remplace, retire (miniatures). Les boosters les voient en grand avec zoom, sans les modifier.
+2. Preuves du booster : 5 maximum. Le booster ajoute et retire les siennes. Vérifier la limite actuelle et la passer à 5.
+- Photos envoyées à Cloudinary, comme les autres. Le nettoyage automatique ne doit pas supprimer les preuves du compte client.
+- Le lien Cloudinary est public : ne pas mettre de mot de passe sur les captures.
+
+**Technique** : aucun changement de serveur ni de base (juste de nouveaux champs). Pousser sur `main` avec un build propre.
+
+**Pas à faire** : les 2 corrections iPhone « Retour de l'image caché par la barre » et « header qui bouge en bas de la dernière page » ont été mises de côté à la demande de BTK (il juge l'état actuel correct).
