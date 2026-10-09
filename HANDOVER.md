@@ -315,3 +315,6 @@ Un seul Claude travaille à la fois. Faire `git pull` avant tout. Recap court pu
 ## Messagerie plus rapide (2026-10-09, non testé à l'écran)
 - Avant : les messages des autres n'arrivaient qu'à la synchro normale (toutes les 20 s). Maintenant `db.setFastPoll(true)` dans `ChatView` : 8 s tant que la messagerie est ouverte, retour à 20 s en la quittant. Coût : ≈ 450 appels par heure par personne qui reste sur la messagerie (quota gratuit, § 3 octies) : à surveiller si tout le monde y reste.
 - L'envoi lui-même était déjà instantané à l'écran (envoi au serveur 0,3 s après).
+
+## Écran noir au défilement des postes (2026-10-09)
+- BTK a signalé l'écran qui devient tout noir en défilant la grille après les animations niveau C. Cause non prouvée (impossible à reproduire sans appareil) ; par prudence : l'apparition en cascade ne touche plus que les 12 premières cartes et seulement leur opacité (plus de `transform`). Si ça revient : retirer la classe `df-stagger` de `PostsGrid20.tsx`, puis la règle `.fixed.inset-0.flex` d'animation dans `index.css`.
