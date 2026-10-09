@@ -19,7 +19,6 @@ import {
   Hourglass,
   CircleDot,
   Circle,
-  Trash2,
   Plus,
 } from 'lucide-react';
 import { ClientContract, PostSession, User } from '../types';
@@ -395,29 +394,6 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
                     <div className="mb-2 px-2 py-1 text-[11px] font-bold border border-slate-500/60 bg-slate-500/15 text-slate-300">
                       Sans compte : en attente du compte client
                     </div>
-                  )}
-                  {isAdminView && (
-                    <button
-                      type="button"
-                      onClick={e => {
-                        e.stopPropagation();
-                        askConfirm({
-                          title: `Retirer le poste ${postLabel} ?`,
-                          message: activeSessionOnThis ? 'Une session est en cours sur ce poste : impossible de le retirer.' : 'Le poste sera supprimé de la grille. Cette action ne peut pas être annulée.',
-                          confirmLabel: 'Retirer',
-                          danger: true,
-                          onConfirm: () => {
-                            const r = db.removeContract(contract.id);
-                            if (!r.success) alert(r.error);
-                          },
-                        });
-                      }}
-                      className="float-right ml-2 p-1 text-slate-400 hover:text-red-400"
-                      title="Retirer ce poste"
-                      aria-label="Retirer ce poste"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
                   )}
                   {/* Type de poste : l'admin le change ici, le booster le voit */}
                   {isAdminView ? (

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   ShieldAlert,
+  Trash2,
   Shield,
   Camera,
   CheckCircle2,
@@ -776,6 +777,37 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     >
                       <Check className="w-4 h-4" />
                       <span>Enregistrer les Modifications du Poste</span>
+                    </button>
+                  </div>
+
+                  <div className="pt-3 border-t border-slate-700/60">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const c = selectedAdminContract;
+                        const label = `P${String(c.post_number).padStart(2, '0')}`;
+                        askConfirm({
+                          title: `Supprimer le poste ${label} ?`,
+                          message: activeSessionForModal
+                            ? 'Une session est en cours sur ce poste : impossible de le supprimer.'
+                            : 'Le poste sera supprimé de la grille. Cette action est définitive.',
+                          confirmLabel: 'Supprimer',
+                          danger: true,
+                          onConfirm: () => {
+                            const r = db.removeContract(c.id);
+                            if (!r.success) {
+                              setAssignErrorMsg(r.error || 'Impossible de supprimer ce poste.');
+                              return;
+                            }
+                            showToast('Poste supprimé.', 'success');
+                            setSelectedAdminContract(null);
+                          },
+                        });
+                      }}
+                      className="w-full min-h-[46px] flex items-center justify-center gap-2 bg-red-950/80 hover:bg-red-900 border border-red-700 text-red-300 font-tactical font-bold text-xs uppercase tracking-wider rounded-xl cursor-pointer"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                      <span>Supprimer ce poste</span>
                     </button>
                   </div>
                 </div>
