@@ -13,13 +13,15 @@ import {
   PresenceRow,
   AttendanceRow,
   QueueInfo,
+  ChatGroup,
+  ChatRead,
 } from '../types';
 import { AVAILABLE_CLIENT_CONTRACTS } from './initialData';
 
 const TOKEN_KEY = 'df_session_token_v2';
 const API_BASE = 'https://ljorjzrxkxqacmmkmqdx.supabase.co/functions/v1/df-api';
 const RESTORE_BASE = 'https://ljorjzrxkxqacmmkmqdx.supabase.co/functions/v1/df-restore';
-const COLS = ['users', 'posts', 'contracts', 'securityLogs', 'advances', 'messages', 'settings'] as const;
+const COLS = ['users', 'posts', 'contracts', 'securityLogs', 'advances', 'messages', 'groups', 'settings'] as const;
 
 export const DEFAULT_SETTINGS: AppSettings = {
   id: 'general',
@@ -64,6 +66,7 @@ const SORTERS: Partial<Record<Col, (a: any, b: any) => number>> = {
   contracts: (a, b) => (a.post_number || 0) - (b.post_number || 0),
   securityLogs: (a, b) => String(b.id).localeCompare(String(a.id)),
   advances: (a, b) => String(b.id).localeCompare(String(a.id)),
+  groups: (a, b) => String(a.created_at || '').localeCompare(String(b.created_at || '')) || String(a.id).localeCompare(String(b.id)),
   messages: (a, b) => String(a.timestamp || '').localeCompare(String(b.timestamp || '')) || String(a.id).localeCompare(String(b.id)),
 };
 
@@ -74,6 +77,8 @@ class DeltaForceStore {
   private securityLogs: SecurityViolation[] = [];
   private advanceRequests: SalaryAdvanceRequest[] = [];
   private messages: ChatMessage[] = [];
+  private groups: ChatGroup[] = [];
+  private reads: ChatRead[] = [];
   private settings: AppSettings[] = [];
   private resets: PasswordResetRequest[] = [];
   private signups: SignupRequest[] = [];
@@ -111,7 +116,7 @@ class DeltaForceStore {
   private emptySynced(): Record<Col, Map<string, string>> {
     return {
       users: new Map(), posts: new Map(), contracts: new Map(),
-      securityLogs: new Map(), advances: new Map(), messages: new Map(), settings: new Map(),
+      securityLogs: new Map(), advances: new Map(), messages: new Map(), groups: new Map(), settings: new Map(),
     };
   }
 
@@ -123,6 +128,7 @@ class DeltaForceStore {
       case 'securityLogs': return this.securityLogs;
       case 'advances': return this.advanceRequests;
       case 'messages': return this.messages;
+      case 'groups': return this.groups;
       case 'settings': return this.settings;
     }
   }
@@ -135,6 +141,7 @@ class DeltaForceStore {
       case 'securityLogs': this.securityLogs = value; break;
       case 'advances': this.advanceRequests = value; break;
       case 'messages': this.messages = value; break;
+      case 'groups': this.groups = value; break;
       case 'settings': this.settings = value; break;
     }
   }
@@ -148,6 +155,7 @@ class DeltaForceStore {
     this.signups = [];
     this.profileRequests = [];
     this.presence = [];
+    this.reads = [];
     this.myQueue = null;
     this.currentUser = null;
   }
@@ -332,6 +340,10 @@ class DeltaForceStore {
     }
 
     // Présence (admin : tous les boosters) et file d'attente (booster : sa place)
+    if (Array.isArray(r.data.reads)) {
+      const nextReads = r.data.reads as ChatRead[];
+      if (JSON.stringify(nextReads) !== JSON.stringify(this.reads)) { this.reads = nextReads; changedAny = true; }
+    }
     if (Array.isArray(r.data.presence)) {
       const next = r.data.presence as PresenceRow[];
       if (JSON.stringify(next) !== JSON.stringify(this.presence)) { this.presence = next; changedAny = true; }
@@ -1272,12 +1284,14 @@ class DeltaForceStore {
     attachmentUrl?: string;
     attachmentName?: string;
     attachmentKind?: 'image' | 'file';
+    replyTo?: ChatMessage; // message cité
   }): { success: boolean } {
     const sender = this.users.find(u => u.id === params.senderId);
     if (!sender || (!params.message.trim() && !params.attachmentUrl)) return { success: false };
 
     const now = new Date();
     const timeStr = `${now.toISOString().split('T')[0]} ${now.toTimeString().split(' ')[0]}`;
+    const q = params.replyTo;
 
     const newMsg: ChatMessage = {
       id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
@@ -1287,6 +1301,10 @@ class DeltaForceStore {
       recipient_id: params.recipientId || 'all',
       message: params.message.trim(),
       timestamp: timeStr,
+      sent_ms: now.getTime(),
+      ...(q && !q.deleted_at
+        ? { reply_to: { id: q.id, sender_name: q.sender_name, text: (q.message || '').slice(0, 140), has_attachment: !!q.attachment_url } }
+        : {}),
       ...(params.attachmentUrl
         ? { attachment_url: params.attachmentUrl, attachment_name: params.attachmentName || 'fichier', attachment_kind: params.attachmentKind || 'file' }
         : {}),
@@ -1297,15 +1315,26 @@ class DeltaForceStore {
     return { success: true };
   }
 
-  // Modifier, épingler, supprimer : par l'auteur du message ou par l'admin
-  private canTouchMessage(msg: ChatMessage, userId: string): boolean {
+  // Comme WhatsApp : on modifie et on épingle SEULEMENT ses propres messages (même l'admin)
+  private isOwnMessage(msg: ChatMessage, userId: string): boolean {
+    return msg.sender_id === userId && !msg.deleted_at;
+  }
+  // Supprimer pour tous : l'auteur, ou l'admin (modération)
+  public canDeleteForAll(msg: ChatMessage, userId: string): boolean {
     const u = this.users.find(x => x.id === userId);
-    return !!u && (msg.sender_id === userId || u.role === 'admin');
+    return !!u && !msg.deleted_at && (msg.sender_id === userId || u.role === 'admin');
+  }
+  public static EDIT_WINDOW_MS = 15 * 60 * 1000;
+  public canEditMessage(msg: ChatMessage, userId: string): boolean {
+    if (!this.isOwnMessage(msg, userId)) return false;
+    if (!msg.message && msg.attachment_url && msg.attachment_kind) return !!msg.message; // une photo sans texte : rien à modifier
+    return !msg.sent_ms || Date.now() - msg.sent_ms <= DeltaForceStore.EDIT_WINDOW_MS;
   }
 
   public editMessage(id: string, userId: string, text: string): { success: boolean; error?: string } {
     const msg = this.messages.find(m => m.id === id);
-    if (!msg || !this.canTouchMessage(msg, userId)) return { success: false, error: 'Action non autorisée.' };
+    if (!msg || !this.isOwnMessage(msg, userId)) return { success: false, error: 'Tu peux modifier seulement tes propres messages.' };
+    if (!this.canEditMessage(msg, userId)) return { success: false, error: 'Tu peux modifier un message pendant 15 minutes après son envoi.' };
     const clean = text.trim();
     if (!clean && !msg.attachment_url) return { success: false, error: 'Le message ne peut pas être vide.' };
     if (clean === msg.message) return { success: true };
@@ -1318,7 +1347,7 @@ class DeltaForceStore {
 
   public togglePinMessage(id: string, userId: string): { success: boolean } {
     const msg = this.messages.find(m => m.id === id);
-    if (!msg || !this.canTouchMessage(msg, userId)) return { success: false };
+    if (!msg || !this.isOwnMessage(msg, userId)) return { success: false };
     if (msg.pinned) {
       msg.pinned = false;
       delete msg.pinned_at;
@@ -1331,12 +1360,79 @@ class DeltaForceStore {
     return { success: true };
   }
 
+  // Supprimer pour tous : une trace « message supprimé » reste dans la conversation
   public deleteMessage(id: string, userId: string): { success: boolean } {
     const msg = this.messages.find(m => m.id === id);
-    if (!msg || !this.canTouchMessage(msg, userId)) return { success: false };
-    this.messages = this.messages.filter(m => m.id !== id);
+    if (!msg || !this.canDeleteForAll(msg, userId)) return { success: false };
+    msg.deleted_at = new Date().toISOString();
+    msg.deleted_by = msg.sender_id === userId ? 'sender' : 'admin';
+    msg.message = '';
+    delete msg.attachment_url; delete msg.attachment_name; delete msg.attachment_kind;
+    delete msg.pinned; delete msg.pinned_at; delete msg.reply_to; delete msg.edited_at;
     this.notify();
     return { success: true };
+  }
+
+  // --- Groupes de discussion ---
+  public getGroups(): ChatGroup[] { return [...this.groups]; }
+  public getChatReads(): ChatRead[] { return [...this.reads]; }
+
+  public createGroup(ownerId: string, name: string, memberIds: string[]): { success: boolean; id?: string; error?: string } {
+    const clean = name.trim();
+    if (clean.length < 1 || clean.length > 40) return { success: false, error: 'Le nom du groupe doit avoir 1 à 40 caractères.' };
+    const members = [...new Set([ownerId, ...memberIds])];
+    if (members.length < 2) return { success: false, error: 'Choisis au moins un autre membre.' };
+    const id = `grp_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+    this.groups.push({ id, name: clean, owner_id: ownerId, members, created_at: new Date().toISOString() });
+    this.notify();
+    return { success: true, id };
+  }
+  public updateGroup(id: string, userId: string, patch: { name?: string; members?: string[] }): { success: boolean; error?: string } {
+    const g = this.groups.find(x => x.id === id);
+    const u = this.users.find(x => x.id === userId);
+    if (!g || !u || (g.owner_id !== userId && u.role !== 'admin')) return { success: false, error: 'Seul le responsable du groupe peut le modifier.' };
+    if (patch.name !== undefined) {
+      const clean = patch.name.trim();
+      if (clean.length < 1 || clean.length > 40) return { success: false, error: 'Le nom du groupe doit avoir 1 à 40 caractères.' };
+      g.name = clean;
+    }
+    if (patch.members) {
+      const members = [...new Set(patch.members)];
+      if (members.length < 1) return { success: false, error: 'Un groupe doit garder au moins un membre.' };
+      g.members = members;
+      if (!members.includes(g.owner_id)) g.owner_id = members[0];
+    }
+    this.notify();
+    return { success: true };
+  }
+  public leaveGroup(id: string, userId: string): { success: boolean } {
+    const g = this.groups.find(x => x.id === id);
+    if (!g || !g.members.includes(userId)) return { success: false };
+    const rest = g.members.filter(m => m !== userId);
+    if (rest.length === 0) return this.deleteGroup(id, userId);
+    g.members = rest;
+    if (g.owner_id === userId) g.owner_id = rest[0];
+    this.notify();
+    return { success: true };
+  }
+  public deleteGroup(id: string, userId: string): { success: boolean } {
+    const g = this.groups.find(x => x.id === id);
+    const u = this.users.find(x => x.id === userId);
+    if (!g || !u || (g.owner_id !== userId && u.role !== 'admin')) return { success: false };
+    this.groups = this.groups.filter(x => x.id !== id);
+    this.messages = this.messages.filter(m => m.recipient_id !== id);
+    this.notify();
+    return { success: true };
+  }
+
+  // « Lu » : on dit au serveur jusqu'où on a lu la conversation (discret, sans barre de chargement)
+  private lastReadSent = new Map<string, number>();
+  public markThreadRead(thread: string, ms: number): void {
+    if (!this.token || !ms || (this.lastReadSent.get(thread) || 0) >= ms) return;
+    this.lastReadSent.set(thread, ms);
+    void this.apiRaw('chat-read', { method: 'POST', body: JSON.stringify({ thread, ms }) }).catch(() => {
+      this.lastReadSent.delete(thread);
+    });
   }
 
   // --- RESET / EXPORT SQL & JSON BACKUP ---

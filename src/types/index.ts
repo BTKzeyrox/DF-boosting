@@ -181,6 +181,26 @@ export interface ChatMessage {
   edited_at?: string; // message modifié après envoi
   pinned?: boolean; // épinglé en haut de la conversation
   pinned_at?: string;
+  reply_to?: { id: string; sender_name: string; text: string; has_attachment?: boolean }; // message cité (réponse)
+  deleted_at?: string; // supprimé pour tous : il ne reste qu'une trace
+  deleted_by?: 'sender' | 'admin';
+  sent_ms?: number; // heure d'envoi côté serveur (fenêtre de modification, coches « lu »)
+}
+
+// Groupe de discussion créé par l'admin ou un booster (recipient_id des messages = id du groupe, « grp_… »)
+export interface ChatGroup {
+  id: string;
+  name: string;
+  owner_id: string;
+  members: string[];
+  created_at?: string;
+}
+
+// Jusqu'où une personne a lu une conversation (thread = id de l'autre personne, ou id du groupe)
+export interface ChatRead {
+  user_id: string;
+  thread: string;
+  ms: number;
 }
 
 export interface ClientContract {

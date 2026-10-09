@@ -319,3 +319,14 @@ Un seul Claude travaille à la fois. Faire `git pull` avant tout. Recap court pu
 - Retiré : le reflet qui passe en horizontal et la barre horizontale en bas, ainsi que le filtre `drop-shadow` sur le logo (coûteux, saccadait pendant le chargement du site).
 - Polices Google chargées sans bloquer l'affichage (`media="print"` + `onload`) : le premier affichage de l'écran BTK n'attend plus le réseau.
 - Gardé : tracé des lettres B, T, K, lueur et anneaux.
+
+## Messagerie « comme WhatsApp » (09/10)
+- **Règles (serveur ET écran)** : on modifie (15 min max) et on épingle SEULEMENT ses propres messages, même l'admin (avant, l'admin pouvait modifier ceux des autres : le serveur ne le bloquait pas). « Supprimer pour tous » : l'auteur ou l'admin, il reste une trace « Ce message a été supprimé ». « Supprimer pour moi » et « Cacher la conversation » sont gardés sur l'appareil (`src/utils/chatPrefs.ts`, pas synchronisés).
+- **Fonctions** : réponses citées (`reply_to`), séparateurs de date, coches ✓ envoyé / ✓✓ bleues lu (table `df_chat_reads`, route `chat-read`, `reads` dans la réponse de `state`), groupes créés par l'admin ou un booster (collection `groups`, table `df_groups`, id `grp_…` = `recipient_id` des messages), discussions 1 à 1 entre boosters, vue admin « entre boosters » en lecture seule (l'admin voit tout), quitter / supprimer un groupe (responsable ou admin).
+- **Fichiers** : `src/components/ChatView.tsx`, `ChatDialogs.tsx` (nouvelle discussion, infos du groupe), `src/db/store.ts` (groupes, règles, `markThreadRead`), serveur `supabase/functions/df-api/index.ts` (`checkMessage`, `checkGroup`, `chatRead`).
+- **Pas fait** : photo de groupe, coche « reçu » (✓✓ gris), réactions, « en train d'écrire », chiffrement de bout en bout (« confidentiel » = invisible pour les non-membres, le serveur peut lire).
+
+## Déploiement du serveur `df-api` (change depuis le 09/10)
+- Le fichier déployé sur Supabase est un **petit fichier** qui importe le vrai serveur depuis GitHub à une version précise : `import "https://raw.githubusercontent.com/BTKzeyrox/DF-boosting/<COMMIT>/supabase/functions/df-api/index.ts"`.
+- **Pour mettre à jour le serveur** : pousser `index.ts` sur `main`, noter l'identifiant du commit, puis redéployer ce petit fichier avec le connecteur Supabase (projet Replay) en changeant le commit. **Retour en arrière** : redéployer avec un ancien commit (`7f87b5d` = avant la messagerie WhatsApp).
+- Version actuellement déployée : commit `a0fd77c`. La fonction `df-api-next` est désactivée (410). `df-restore` (restauration) est un fichier normal.
