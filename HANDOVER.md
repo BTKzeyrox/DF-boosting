@@ -79,7 +79,7 @@ Rien n'a été testé à l'écran par Claude (seulement build + tests de rendu l
 6. **Petits défauts connus** : aucun ouvert. Réglés : pluriels, filtres des notifications, sous-titre du menu, anti-spam, messagerie dans la cloche, `Navbar.tsx` et `generateDeltaForcePoster` supprimés.
 7. **Nettoyage Supabase (non urgent, constat du 2026-10-08)** : 5 anciennes fonctions SQL d'une version précédente du projet (`create_employee`, `delete_employee`, `take_slot`, `is_admin`, `new_profile`) sont encore appelables par l'API publique ; elles refusent si l'appelant n'est pas admin (risque faible) et ne sont plus utilisées par ce site. À supprimer après vérification que rien d'autre (autre projet dans « Replay » : `market_candles`, TradingView Clone) ne s'en sert. Les tables `df_*` ont la sécurité par ligne activée sans politique : voulu, seul `df-api` y accède.
 8. **Textes chinois** : environ 70 phrases ajoutées par Claude, jamais relues par une personne qui lit le chinois.
-10. **Plan de secours (pannes et bugs)** : planifié, **rien codé**, attend le « GO lot 1 » de BTK : voir § 3 nonies.
+10. **Plan de secours (pannes et bugs)** : **fait (lots 1, 2, 3)**, à tester par BTK : voir § 3 nonies.
 9. **Règles de Madagascar sur les retenues de salaire et pénalités** : non vérifiées (la recherche donne surtout du droit français). Valider avec un comptable ou l'Inspection du travail avant d'activer les retenues.
 
 **Vérification en lecture seule du 2026-10-08 (session « vérification »)** : build et types OK, 40 cas de logique OK, aucun secret dans le dépôt ; `df-api` v14 ; `df_attendance` = 3 lignes (vraies connexions `sarah`, `kiot`, `potato`) ; `df_payroll` = **0 ligne** (la paie n'a jamais servi, donc jamais testée) ; 50 contrats ; journaux des 24 h : 259 réponses 200, un 403, un 401, **aucune erreur 500**. À savoir en test : un booster de **nuit** qui se connecte avant midi est compté au **jour précédent** (règle voulue pour l'arrivée), donc l'arrivée de `kiot` à 08:36 apparaît au 7 octobre.
@@ -172,24 +172,40 @@ Un seul Claude travaille à la fois. Faire `git pull` avant tout. Recap court pu
 - C. Contrôle : **rôles** supplémentaires (aujourd'hui seulement « admin » et « booster » : superviseur, comptable) ; **journal des actions** pour tout (aujourd'hui seulement la paie) ; **archiver** un booster au lieu de le supprimer (à vérifier si `deleteUser` efface son historique) ; nettoyage des vieilles fonctions SQL.
 - D. Confort : notifications hors du site (le site est installable, `manifest.webmanifest`, mais aucun service worker ni notification push) ; page « santé du système » ; version réutilisable (stock, boutique, communauté, lots 4 et 5 du plan collé par BTK).
 
-## 3 nonies. Plan de secours : pannes, plantages, erreurs à corriger (2026-10-08, demande de BTK, **PLANIFIÉ, RIEN CODÉ, attend « GO lot 1 »**)
+## 3 nonies. Plan de secours : pannes, plantages, erreurs à corriger (2026-10-08, demande de BTK, « Go 1, 2, 3 » : **LOTS 1, 2 ET 3 FAITS**, non testés à l'écran par BTK)
 **Demande de BTK** : des options de secours si le site bugue, se fige ou ne marche plus, et qu'il affiche l'erreur, pour qu'elle serve de source pour l'améliorer.
 
+**CE QUI EXISTE MAINTENANT** (commit `0925d1a`, `df-api` **v15** = import de ce commit ; v14 = `13b6099`)
+- **Écran de secours** (`src/components/ErrorBoundary.tsx`, `scope="app"` dans `main.tsx`, `scope="page"` autour du contenu dans `App.tsx` avec `key={activeView}`) : fini la page blanche. Numéro d'incident `INC-…`, boutons Réessayer / Vider le cache et recharger / Copier le rapport / Se déconnecter, lien `/secours.html`. Détail technique visible pour l'admin ; caché aux boosters et aux visiteurs si le réglage `err_hide_details` est coché.
+- **Après une mise à jour du site** : un échec de chargement d'une page (`Failed to fetch dynamically imported module`, évènement `vite:preloadError`) recharge la page **une seule fois** (`sessionStorage` `df_update_reload`).
+- **Bandeau « Connexion perdue »** (`ConnectionBanner.tsx`, état dans `store.ts` : `onConnection`, `retryNow`, `setConn`) : nouvelle tentative toutes les `retry_seconds` (15 par défaut) tant que le serveur est injoignable ou répond 5xx. Les renvois de synchro échouées sont **espacés** (2,5 s puis 5, 10, 20, 30 s max, `flushFails`) pour ne pas user le quota d'appels.
+- **Rapports d'erreur** (`src/utils/errorReport.ts`) : plantages, erreurs JavaScript globales, promesses refusées, réponses 5xx. Texte nettoyé (jetons, adresses sans paramètres), **empreinte** pour regrouper, 20 derniers gardés dans le navigateur (`df_errors_local`), envoi limité : `err_max_per_session` (3) par session, une seule fois par empreinte, plus 30 par heure et par adresse côté serveur. Bruit ignoré (`ResizeObserver`, erreurs réseau simples, annulations). Version du site = commit Vercel (`__APP_VERSION__`, `vite.config.ts`, `src/env.d.ts`).
+- **Serveur** (`df-api`) : table **`df_errors`** (migration `df_errors_table`, RLS activée, index unique sur l'empreinte), routes `POST report-error` (**sans connexion obligatoire**, car l'écran de connexion peut planter ; les signalements `report` exigent une connexion), `GET errors?status=open|resolved|all` et `POST error-update` (**admin seulement**). Une erreur « résolue » qui revient est **rouverte**. Purge automatique (`maybePurge`) : résolues > 30 jours et tout > 90 jours.
+- **Page admin « Journal des erreurs »** (menu admin, `src/views/admin/ErrorsLog.tsx`) : erreurs regroupées (nombre, comptes touchés, première / dernière fois heure de Madagascar, appareil, page, version), filtres Ouvertes / Résolues et par type, **« Copier pour Claude »** (et « Tout copier »), Marquer résolue / Rouvrir / Supprimer, capture et détail technique.
+- **« Signaler un problème »** (bouton dans le menu, `ReportProblemModal.tsx`) : texte libre + capture facultative (Cloudinary) ; page, appareil et version ajoutés automatiquement ; arrive dans le journal (type « Signalement »).
+- **Mode maintenance** (Réglages > « Secours et maintenance » : `maintenance_on`, `maintenance_message`) : le serveur refuse les boosters (503 `code: 'maintenance'`) à la connexion et à chaque appel, l'admin entre toujours ; le site déconnecte le booster et affiche « Maintenance : … » sur la page de connexion. Effet en environ 1 minute (cache des réglages du serveur).
+- **`public/secours.html`** : page statique qui marche même si l'application est cassée (vider le cache, recharger).
+- **Réglages ajoutés** (`AppSettings`, valeurs par défaut dans `DEFAULT_SETTINGS`) : `err_report_enabled` (oui), `err_max_per_session` (3), `err_hide_details` (oui), `err_report_button` (oui), `retry_seconds` (15), `maintenance_on` (non), `maintenance_message`.
+- **Vérifié par Claude** : 27 contrôles du serveur avec une base simulée (rapport anonyme, regroupement, comptes touchés, réouverture, empreinte invalide, signalement refusé sans connexion, capture étrangère refusée, textes tronqués, journal réservé à l'admin, limite par adresse), 4 contrôles de la maintenance, 20 contrôles du nettoyage des textes / détection des échecs de chargement, **15 contrôles de l'écran de secours dans un navigateur simulé** (affichage, numéro, détail caché, Réessayer qui ramène le contenu, un seul envoi). Table `df_errors` créée (0 ligne). **Pas testé à l'écran réel ni sur le vrai serveur.**
+- **À tester par BTK** : (1) Journal des erreurs : ouvrir la page (vide au départ) ; (2) « Signaler un problème » avec `toki`, puis voir le signalement chez l'admin et « Copier pour Claude » ; (3) Réglages > Secours et maintenance : activer la maintenance, vérifier que `toki` est refusé avec le message, puis désactiver ; (4) couper le réseau du téléphone : le bandeau « Connexion perdue » apparaît et disparaît au retour ; (5) ouvrir `/secours.html`.
+- **Limite** : si Supabase tombe, le rapport ne peut pas partir ; il reste dans le téléphone (bouton « Copier le rapport »). Chaque rapport est un appel au serveur gratuit (§ 3 octies) : garder `err_max_per_session` bas.
+
+**Historique de la demande (constat avant les lots, gardé pour mémoire)**
 **Constat (vérifié dans le code le 2026-10-08)** : aucun `ErrorBoundary` ni gestionnaire d'erreurs global (`src/main.tsx` monte `<AppProvider><App /></AppProvider>` sans protection) → un plantage d'un composant = **page blanche** pour toute l'application. Aucune table ni route d'erreurs, aucun mode maintenance. Les pages sont chargées par `lazy()` (`App.tsx`) : après un déploiement, un onglet resté ouvert peut échouer au chargement d'une page (module introuvable), cas non géré. Hors ligne : `store.ts` saute seulement le rechargement (`navigator.onLine`), aucun message à l'utilisateur.
 
-**Lot 1 — écran de secours (site seul, aucun serveur, Vercel uniquement)**
+**Lot 1 — écran de secours (FAIT)**
 - `ErrorBoundary` autour de l'application **et** de chaque page (le menu reste utilisable si une page plante). Écran « Un problème est survenu » : erreur résumée, **numéro d'incident**, boutons Réessayer / Vider le cache et recharger / Se déconnecter / **Copier le rapport** (à envoyer par WhatsApp).
 - Échec de chargement d'une page après mise à jour : rechargement automatique **une seule fois** avec le message « Nouvelle version ».
 - Bandeau « Connexion perdue, nouvelle tentative dans X s » avec bouton Réessayer ; ce que l'utilisateur a saisi (notes, photos) n'est pas perdu.
 - Les 20 dernières erreurs gardées dans le navigateur (`localStorage`) pour le bouton « Copier le rapport » quand Supabase est lui-même en panne.
 
-**Lot 2 — rapport automatique et journal (nouvelle table Supabase + routes `df-api` → redéploiement)**
+**Lot 2 — rapport automatique et journal (FAIT, `df-api` v15)**
 - Chaque plantage ou erreur serveur (5xx) est envoyé : message, début de la pile (sans jeton), page, rôle et identifiant (jamais de mot de passe ni de photo), appareil et navigateur, **version du site**, heure.
 - Table `df_errors` (migration à faire, RLS activée comme les autres), routes `report-error` (sans connexion, car la page de connexion peut planter aussi ; **limitée** : 3 rapports max par session, regroupement des erreurs identiques par empreinte, limite par adresse), liste et « marquer résolue » (admin).
 - Page admin **« Journal des erreurs »** : erreurs regroupées (nombre, boosters touchés, première et dernière fois, appareil), bouton **« Copier pour Claude »** (tout ce qu'il faut pour corriger). Bouton **« Signaler un problème »** pour les boosters (texte libre, capture facultative via Cloudinary, infos techniques ajoutées automatiquement).
 - **Contrainte plan gratuit** (§ 3 octies) : chaque rapport est un appel au serveur ; d'où les limites ci-dessus.
 
-**Lot 3 — mode maintenance et procédure de panne**
+**Lot 3 — mode maintenance et page de secours (FAIT)** ; la procédure de panne ci-dessous est à jour
 - Interrupteur « Site en maintenance » + message dans Réglages : les boosters voient l'écran de maintenance, l'admin entre toujours (contrôle côté serveur, comme `shiftAccess`).
 - Page statique `secours.html` qui marche même si l'application est cassée (vider le cache, recharger, contact).
 - Section « Que faire en cas de panne » (ci-dessous, à compléter par ce lot).
@@ -198,7 +214,8 @@ Un seul Claude travaille à la fois. Faire `git pull` avant tout. Recap court pu
 
 **Limite honnête** : si Supabase tombe, le rapport ne peut pas partir ; l'erreur reste dans le téléphone, d'où « Copier le rapport ».
 
-**Procédure de panne : ce qu'on peut faire AUJOURD'HUI (avant les lots)**
+**Procédure de panne (à jour après les lots 1, 2, 3)**
+0. **Commencer par le Journal des erreurs** (menu admin) : « Copier pour Claude » donne tout ce qu'il faut pour corriger. Si le site entier est en panne, utiliser le **mode maintenance** (Réglages) pour prévenir les boosters, et `/secours.html` pour les aider à recharger.
 1. Page blanche pour tous : demander de recharger en vidant le cache ; regarder si le **dernier déploiement du site** est en échec sur Vercel ; revenir à la version précédente depuis Vercel (Deployments, puis promouvoir un déploiement précédent : **à confirmer sur l'interface, non vérifié par Claude**).
 2. Connexion ou données qui échouent : regarder les journaux de `df-api` (Supabase, Edge Functions, journaux ; ou l'outil `query_logs` : codes de réponse 200 / 401 / 403 / 500) et l'état de Supabase.
 3. **Retour arrière du serveur** : redéployer `df-api` avec l'import d'un commit précédent (versions et commits dans le § 1 et les sections 3 sexies / 3 septies). Déployer le serveur sans les bons réglages ne perd aucune donnée.
