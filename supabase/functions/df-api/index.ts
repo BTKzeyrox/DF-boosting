@@ -131,6 +131,14 @@ async function shiftAccess(user: any): Promise<{ ok: boolean; message?: string }
   return { ok: false, message: `Ton shift ${shift === 'night' ? 'de nuit' : 'de jour'} est de ${from} à ${to}. Tu peux te connecter à partir de ${opens}.` };
 }
 
+// Mode maintenance (Réglages) : les boosters sont refusés avec le message de l'admin ; l'admin entre toujours.
+async function maintenanceMessage(user: any): Promise<string | null> {
+  if (user.role === 'admin') return null;
+  const st = await getSettings();
+  if (!st.maintenance_on) return null;
+  return String(st.maintenance_message || '').trim().slice(0, 300) || 'Le site est en maintenance. Réessaie un peu plus tard.';
+}
+
 // ---------- présence (en ligne, temps de connexion, file d'attente « sans poste ») ----------
 const dayOf = (d: Date) => new Date(d.getTime() + 3 * 3600 * 1000).toISOString().slice(0, 10); // jour à Madagascar (UTC+3)
 const ALIVE_MS = 5 * 60 * 1000;
@@ -240,6 +248,8 @@ async function login(req: any, res: any) {
   const user = await getUserRow(cred.user_id);
   if (!user) return res.status(401).json({ error: 'Compte introuvable.' });
   if (user.status === 'blocked') return res.status(403).json({ error: 'Compte bloqué par l\'administrateur.' });
+  const mm = await maintenanceMessage(user);
+  if (mm) return res.status(503).json({ error: mm, code: 'maintenance' });
   const acc = await shiftAccess(user);
   if (!acc.ok) return res.status(403).json({ error: acc.message, code: 'shift' });
 
@@ -1013,6 +1023,9 @@ async function maybePurge() {
     const { data: st } = await sb.from(T.settings).select('data').eq('id', 'general').maybeSingle();
     const days = Math.max(1, Number(st?.data?.retention_days) || 7);
     const cutoff = new Date(Date.now() - days * 24 * 3600 * 1000).toISOString();
+    // Journal des erreurs : résolues gardées 30 jours, tout le reste 90 jours (la base gratuite est limitée à 500 Mo)
+    await sb.from(ERRORS).delete().eq('status', 'resolved').lt('last_seen', new Date(Date.now() - 30 * 86400_000).toISOString());
+    await sb.from(ERRORS).delete().lt('last_seen', new Date(Date.now() - 90 * 86400_000).toISOString());
     const { data: rows } = await sb.from(T.posts).select('id,data')
       .lt('updated_at', cutoff).in('data->>status', ['completed', 'rejected', 'force_released']).order('updated_at', { ascending: true }).limit(60);
     for (const r of rows || []) {
@@ -1029,6 +1042,72 @@ async function maybePurge() {
       await sb.from(T.posts).upsert({ id: r.id, data: next, updated_at: new Date().toISOString() });
     }
   } catch (e) { console.error('purge error:', e); }
+}
+
+// ---------- erreurs du site : rapports automatiques, signalements, journal (table df_errors) ----------
+const ERRORS = "df_errors";
+const errRate = new Map<string, number[]>(); // 30 rapports par heure et par adresse (compteur propre à chaque instance)
+const cutTxt = (v: unknown, n: number) => String(v ?? '').slice(0, n);
+async function reportError(req: any, res: any) {
+  const b = req.body || {};
+  const kind = ['crash', 'error', 'server', 'report'].includes(b.kind) ? String(b.kind) : 'error';
+  const me = await authenticate(req); // facultatif : la page de connexion peut planter aussi
+  const ipKey = req.headers.ip || 'inconnue';
+  const nowMs = Date.now();
+  const hits = (errRate.get(ipKey) || []).filter(t => nowMs - t < 3600_000);
+  if (hits.length >= 30) return res.status(429).json({ error: 'Trop de rapports.' });
+  hits.push(nowMs);
+  errRate.set(ipKey, hits);
+  if (errRate.size > 2000) errRate.clear();
+  const nowIso = new Date().toISOString();
+  const common = {
+    kind,
+    message: cutTxt(b.message, 300),
+    stack: cutTxt(b.stack, 1500),
+    page: cutTxt(b.page, 60),
+    role: me ? me.role : cutTxt(b.role, 20),
+    device: cutTxt(b.device, 140),
+    version: cutTxt(b.version, 40),
+  };
+  if (kind === 'report') {
+    if (!me) return res.status(401).json({ error: 'Connecte-toi pour signaler un problème.' });
+    const detail = cutTxt(b.detail, 1000).trim();
+    if (detail.length < 3) return res.status(400).json({ error: 'Décris le problème en quelques mots.' });
+    const shot = typeof b.screenshot_url === 'string' && b.screenshot_url.startsWith(CLD_PREFIX) ? b.screenshot_url.slice(0, 400) : null;
+    const id = `rp-${Date.now()}-${randomBytes(3).toString('hex')}`;
+    await sb.from(ERRORS).insert({ id, ...common, message: common.message || 'Signalement', detail, screenshot_url: shot, users: [me.id], first_seen: nowIso, last_seen: nowIso, status: 'open' });
+    return res.json({ ok: true, id });
+  }
+  const fp = /^[a-f0-9]{6,16}$/.test(String(b.fingerprint || '')) ? String(b.fingerprint) : '';
+  if (!fp) return res.status(400).json({ error: 'Empreinte invalide.' });
+  const { data: ex } = await sb.from(ERRORS).select('*').eq('fingerprint', fp).maybeSingle();
+  if (ex) {
+    const users: string[] = Array.isArray(ex.users) ? ex.users : [];
+    if (me && !users.includes(me.id) && users.length < 20) users.push(me.id);
+    // Une erreur déjà « résolue » qui revient est rouverte
+    await sb.from(ERRORS).update({ count: (ex.count || 1) + 1, last_seen: nowIso, users, status: 'open', version: common.version || ex.version }).eq('id', ex.id);
+  } else {
+    const { error } = await sb.from(ERRORS).insert({ id: `er-${fp}`, fingerprint: fp, ...common, users: me ? [me.id] : [], first_seen: nowIso, last_seen: nowIso, count: 1, status: 'open' });
+    if (error) console.error('error insert:', error.message); // deux rapports identiques en même temps : le 2e est ignoré
+  }
+  return res.json({ ok: true });
+}
+async function errorsList(req: any, res: any, me: any) {
+  if (me.role !== 'admin') return res.status(403).json({ error: 'Réservé à l\'administrateur.' });
+  const st = String(req.query.status || 'open');
+  let q = sb.from(ERRORS).select('*').order('last_seen', { ascending: false }).limit(300);
+  if (st === 'open' || st === 'resolved') q = q.eq('status', st);
+  const { data } = await q;
+  return res.json({ rows: data || [] });
+}
+async function errorUpdate(req: any, res: any, me: any) {
+  if (me.role !== 'admin') return res.status(403).json({ error: 'Réservé à l\'administrateur.' });
+  const { id, status, remove } = req.body || {};
+  if (typeof id !== 'string') return res.status(400).json({ error: 'Rapport invalide.' });
+  if (remove === true) await sb.from(ERRORS).delete().eq('id', id);
+  else if (status === 'open' || status === 'resolved') await sb.from(ERRORS).update({ status }).eq('id', id);
+  else return res.status(400).json({ error: 'Statut invalide.' });
+  return res.json({ ok: true });
 }
 
 // ---------- routeur ----------
@@ -1051,7 +1130,7 @@ Deno.serve(async (request: Request) => {
   const req: any = {
     method: request.method,
     body,
-    query: { since: url.searchParams.get("since") || "", day: url.searchParams.get("day") || "" },
+    query: { since: url.searchParams.get("since") || "", day: url.searchParams.get("day") || "", status: url.searchParams.get("status") || "" },
     headers: {
       authorization: request.headers.get("authorization") || "",
       ip: (request.headers.get("x-forwarded-for") || "").split(",")[0].trim(),
@@ -1061,14 +1140,19 @@ Deno.serve(async (request: Request) => {
     if (action === "login" && req.method === "POST") return await login(req, res);
     if (action === "forgot" && req.method === "POST") return await forgot(req, res);
     if (action === "signup" && req.method === "POST") return await signup(req, res);
+    if (action === "report-error" && req.method === "POST") return await reportError(req, res);
     const me = await authenticate(req);
     if (!me) return res.status(401).json({ error: "Session expirée. Reconnectez-vous." });
     if (action !== "logout") {
+      const mm = await maintenanceMessage(me);
+      if (mm) return res.status(503).json({ error: mm, code: 'maintenance' });
       const acc = await shiftAccess(me);
       if (!acc.ok) return res.status(401).json({ error: acc.message, code: 'shift' });
     }
     if (action === "state" && req.method === "GET") return await state(req, res, me);
     if (action === "attendance" && req.method === "GET") return await attendanceRoute(req, res, me);
+    if (action === "errors" && req.method === "GET") return await errorsList(req, res, me);
+    if (action === "error-update" && req.method === "POST") return await errorUpdate(req, res, me);
     if (action === "sync" && req.method === "POST") return await sync(req, res, me);
     if (action === "create-user" && req.method === "POST") return await createUser(req, res, me);
     if (action === "set-password" && req.method === "POST") return await setPassword(req, res, me);

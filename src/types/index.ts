@@ -32,6 +32,13 @@ export interface AppSettings {
   badges_clickable: boolean; // un clic sur une pastille ouvre Validations
   alert_idle_1_min: number; // 1re alerte « booster sans poste » (minutes)
   alert_idle_2_min: number; // 2e alerte
+  err_report_enabled: boolean; // envoi automatique des erreurs au journal
+  err_max_per_session: number; // rapports automatiques maximum par session (quota d'appels)
+  err_hide_details: boolean; // cacher le détail technique aux boosters (ils voient seulement le numéro)
+  err_report_button: boolean; // bouton « Signaler un problème »
+  retry_seconds: number; // délai entre deux tentatives quand la connexion est perdue
+  maintenance_on: boolean; // site en maintenance (les boosters sont refusés, l'admin entre)
+  maintenance_message: string;
   retention_days: number;
   rules: string;
   post_types: string[];

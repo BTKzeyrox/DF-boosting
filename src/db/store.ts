@@ -43,6 +43,13 @@ export const DEFAULT_SETTINGS: AppSettings = {
   badges_clickable: true,
   alert_idle_1_min: 15,
   alert_idle_2_min: 30,
+  err_report_enabled: true,
+  err_max_per_session: 3,
+  err_hide_details: true,
+  err_report_button: true,
+  retry_seconds: 15,
+  maintenance_on: false,
+  maintenance_message: 'Le site est en maintenance. Réessaie un peu plus tard.',
   retention_days: 7,
   rules: '',
   post_types: ['NO R/C', 'YES R/C', 'RED 9CASE'],
@@ -165,6 +172,25 @@ class DeltaForceStore {
     }
   }
 
+  // --- État de la connexion (bandeau « Connexion perdue ») et erreurs serveur ---
+  private connDown = false;
+  private connListeners = new Set<(down: boolean) => void>();
+  public serverErrorHook: ((path: string, status: number) => void) | null = null;
+  public onConnection(fn: (down: boolean) => void): () => void {
+    this.connListeners.add(fn);
+    fn(this.connDown);
+    return () => { this.connListeners.delete(fn); };
+  }
+  private setConn(down: boolean) {
+    if (down === this.connDown) return;
+    this.connDown = down;
+    this.connListeners.forEach(f => f(down));
+  }
+  public retryNow() {
+    void this.pull(true);
+    void this.flush();
+  }
+
   private async apiRaw(path: string, init?: RequestInit): Promise<{ ok: boolean; status: number; data: any }> {
     try {
       const res = await fetch(`${API_BASE}/${path}`, {
@@ -175,6 +201,14 @@ class DeltaForceStore {
         },
       });
       const data = await res.json().catch(() => ({}));
+      const maintenance = res.status === 503 && data?.code === 'maintenance';
+      this.setConn(res.status >= 500 && !maintenance);
+      if (res.status >= 500 && !maintenance && this.serverErrorHook) this.serverErrorHook(path.split('?')[0], res.status);
+      if (maintenance && this.token && path !== 'login') {
+        // Maintenance décidée par l'admin : on déconnecte et on garde son message pour la page de connexion
+        try { sessionStorage.setItem('df_login_notice', `Maintenance : ${String(data.error || '')}`); } catch { /* ignore */ }
+        this.expireSession();
+      }
       if (res.status === 401 && this.token && path !== 'login') {
         // Déconnecté parce que le shift est fini (ou accès bloqué) : on garde le message pour la page de connexion
         if (data?.code === 'shift' && data.error) { try { sessionStorage.setItem('df_login_notice', String(data.error)); } catch { /* ignore */ } }
@@ -182,6 +216,7 @@ class DeltaForceStore {
       }
       return { ok: res.ok, status: res.status, data };
     } catch {
+      this.setConn(true);
       return { ok: false, status: 0, data: { error: 'Réseau indisponible.' } };
     }
   }
@@ -372,6 +407,7 @@ class DeltaForceStore {
     return { changes, sent };
   }
 
+  private flushFails = 0;
   private async flush() {
     if (this.syncing || !this.token) return;
     this.syncing = true;
@@ -380,7 +416,8 @@ class DeltaForceStore {
       const { changes, sent } = this.diff();
       if (Object.keys(changes).length === 0) { this.dirty = false; return; }
       const r = await this.api('sync', { method: 'POST', body: JSON.stringify({ changes }) });
-      if (!r.ok) { retry = r.status !== 401 && r.status !== 403 && r.status !== 400; if (!retry) this.dirty = false; return; }
+      if (!r.ok) { retry = r.status !== 401 && r.status !== 403 && r.status !== 400 && r.status !== 503 || r.status === 503 && r.data?.code !== 'maintenance'; if (!retry) this.dirty = false; this.flushFails++; return; }
+      this.flushFails = 0;
       for (const col of Object.keys(sent) as Col[]) {
         sent[col].sets.forEach((json, id) => this.synced[col].set(id, json));
         sent[col].deletes.forEach(id => this.synced[col].delete(id));
@@ -399,7 +436,9 @@ class DeltaForceStore {
       this.syncing = false;
       if (retry && this.token) {
         if (this.syncTimer) clearTimeout(this.syncTimer);
-        this.syncTimer = setTimeout(() => void this.flush(), 2500);
+        // 2,5 s au début, puis de plus en plus long (jusqu'à 30 s) : une panne ne doit pas épuiser les appels gratuits
+        const wait = Math.min(30000, 2500 * Math.pow(2, Math.min(this.flushFails, 4)));
+        this.syncTimer = setTimeout(() => void this.flush(), wait);
       }
     }
   }
@@ -477,6 +516,35 @@ class DeltaForceStore {
   public async uploadFile(dataUrl: string): Promise<string | null> {
     const r = await this.api('upload', { method: 'POST', body: JSON.stringify({ dataUrl }) });
     return r.ok && r.data?.url ? String(r.data.url) : null;
+  }
+
+  // --- Journal des erreurs et signalements ---
+  public async sendErrorReport(report: Record<string, unknown>): Promise<void> {
+    try {
+      await fetch(`${API_BASE}/report-error`, {
+        method: 'POST',
+        keepalive: true,
+        headers: { 'Content-Type': 'application/json', ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}) },
+        body: JSON.stringify(report),
+      });
+    } catch { /* serveur injoignable : le rapport reste dans le navigateur (bouton « Copier le rapport ») */ }
+  }
+
+  public async submitProblemReport(p: { detail: string; screenshotDataUrl?: string; page: string; device: string; version: string }): Promise<{ success: boolean; error?: string }> {
+    let screenshot_url = '';
+    if (p.screenshotDataUrl) screenshot_url = (await this.uploadFile(p.screenshotDataUrl)) || '';
+    const r = await this.api('report-error', { method: 'POST', body: JSON.stringify({ kind: 'report', detail: p.detail, screenshot_url, page: p.page, device: p.device, version: p.version, message: 'Signalement' }) });
+    return r.ok ? { success: true } : { success: false, error: r.data?.error || "Envoi impossible. Réessaie plus tard." };
+  }
+
+  public async fetchErrors(status: 'open' | 'resolved' | 'all'): Promise<any[]> {
+    const r = await this.api(`errors?status=${status}`);
+    return r.ok && Array.isArray(r.data?.rows) ? r.data.rows : [];
+  }
+
+  public async updateError(id: string, change: { status?: 'open' | 'resolved'; remove?: boolean }): Promise<boolean> {
+    const r = await this.api('error-update', { method: 'POST', body: JSON.stringify({ id, ...change }) });
+    return r.ok;
   }
 
   // Mot de passe oublié (sans être connecté) : la réponse est toujours la même

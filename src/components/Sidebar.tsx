@@ -23,6 +23,8 @@ import {
   Moon,
   Globe,
   Download,
+  Bug,
+  LifeBuoy,
 } from 'lucide-react';
 import { User } from '../types';
 import { countPending } from '../utils/pendingCount';
@@ -41,6 +43,7 @@ interface SidebarProps {
   canSwitchMode?: boolean; // vrai pour l'admin : peut passer en mode booster
   boosterMode?: boolean;
   onToggleBoosterMode?: () => void;
+  onReportProblem?: () => void; // ouvre « Signaler un problème »
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -48,6 +51,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   activeView,
   onNavigate,
   onLogout,
+  onReportProblem,
   onOpenEmployeeCV,
   isOpenMobile = false,
   onCloseMobile,
@@ -155,6 +159,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
             badgeColor: isLight
               ? 'bg-red-100 text-red-800 border-red-300'
               : 'bg-red-950 text-red-300 border-red-500/40',
+          },
+          {
+            id: 'errors',
+            label: 'Journal des erreurs',
+            sublabel: 'Bugs et signalements',
+            icon: Bug,
           },
           {
             id: 'settings',
@@ -403,6 +413,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
             >
               <Swords className="w-3.5 h-3.5" />
               <span>{boosterMode ? 'Retour admin' : 'Mode booster'}</span>
+            </button>
+          )}
+
+          {onReportProblem && db.getSettings().err_report_button !== false && (
+            <button
+              type="button"
+              onClick={() => { onReportProblem(); if (onCloseMobile) onCloseMobile(); }}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-slate-800/60 hover:bg-slate-700/70 border border-slate-600/60 text-slate-300 hover:text-white text-xs font-tactical font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer"
+            >
+              <LifeBuoy className="w-3.5 h-3.5" />
+              <span>Signaler un problème</span>
             </button>
           )}
 

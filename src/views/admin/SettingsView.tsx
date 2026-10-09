@@ -56,6 +56,8 @@ export const SettingsView: React.FC = () => {
     if (s.access_before_min < 0 || s.access_after_min < 0) return setError("La tolérance d'accès ne peut pas être négative.");
     if (s.alert_idle_1_min < 1) return setError('La 1re alerte doit être de 1 minute ou plus.');
     if (s.alert_idle_2_min <= s.alert_idle_1_min) return setError('La 2e alerte doit être plus longue que la 1re.');
+    if (s.err_max_per_session < 0 || s.err_max_per_session > 20) return setError('Rapports par session : entre 0 et 20.');
+    if (s.retry_seconds < 5) return setError('Le délai entre deux tentatives doit être de 5 secondes ou plus.');
     db.updateSettings({
       ...s,
       price_per_million: Math.round(s.price_per_million),
@@ -65,6 +67,9 @@ export const SettingsView: React.FC = () => {
       access_after_min: Math.round(s.access_after_min),
       alert_idle_1_min: Math.round(s.alert_idle_1_min),
       alert_idle_2_min: Math.round(s.alert_idle_2_min),
+      err_max_per_session: Math.round(s.err_max_per_session),
+      retry_seconds: Math.round(s.retry_seconds),
+      maintenance_message: (s.maintenance_message || '').trim().slice(0, 300),
     });
     setTouched(false);
     setSaved(true);
@@ -166,6 +171,43 @@ export const SettingsView: React.FC = () => {
             </label>
           </div>
         </div>
+      </section>
+
+      <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3">
+        <h3 className="font-tactical font-bold text-white">Secours et maintenance</h3>
+        <label className={`flex items-center gap-2 text-sm cursor-pointer ${s.maintenance_on ? 'text-amber-300 font-bold' : 'text-slate-200'}`}>
+          <input type="checkbox" checked={s.maintenance_on} onChange={e => set('maintenance_on', e.target.checked)} className="w-4 h-4 accent-amber-500" />
+          Site en maintenance (les boosters sont déconnectés et refusés, toi tu entres toujours)
+        </label>
+        <div>
+          <label className={labelCls}>Message affiché aux boosters</label>
+          <textarea rows={2} maxLength={300} value={s.maintenance_message} onChange={e => set('maintenance_message', e.target.value)} className={inputCls} />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className={labelCls}>Rapports d'erreur par session (0 à 20)</label>
+            <input type="number" min={0} max={20} value={s.err_max_per_session} onChange={e => set('err_max_per_session', Number(e.target.value))} className={inputCls} />
+          </div>
+          <div>
+            <label className={labelCls}>Nouvelle tentative si connexion perdue (s)</label>
+            <input type="number" min={5} value={s.retry_seconds} onChange={e => set('retry_seconds', Number(e.target.value))} className={inputCls} />
+          </div>
+        </div>
+        <div className="space-y-2">
+          <label className="flex items-center gap-2 text-sm text-slate-200 cursor-pointer">
+            <input type="checkbox" checked={s.err_report_enabled} onChange={e => set('err_report_enabled', e.target.checked)} className="w-4 h-4 accent-emerald-500" />
+            Envoyer automatiquement les erreurs au Journal des erreurs
+          </label>
+          <label className="flex items-center gap-2 text-sm text-slate-200 cursor-pointer">
+            <input type="checkbox" checked={s.err_hide_details} onChange={e => set('err_hide_details', e.target.checked)} className="w-4 h-4 accent-emerald-500" />
+            Cacher le détail technique aux boosters (ils ne voient que le numéro d'incident)
+          </label>
+          <label className="flex items-center gap-2 text-sm text-slate-200 cursor-pointer">
+            <input type="checkbox" checked={s.err_report_button} onChange={e => set('err_report_button', e.target.checked)} className="w-4 h-4 accent-emerald-500" />
+            Afficher le bouton « Signaler un problème »
+          </label>
+        </div>
+        <p className="text-[11px] text-slate-500">Chaque rapport est un appel au serveur gratuit : garde une limite basse. La maintenance s'applique en environ 1 minute.</p>
       </section>
 
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3">

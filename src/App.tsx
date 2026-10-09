@@ -3,6 +3,10 @@ import { User, PostSession, AttendanceRow } from './types';
 import { db } from './db/store';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { ConnectionBanner } from './components/ConnectionBanner';
+import { ReportProblemModal } from './components/ReportProblemModal';
+import { setCurrentPage } from './utils/errorReport';
 import { LoadingBar } from './components/LoadingBar';
 import { PageSkeleton } from './components/PageSkeleton';
 import { prefetchViews } from './utils/prefetch';
@@ -24,6 +28,7 @@ const AdminDashboard = lazy(() => import('./views/admin/AdminDashboard').then(m 
 const EmployeesManagement = lazy(() => import('./views/admin/EmployeesManagement').then(m => ({ default: m.EmployeesManagement })));
 const BoosterPage = lazy(() => import('./views/admin/BoosterPage').then(m => ({ default: m.BoosterPage })));
 const HistoryPage = lazy(() => import('./views/admin/HistoryPage').then(m => ({ default: m.HistoryPage })));
+const ErrorsLog = lazy(() => import('./views/admin/ErrorsLog').then(m => ({ default: m.ErrorsLog })));
 const SettingsView = lazy(() => import('./views/admin/SettingsView').then(m => ({ default: m.SettingsView })));
 const EmployeeDashboard = lazy(() => import('./views/employee/EmployeeDashboard').then(m => ({ default: m.EmployeeDashboard })));
 const CalendarView = lazy(() => import('./views/CalendarView').then(m => ({ default: m.CalendarView })));
@@ -51,6 +56,8 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(db.getCurrentUser());
   const [activeView, setActiveView] = useState<string>('grid');
   const [focusBoosterId, setFocusBoosterId] = useState<string | null>(null); // booster ouvert depuis la recherche
+  const [showReport, setShowReport] = useState(false); // fenêtre « Signaler un problème »
+  useEffect(() => { setCurrentPage(activeView); }, [activeView]); // la page est jointe aux rapports d'erreur
   useLockBodyScroll(activeView === 'chat'); // Messagerie : la page ne défile pas, seules les listes défilent
   // iPhone : le clavier déplace la vue ; on suit la vue visible pour garder la barre du haut et la messagerie en place
   useEffect(() => {
@@ -302,6 +309,7 @@ export default function App() {
           setActiveView(view);
         }}
         onLogout={requestLogout}
+        onReportProblem={() => setShowReport(true)}
         onOpenEmployeeCV={handleOpenEmployeeCV}
         isOpenMobile={isMobileSidebarOpen}
         onCloseMobile={() => setIsMobileSidebarOpen(false)}
@@ -311,6 +319,7 @@ export default function App() {
       <div className="flex-1 lg:pl-72 flex flex-col min-h-screen">
         
         <LoadingBar />
+        <ConnectionBanner />
 
         {/* Barre du haut fixe : recherche globale + cloche */}
         <TopBar
@@ -323,12 +332,15 @@ export default function App() {
         {/* Dynamic Page Content Based on activeView */}
         <main style={activeView === 'chat' ? { top: 'calc(57px + var(--vvt, 0px))', height: 'calc(var(--vvh, 100dvh) - 57px)' } : undefined} className={activeView === 'chat' ? 'fixed left-0 right-0 lg:left-72 z-20 min-h-0 overflow-hidden p-0 sm:p-2' : 'flex-1 p-2 sm:p-3 lg:p-4 max-w-none w-full mx-auto'}>
           <Suspense fallback={<PageSkeleton />}>
+          <ErrorBoundary scope="page" key={activeView}>
           <div className={`h-full min-h-0 ${fadeClass}`}>
           {viewUser.role === 'admin' ? (
             /* ================= ADMIN SEPARATED PAGES ================= */
             <>
               {activeView === 'settings' ? (
                 <SettingsView />
+              ) : activeView === 'errors' ? (
+                <ErrorsLog />
               ) : activeView === 'employees' ? (
                 <EmployeesManagement onOpenEmployeeCV={handleOpenEmployeeCV} onNavigate={view => setActiveView(view)} />
               ) : activeView === 'advances' ? (
@@ -399,6 +411,7 @@ export default function App() {
             </>
           )}
           </div>
+          </ErrorBoundary>
           </Suspense>
         </main>
       </div>
@@ -420,6 +433,7 @@ export default function App() {
       {/* CONFIRMATIONS */}
       <ConfirmHost />
       <ReasonHost />
+      {showReport && <ReportProblemModal onClose={() => setShowReport(false)} />}
 
       {/* PROFILE MODAL */}
       {cvModalUser !== null && (

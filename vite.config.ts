@@ -6,6 +6,10 @@ import {defineConfig} from 'vite';
 export default defineConfig(() => {
   return {
     plugins: [react(), tailwindcss()],
+    // Version affichée dans les rapports d'erreur : commit Vercel (7 caractères), sinon l'heure de construction
+    define: {
+      __APP_VERSION__: JSON.stringify((process.env.VERCEL_GIT_COMMIT_SHA || '').slice(0, 7) || `local-${Date.now().toString(36)}`),
+    },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
