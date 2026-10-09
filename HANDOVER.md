@@ -314,3 +314,8 @@ Un seul Claude travaille à la fois. Faire `git pull` avant tout. Recap court pu
 
 ## Animations niveau C RETIRÉES (2026-10-09, demande de BTK)
 - Retiré : boutons avec rond et coche (`buttonFeedback.ts`), fenêtres qui grandissent, cascade des cartes, transition de page plus longue (retour au fondu de 0,18 s). Raison : écran noir au défilement des postes. Ne pas les remettre sans test sur téléphone.
+
+## Écran de démarrage allégé (2026-10-09, demande de BTK)
+- Retiré : le reflet qui passe en horizontal et la barre horizontale en bas, ainsi que le filtre `drop-shadow` sur le logo (coûteux, saccadait pendant le chargement du site).
+- Polices Google chargées sans bloquer l'affichage (`media="print"` + `onload`) : le premier affichage de l'écran BTK n'attend plus le réseau.
+- Gardé : tracé des lettres B, T, K, lueur et anneaux.
