@@ -18,6 +18,7 @@ import { AVAILABLE_CLIENT_CONTRACTS } from './initialData';
 
 const TOKEN_KEY = 'df_session_token_v2';
 const API_BASE = 'https://ljorjzrxkxqacmmkmqdx.supabase.co/functions/v1/df-api';
+const RESTORE_BASE = 'https://ljorjzrxkxqacmmkmqdx.supabase.co/functions/v1/df-restore';
 const COLS = ['users', 'posts', 'contracts', 'securityLogs', 'advances', 'messages', 'settings'] as const;
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -518,6 +519,30 @@ class DeltaForceStore {
     const r = await this.api('upload', { method: 'POST', body: JSON.stringify({ dataUrl }) });
     return r.ok && r.data?.url ? String(r.data.url) : null;
   }
+
+  // --- Restauration du site (remise à zéro) : Gmail admin + code par mail ---
+  private async restoreCall(path: string, body: Record<string, unknown> = {}): Promise<{ ok: boolean; error?: string; data?: any }> {
+    this.netTick(1);
+    try {
+      const res = await fetch(`${RESTORE_BASE}/${path}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}) },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) return { ok: true, data };
+      return { ok: false, error: data?.error || 'Erreur. Réessayez.' };
+    } catch {
+      return { ok: false, error: 'Connexion impossible. Réessayez.' };
+    } finally {
+      this.netTick(-1);
+    }
+  }
+  public restoreStatus() { return this.restoreCall('restore-status'); }
+  public restoreSetEmail(email: string) { return this.restoreCall('restore-email', { email }); }
+  public restoreVerifyEmail(code: string) { return this.restoreCall('restore-email-verify', { code }); }
+  public restoreSendCode() { return this.restoreCall('restore-send-code'); }
+  public restoreExecute(code: string) { return this.restoreCall('restore-execute', { code, confirm: 'RESTAURER' }); }
 
   // --- Journal des erreurs et signalements ---
   public async sendErrorReport(report: Record<string, unknown>): Promise<void> {
