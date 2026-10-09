@@ -302,8 +302,16 @@ html { -webkit-tap-highlight-color: rgba(16, 185, 129, 0.22); }
 /* Tous les formulaires / fenêtres s'ouvrent SOUS le header fixe (jamais derrière), et défilent si trop longs */
 body:has(header.df-topbar) .fixed.inset-0.flex:not([class*="z-[9999]"]) {
   top: calc(57px + var(--vvt, 0px));
-  bottom: 0;
+  bottom: auto;
+  height: calc(var(--vvh, 100dvh) - 57px);
+  max-height: calc(var(--vvh, 100dvh) - 57px);
+  padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+  box-sizing: border-box;
   overflow-y: auto;
   align-items: safe center;
   overscroll-behavior: contain;
 }
+
+/* Le bas de chaque page reste visible au-dessus de la barre du navigateur (Chrome mobile) */
+html { scroll-padding-bottom: 6rem; }
+main:not(.fixed) { padding-bottom: calc(5rem + env(safe-area-inset-bottom)) !important; }
