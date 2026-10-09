@@ -40,6 +40,7 @@ export interface AppSettings {
   maintenance_on: boolean; // site en maintenance (les boosters sont refusés, l'admin entre)
   maintenance_message: string;
   retention_days: number;
+  grid_columns?: number; // colonnes de la grille des postes (2 à 10)
   rules: string;
   post_types: string[];
 }

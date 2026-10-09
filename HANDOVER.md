@@ -252,3 +252,8 @@ Un seul Claude travaille à la fois. Faire `git pull` avant tout. Recap court pu
 5. BTK doit **supprimer l'ancien token** sur https://github.com/settings/tokens et en créer un nouveau (`repo`, 7 jours) pour la session suivante.
 
 - **iPhone (08/10)** : page figée en position fixe quand une fenêtre ou le menu est ouvert (`useLockBodyScroll`, toutes les fenêtres l'utilisent) ; champs à 16 px sur écran tactile (plus de zoom) ; la barre du haut et la messagerie suivent la vue visible quand le clavier s'ouvre (variables `--vvt` / `--vvh` posées dans `App.tsx`) ; gestion des boosters en cartes sur téléphone ; fiches ouvertes dans l'app (`FileViewerModal`) avec Retour et Supprimer ; Supprimer dans la visionneuse d'images.
+
+## Cartes de poste et grille (fait, non testé à l'écran)
+- Barre de progression retirée, « Objectif » devenu « Obj. ».
+- Gros titre « P09 » + nom du booster qui prend le poste ; le reste en plus petit.
+- Réglages > « Grille des postes » : 2 à 10 colonnes (`grid_columns`, défaut 2).

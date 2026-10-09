@@ -175,6 +175,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
     return a.post_number - b.post_number;
   });
   const settings = db.getSettings();
+  const gridCols = Math.min(10, Math.max(1, Math.round(settings.grid_columns || 2)));
   const isAdminView = currentUser.role === 'admin';
 
   return (
@@ -332,7 +333,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
       </div>
 
       {/* Cartes des postes (2 colonnes) */}
-        <div className="grid grid-cols-2 gap-2.5 sm:gap-4">
+        <div className="grid gap-2.5 sm:gap-4" style={{ gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))` }}>
           {sortedContracts.map(contract => {
             const isMyActive = activePost?.client_name === contract.client_name;
             const activeSessionOnThis = liveBy.get(contract.client_name);
@@ -353,7 +354,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
             const remainingScore = Math.max(0, objectiveScore - boostedDiff);
             const progressPercent = Math.min(100, Math.max(0, Math.round((boostedDiff / objectiveScore) * 100)));
 
-            const postLabel = `#${String(contract.post_number).padStart(2, '0')}`;
+            const postLabel = `P${String(contract.post_number).padStart(2, '0')}`;
             const noAccount = !!contract.no_account || !contract.client_name;
             // Couleur selon le Reste : moins de 20M rouge, moins de 50M orange, au-dessus aucune couleur
             const band = getRemainingBand(remainingScore, noAccount);
@@ -451,7 +452,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
                     <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0">
                       {/* Post Number Badge */}
                       <div
-                        className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg font-tactical font-black text-xs sm:text-sm tracking-wider shadow-sm shrink-0 ${
+                        className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg font-tactical font-black text-xl sm:text-3xl leading-none tracking-wider shadow-sm shrink-0 ${
                           isPending
                             ? 'bg-amber-500 text-black'
                             : isLight
@@ -481,6 +482,11 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
                             {contract.account_tag}
                           </span>
                         </div>
+                        {activeSessionOnThis && (
+                          <div className={`text-[11px] sm:text-sm font-bold truncate ${isLight ? 'text-cyan-700' : 'text-cyan-300'}`}>
+                            {activeSessionOnThis.employee_name}
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -595,35 +601,10 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
                         isLight ? 'bg-emerald-50/60 border-emerald-200' : 'bg-[#06140f] border-emerald-900/50'
                       }`}
                     >
-                      <span className="text-[10px] text-emerald-400 uppercase block font-semibold">Objectif</span>
+                      <span className="text-[10px] text-emerald-400 uppercase block font-semibold">Obj.</span>
                       <span className="font-mono-numbers font-bold text-xs text-emerald-400">
                         {formatScoreM(objectiveScore)}
                       </span>
-                    </div>
-                  </div>
-
-                  {/* Barre de progression */}
-                  <div
-                    className={`mt-3 p-2.5 rounded-xl border ${
-                      isLight ? 'bg-slate-50 border-slate-200' : 'bg-[#080d14] border-slate-800/80'
-                    }`}
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-1.5 text-[11px] font-mono mb-1.5">
-                      <span className="text-slate-400 flex flex-wrap items-center gap-x-1.5">
-                        <span>Progression :</span>
-                        <strong className="text-emerald-400">{progressPercent}%</strong>
-                        <span className="text-slate-500">({formatScoreM(remainingScore)} restant)</span>
-                      </span>
-                    </div>
-                    <div
-                    className={`w-full h-2.5 rounded-full overflow-hidden border ${
-                      isLight ? 'bg-slate-200 border-slate-300' : 'bg-slate-700/50 border-slate-600/60'
-                    }`}
-                  >
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400 transition-all duration-500"
-                        style={{ width: `${progressPercent}%`, minWidth: progressPercent > 0 ? '6px' : 0 }}
-                      />
                     </div>
                   </div>
                 </div>

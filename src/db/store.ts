@@ -51,6 +51,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   maintenance_on: false,
   maintenance_message: 'Le site est en maintenance. Réessaie un peu plus tard.',
   retention_days: 7,
+  grid_columns: 2,
   rules: '',
   post_types: ['NO R/C', 'YES R/C', 'RED 9CASE'],
 };

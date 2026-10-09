@@ -280,6 +280,15 @@ export const SettingsView: React.FC = () => {
           <input type="number" min={1} value={s.retention_days} onChange={e => set('retention_days', Number(e.target.value))} className={inputCls} />
           <p className="text-[11px] text-slate-500 mt-1">Après ce délai, les photos des sessions terminées sont supprimées automatiquement.</p>
         </div>
+        <div>
+          <label className={labelCls}>Grille des postes : nombre de colonnes</label>
+          <select value={s.grid_columns || 2} onChange={e => set('grid_columns', Number(e.target.value))} className={inputCls}>
+            {[2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
+              <option key={n} value={n}>{n} colonnes (grille {n}x)</option>
+            ))}
+          </select>
+          <p className="text-[11px] text-slate-500 mt-1">Plus il y a de colonnes, plus les cartes sont petites. Sur téléphone, 2 ou 3 reste le plus lisible.</p>
+        </div>
       </section>
 
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3">
