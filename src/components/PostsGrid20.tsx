@@ -332,7 +332,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
       </div>
 
       {/* Cartes des postes (2 colonnes) */}
-        <div className="df-stagger grid gap-2.5 sm:gap-4" style={{ gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))` }}>
+        <div className="grid gap-2.5 sm:gap-4" style={{ gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))` }}>
           {sortedContracts.map(contract => {
             const isMyActive = activePost?.client_name === contract.client_name;
             const activeSessionOnThis = liveBy.get(contract.client_name);

@@ -278,11 +278,10 @@ html.theme-light header.df-topbar {
 
 /* ===== Retour visuel immédiat (le site paraît plus rapide) ===== */
 /* Fondu à chaque changement de page (opacité seulement : ne gêne pas les fenêtres plein écran) */
-@keyframes df-fade-a { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-@keyframes df-fade-b { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-/* fill « backwards » : rien ne reste appliqué après l'animation (un transform final casserait les fenêtres en position fixe) */
-.df-fade-a { animation: df-fade-a 0.3s cubic-bezier(.2,.7,.2,1) backwards; }
-.df-fade-b { animation: df-fade-b 0.3s cubic-bezier(.2,.7,.2,1) backwards; }
+@keyframes df-fade-a { from { opacity: 0; } to { opacity: 1; } }
+@keyframes df-fade-b { from { opacity: 0; } to { opacity: 1; } }
+.df-fade-a { animation: df-fade-a 0.18s ease-out both; }
+.df-fade-b { animation: df-fade-b 0.18s ease-out both; }
 
 /* Barre de chargement sous l'en-tête */
 @keyframes df-loadbar-run { 0% { transform: translateX(-100%); } 100% { transform: translateX(300%); } }
@@ -296,8 +295,6 @@ html { -webkit-tap-highlight-color: rgba(16, 185, 129, 0.22); }
 
 @media (prefers-reduced-motion: reduce) {
   .df-fade-a, .df-fade-b, .df-loadbar-run { animation: none; }
-  .fixed.inset-0.flex, .fixed.inset-0.flex > *:first-child, .df-stagger > * { animation: none !important; }
-  button[data-df-busy]::before, button[data-df-done]::before { animation: none !important; }
   button:not(:disabled):active, [role="button"]:active { transform: none; }
 }
 
@@ -318,36 +315,6 @@ body:has(header.df-topbar) .fixed.inset-0.flex:not([class*="z-[9999]"]) {
 /* Le bas de chaque page reste visible au-dessus de la barre du navigateur (Chrome mobile) */
 html { scroll-padding-bottom: 6rem; }
 main:not(.fixed) { padding-bottom: calc(5rem + env(safe-area-inset-bottom)) !important; }
-
-/* ===== Fenêtres : fondu du fond + la fenêtre grandit doucement (sauf visionneuses plein écran) ===== */
-@keyframes df-overlay-in { from { opacity: 0; } to { opacity: 1; } }
-@keyframes df-pop-in { from { opacity: 0; transform: translateY(12px) scale(.96); } to { opacity: 1; transform: none; } }
-.fixed.inset-0.flex:not([class*="z-[9999]"]) { animation: df-overlay-in .2s ease-out backwards; }
-.fixed.inset-0.flex:not([class*="z-[9999]"]) > *:first-child { animation: df-pop-in .28s cubic-bezier(.2,.8,.2,1) backwards; }
-
-/* ===== Cartes et listes : apparition l'une après l'autre (les 12 premières, le reste sans retard) ===== */
-/* Seulement les 12 premières cartes et seulement l'opacité : pas de couche graphique par carte (évitait l'écran noir au défilement) */
-@keyframes df-rise { from { opacity: 0; } to { opacity: 1; } }
-.df-stagger > *:nth-child(-n+12) { animation: df-rise .35s ease-out backwards; }
-.df-stagger > *:nth-child(2) { animation-delay: .04s; } .df-stagger > *:nth-child(3) { animation-delay: .08s; }
-.df-stagger > *:nth-child(4) { animation-delay: .12s; } .df-stagger > *:nth-child(5) { animation-delay: .16s; }
-.df-stagger > *:nth-child(6) { animation-delay: .2s; } .df-stagger > *:nth-child(7) { animation-delay: .24s; }
-.df-stagger > *:nth-child(8) { animation-delay: .28s; } .df-stagger > *:nth-child(9) { animation-delay: .32s; }
-.df-stagger > *:nth-child(10) { animation-delay: .36s; } .df-stagger > *:nth-child(11) { animation-delay: .4s; }
-.df-stagger > *:nth-child(12) { animation-delay: .44s; }
-
-/* ===== Boutons d'action : rond qui tourne pendant l'envoi, puis coche verte ===== */
-@keyframes df-spin { to { transform: rotate(360deg); } }
-@keyframes df-check-in { from { opacity: 0; transform: scale(.5); } to { opacity: 1; transform: none; } }
-button[data-df-busy] { pointer-events: none; opacity: .75; cursor: progress; }
-button[data-df-busy]::before {
-  content: ''; display: inline-block; width: .95em; height: .95em; margin-right: .45em; vertical-align: -.12em;
-  border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: df-spin .7s linear infinite;
-}
-button[data-df-busy]::after { content: ' …'; }
-button[data-df-done]::before {
-  content: '✓'; display: inline-block; margin-right: .4em; color: #34d399; font-weight: 900; animation: df-check-in .2s ease-out backwards;
-}
 
 /* ===== Thème clair COMPLET : tableaux de bord, formulaires et textes lisibles (2026-10-09) ===== */
 html.theme-light { background: #cdd6e1; }

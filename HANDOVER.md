@@ -299,13 +299,6 @@ Un seul Claude travaille à la fois. Faire `git pull` avant tout. Recap court pu
 - **La remise à zéro efface** : boosters (sauf l'admin) et leurs identifiants, sessions, avances, paie, messages, journaux de sécurité, présence, présence/jours, demandes (inscription, mot de passe, profil). **Elle garde** : l'admin, les Réglages, les postes (Actuel remis au Début, preuves du compte retirées), le journal des erreurs. Les photos déjà envoyées (Cloudinary et stockage) ne sont pas supprimées.
 - **Non testé de bout en bout** (l'envoi réel du mail doit être essayé depuis le site).
 
-## Animations (niveau C, 2026-10-09, non testé à l'écran)
-- Changement de page : fondu + glissement de 0,3 s (`.df-fade-a/b`, fill `backwards` : un `transform` final casserait les fenêtres en position fixe).
-- Boutons d'action : `src/utils/buttonFeedback.ts` (lancé dans `main.tsx`). Écoute les clics, suit `db.onNetwork` ; si un envoi part dans les 0,4 s : rond qui tourne + bouton bloqué, puis coche verte 0,5 s. Aucun envoi = aucune animation. Exclus : menu, barre du haut, messagerie (`main.fixed`), `[data-no-anim]`.
-- Fenêtres : fond en fondu + fenêtre qui grandit (CSS global sur `.fixed.inset-0.flex`). **Pas d'animation de fermeture** (React retire la fenêtre tout de suite).
-- Grille des postes : classe `df-stagger` (apparition l'une après l'autre, 12 premières décalées). Pas appliqué aux listes de boosters ni aux messages.
-- Tout est coupé si le téléphone est réglé sur « réduire les animations ».
-
 ## Thème clair : textes invisibles corrigés (2026-10-09)
 - Cause : les règles `html.theme-light [class*="bg-emerald-5"] .text-white {color:#fff}` se déclenchaient dès qu'un parent contenait « bg-emerald-5… » dans ses classes, même dans `selection:bg-emerald-500/20` de la racine (`App.tsx`) : tous les `text-white` de la page restaient blancs sur fond clair. Même défaut pour `[class*="bg-emerald-50"]` (qui attrapait aussi `bg-emerald-500`).
 - Correctif (`src/index.css`) : sélecteurs exacts `[class~="bg-emerald-500"]` (nom de classe complet). Ne plus utiliser `[class*=…]` pour une couleur.
@@ -318,3 +311,6 @@ Un seul Claude travaille à la fois. Faire `git pull` avant tout. Recap court pu
 
 ## Écran noir au défilement des postes (2026-10-09)
 - BTK a signalé l'écran qui devient tout noir en défilant la grille après les animations niveau C. Cause non prouvée (impossible à reproduire sans appareil) ; par prudence : l'apparition en cascade ne touche plus que les 12 premières cartes et seulement leur opacité (plus de `transform`). Si ça revient : retirer la classe `df-stagger` de `PostsGrid20.tsx`, puis la règle `.fixed.inset-0.flex` d'animation dans `index.css`.
+
+## Animations niveau C RETIRÉES (2026-10-09, demande de BTK)
+- Retiré : boutons avec rond et coche (`buttonFeedback.ts`), fenêtres qui grandissent, cascade des cartes, transition de page plus longue (retour au fondu de 0,18 s). Raison : écran noir au défilement des postes. Ne pas les remettre sans test sur téléphone.
