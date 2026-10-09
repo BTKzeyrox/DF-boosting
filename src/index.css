@@ -298,3 +298,12 @@ html { -webkit-tap-highlight-color: rgba(16, 185, 129, 0.22); }
   button:not(:disabled):active, [role="button"]:active { transform: none; }
 }
 
+
+/* Tous les formulaires / fenêtres s'ouvrent SOUS le header fixe (jamais derrière), et défilent si trop longs */
+body:has(header.df-topbar) .fixed.inset-0.flex:not([class*="z-[9999]"]) {
+  top: calc(57px + var(--vvt, 0px));
+  bottom: 0;
+  overflow-y: auto;
+  align-items: safe center;
+  overscroll-behavior: contain;
+}
