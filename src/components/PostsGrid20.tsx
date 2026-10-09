@@ -595,15 +595,15 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
                       </span>
                     </div>
 
-                    {/* 4. Objectif (points à gagner) */}
+                    {/* 4. Cible = objectif + début */}
                     <div
                       className={`p-2.5 rounded-xl border ${
                         isLight ? 'bg-emerald-50/60 border-emerald-200' : 'bg-[#06140f] border-emerald-900/50'
                       }`}
                     >
-                      <span className="text-[10px] text-emerald-400 uppercase block font-semibold">Obj.</span>
+                      <span className="text-[10px] text-emerald-400 uppercase block font-semibold">Cible</span>
                       <span className="font-mono-numbers font-bold text-xs text-emerald-400">
-                        {formatScoreM(objectiveScore)}
+                        {formatScoreM(initialScore + objectiveScore)}
                       </span>
                     </div>
                   </div>
@@ -708,8 +708,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
               <label className="block text-slate-300 uppercase mb-1">Nom du compte client (facultatif)</label>
               <input type="text" value={addName} onChange={e => setAddName(e.target.value)} className="w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white focus:border-emerald-500" />
             </div>
-            {addName.trim() && (
-              <>
+            <>
                 <div>
                   <label className="block text-slate-300 uppercase mb-1">Score de début</label>
                   <ScoreInput value={addInitial} onChange={setAddInitial} />
@@ -718,8 +717,10 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
                   <label className="block text-slate-300 uppercase mb-1">Objectif (points à gagner)</label>
                   <ScoreInput value={addObjective} onChange={setAddObjective} />
                 </div>
-              </>
-            )}
+              <p className="text-[11px] text-slate-400 font-mono">
+                Cible = début + objectif = <strong className="text-emerald-400">{formatScoreM(addInitial + addObjective)}</strong>
+              </p>
+            </>
             <div>
               <label className="block text-slate-300 uppercase mb-1">Type de poste</label>
               <select value={addType} onChange={e => setAddType(e.target.value)} className="w-full bg-[#141e2a] border border-slate-600 p-2.5 text-white">
