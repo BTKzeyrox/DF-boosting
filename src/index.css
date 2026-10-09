@@ -112,18 +112,18 @@ html.theme-light .border-slate-300 { border-color: #b9c4d1; }
 html.theme-light .text-slate-900 { color: #1f2937; }
 html.theme-light .text-slate-800 { color: #273244; }
 html.theme-light .text-slate-700 { color: #364358; }
-html.theme-light [class*="bg-emerald-50"] { background-color: #d3e6df; }
-html.theme-light [class*="bg-cyan-50"],
-html.theme-light [class*="bg-sky-50"] { background-color: #d1e3ea; }
-html.theme-light [class*="bg-amber-50"],
-html.theme-light [class*="bg-yellow-50"],
-html.theme-light [class*="bg-orange-50"] { background-color: #e8ddc8; }
-html.theme-light [class*="bg-red-50"],
-html.theme-light [class*="bg-rose-50"] { background-color: #ead5d5; }
-html.theme-light [class*="bg-blue-50"],
-html.theme-light [class*="bg-indigo-50"] { background-color: #d3deec; }
-html.theme-light [class*="bg-purple-50"],
-html.theme-light [class*="bg-violet-50"] { background-color: #ddd7ec; }
+html.theme-light [class~="bg-emerald-50"] { background-color: #d3e6df; }
+html.theme-light [class~="bg-cyan-50"],
+html.theme-light [class~="bg-sky-50"] { background-color: #d1e3ea; }
+html.theme-light [class~="bg-amber-50"],
+html.theme-light [class~="bg-yellow-50"],
+html.theme-light [class~="bg-orange-50"] { background-color: #e8ddc8; }
+html.theme-light [class~="bg-red-50"],
+html.theme-light [class~="bg-rose-50"] { background-color: #ead5d5; }
+html.theme-light [class~="bg-blue-50"],
+html.theme-light [class~="bg-indigo-50"] { background-color: #d3deec; }
+html.theme-light [class~="bg-purple-50"],
+html.theme-light [class~="bg-violet-50"] { background-color: #ddd7ec; }
 html.theme-light [class*="rounded-2xl"][class*="border"],
 html.theme-light [class*="rounded-xl"][class*="border"] {
   box-shadow: 0 4px 14px -8px rgba(15, 23, 42, 0.28);
@@ -347,3 +347,190 @@ button[data-df-busy]::after { content: ' …'; }
 button[data-df-done]::before {
   content: '✓'; display: inline-block; margin-right: .4em; color: #34d399; font-weight: 900; animation: df-check-in .2s ease-out backwards;
 }
+
+/* ===== Thème clair COMPLET : tableaux de bord, formulaires et textes lisibles (2026-10-09) ===== */
+html.theme-light { background: #cdd6e1; }
+html.theme-light .df-bg-app { background-image: linear-gradient(180deg, #d5dce6 0%, #c8d1dd 100%); }
+html.theme-light .bg-white { background-color:#dde4ec }
+html.theme-light .bg-slate-50 { background-color:#d6dee8 }
+html.theme-light [class^="bg-[#0"],
+html.theme-light [class*=" bg-[#0"],
+html.theme-light [class^="bg-[#10"],
+html.theme-light [class*=" bg-[#10"],
+html.theme-light [class^="bg-[#11"],
+html.theme-light [class*=" bg-[#11"],
+html.theme-light [class^="bg-[#12"],
+html.theme-light [class*=" bg-[#12"],
+html.theme-light [class^="bg-[#13"],
+html.theme-light [class*=" bg-[#13"] { background-color:#e1e7ee }
+html.theme-light [class^="bg-[#14"],
+html.theme-light [class*=" bg-[#14"],
+html.theme-light [class^="bg-[#15"],
+html.theme-light [class*=" bg-[#15"],
+html.theme-light [class^="bg-[#16"],
+html.theme-light [class*=" bg-[#16"],
+html.theme-light [class^="bg-[#17"],
+html.theme-light [class*=" bg-[#17"],
+html.theme-light [class^="bg-[#18"],
+html.theme-light [class*=" bg-[#18"],
+html.theme-light [class^="bg-[#19"],
+html.theme-light [class*=" bg-[#19"],
+html.theme-light [class^="bg-[#1a"],
+html.theme-light [class*=" bg-[#1a"],
+html.theme-light [class^="bg-[#1b"],
+html.theme-light [class*=" bg-[#1b"],
+html.theme-light [class^="bg-[#1c"],
+html.theme-light [class*=" bg-[#1c"],
+html.theme-light [class^="bg-[#1d"],
+html.theme-light [class*=" bg-[#1d"],
+html.theme-light [class^="bg-[#1e"],
+html.theme-light [class*=" bg-[#1e"],
+html.theme-light [class^="bg-[#1f"],
+html.theme-light [class*=" bg-[#1f"] { background-color:#d3dce6 }
+html.theme-light [class^="bg-slate-8"],
+html.theme-light [class*=" bg-slate-8"],
+html.theme-light [class^="bg-slate-9"],
+html.theme-light [class*=" bg-slate-9"],
+html.theme-light [class^="bg-black"],
+html.theme-light [class*=" bg-black"],
+html.theme-light [class^="bg-gray-8"],
+html.theme-light [class*=" bg-gray-8"],
+html.theme-light [class^="bg-gray-9"],
+html.theme-light [class*=" bg-gray-9"],
+html.theme-light [class^="bg-zinc-9"],
+html.theme-light [class*=" bg-zinc-9"] { background-color:#d3dce6 }
+html.theme-light [class^="bg-emerald-9"],
+html.theme-light [class*=" bg-emerald-9"],
+html.theme-light [class^="bg-emerald-8"],
+html.theme-light [class*=" bg-emerald-8"] { background-color:#d3e6df }
+html.theme-light [class^="bg-teal-9"],
+html.theme-light [class*=" bg-teal-9"],
+html.theme-light [class^="bg-teal-8"],
+html.theme-light [class*=" bg-teal-8"] { background-color:#d1e6e3 }
+html.theme-light [class^="bg-cyan-9"],
+html.theme-light [class*=" bg-cyan-9"],
+html.theme-light [class^="bg-cyan-8"],
+html.theme-light [class*=" bg-cyan-8"] { background-color:#d1e3ea }
+html.theme-light [class^="bg-sky-9"],
+html.theme-light [class*=" bg-sky-9"],
+html.theme-light [class^="bg-sky-8"],
+html.theme-light [class*=" bg-sky-8"] { background-color:#d1e3ea }
+html.theme-light [class^="bg-amber-9"],
+html.theme-light [class*=" bg-amber-9"],
+html.theme-light [class^="bg-amber-8"],
+html.theme-light [class*=" bg-amber-8"] { background-color:#eadfc9 }
+html.theme-light [class^="bg-yellow-9"],
+html.theme-light [class*=" bg-yellow-9"],
+html.theme-light [class^="bg-yellow-8"],
+html.theme-light [class*=" bg-yellow-8"] { background-color:#eadfc9 }
+html.theme-light [class^="bg-orange-9"],
+html.theme-light [class*=" bg-orange-9"],
+html.theme-light [class^="bg-orange-8"],
+html.theme-light [class*=" bg-orange-8"] { background-color:#ecdccb }
+html.theme-light [class^="bg-red-9"],
+html.theme-light [class*=" bg-red-9"],
+html.theme-light [class^="bg-red-8"],
+html.theme-light [class*=" bg-red-8"] { background-color:#ead5d5 }
+html.theme-light [class^="bg-rose-9"],
+html.theme-light [class*=" bg-rose-9"],
+html.theme-light [class^="bg-rose-8"],
+html.theme-light [class*=" bg-rose-8"] { background-color:#ead5d5 }
+html.theme-light [class^="bg-blue-9"],
+html.theme-light [class*=" bg-blue-9"],
+html.theme-light [class^="bg-blue-8"],
+html.theme-light [class*=" bg-blue-8"] { background-color:#d3deec }
+html.theme-light [class^="bg-indigo-9"],
+html.theme-light [class*=" bg-indigo-9"],
+html.theme-light [class^="bg-indigo-8"],
+html.theme-light [class*=" bg-indigo-8"] { background-color:#d3deec }
+html.theme-light [class^="bg-purple-9"],
+html.theme-light [class*=" bg-purple-9"],
+html.theme-light [class^="bg-purple-8"],
+html.theme-light [class*=" bg-purple-8"] { background-color:#ddd7ec }
+html.theme-light [class^="bg-violet-9"],
+html.theme-light [class*=" bg-violet-9"],
+html.theme-light [class^="bg-violet-8"],
+html.theme-light [class*=" bg-violet-8"] { background-color:#ddd7ec }
+html.theme-light [class^="bg-green-9"],
+html.theme-light [class*=" bg-green-9"],
+html.theme-light [class^="bg-green-8"],
+html.theme-light [class*=" bg-green-8"] { background-color:#d3e6d8 }
+html.theme-light [class^="border-slate-6"],
+html.theme-light [class*=" border-slate-6"],
+html.theme-light [class^="border-slate-7"],
+html.theme-light [class*=" border-slate-7"],
+html.theme-light [class^="border-slate-8"],
+html.theme-light [class*=" border-slate-8"],
+html.theme-light [class^="border-slate-9"],
+html.theme-light [class*=" border-slate-9"] { border-color:#b4bfcd }
+html.theme-light .text-white,
+html.theme-light .text-slate-100,
+html.theme-light .text-slate-200 { color:#1f2937 }
+html.theme-light .text-slate-300 { color:#334155 }
+html.theme-light .text-slate-400 { color:#475569 }
+html.theme-light .text-slate-500 { color:#566274 }
+html.theme-light .text-emerald-300,
+html.theme-light .text-emerald-400 { color:#047857 }
+html.theme-light .text-teal-300,
+html.theme-light .text-teal-400 { color:#0f766e }
+html.theme-light .text-cyan-300,
+html.theme-light .text-cyan-400,
+html.theme-light .text-sky-300,
+html.theme-light .text-sky-400 { color:#0e7490 }
+html.theme-light .text-amber-200,
+html.theme-light .text-amber-300,
+html.theme-light .text-amber-400,
+html.theme-light .text-yellow-300,
+html.theme-light .text-yellow-400 { color:#92400e }
+html.theme-light .text-orange-300,
+html.theme-light .text-orange-400 { color:#c2410c }
+html.theme-light .text-red-300,
+html.theme-light .text-red-400 { color:#b91c1c }
+html.theme-light .text-rose-300,
+html.theme-light .text-rose-400 { color:#be123c }
+html.theme-light .text-blue-300,
+html.theme-light .text-blue-400,
+html.theme-light .text-indigo-300,
+html.theme-light .text-indigo-400 { color:#1d4ed8 }
+html.theme-light .text-purple-300,
+html.theme-light .text-purple-400,
+html.theme-light .text-violet-300,
+html.theme-light .text-violet-400 { color:#6d28d9 }
+html.theme-light .text-green-300,
+html.theme-light .text-green-400 { color:#15803d }
+html.theme-light [class~="bg-emerald-500"].text-white,
+html.theme-light [class~="bg-emerald-500"] .text-white,
+html.theme-light [class~="bg-emerald-600"].text-white,
+html.theme-light [class~="bg-emerald-600"] .text-white,
+html.theme-light [class~="bg-emerald-700"].text-white,
+html.theme-light [class~="bg-emerald-700"] .text-white,
+html.theme-light [class~="bg-teal-600"].text-white,
+html.theme-light [class~="bg-teal-600"] .text-white,
+html.theme-light [class~="bg-cyan-600"].text-white,
+html.theme-light [class~="bg-cyan-600"] .text-white,
+html.theme-light [class~="bg-blue-600"].text-white,
+html.theme-light [class~="bg-blue-600"] .text-white,
+html.theme-light [class~="bg-red-500"].text-white,
+html.theme-light [class~="bg-red-500"] .text-white,
+html.theme-light [class~="bg-red-600"].text-white,
+html.theme-light [class~="bg-red-600"] .text-white,
+html.theme-light [class~="bg-purple-600"].text-white,
+html.theme-light [class~="bg-purple-600"] .text-white,
+html.theme-light [class~="bg-amber-600"].text-white,
+html.theme-light [class~="bg-amber-600"] .text-white,
+html.theme-light [class~="bg-gradient-to-r"].text-white,
+html.theme-light [class~="bg-gradient-to-r"] .text-white,
+html.theme-light [class~="bg-gradient-to-l"].text-white,
+html.theme-light [class~="bg-gradient-to-l"] .text-white,
+html.theme-light [class~="bg-gradient-to-b"].text-white,
+html.theme-light [class~="bg-gradient-to-b"] .text-white,
+html.theme-light [class~="bg-gradient-to-t"].text-white,
+html.theme-light [class~="bg-gradient-to-t"] .text-white,
+html.theme-light [class~="bg-gradient-to-br"].text-white,
+html.theme-light [class~="bg-gradient-to-br"] .text-white,
+html.theme-light [class~="bg-gradient-to-bl"].text-white,
+html.theme-light [class~="bg-gradient-to-bl"] .text-white,
+html.theme-light [class~="bg-gradient-to-tr"].text-white,
+html.theme-light [class~="bg-gradient-to-tr"] .text-white,
+html.theme-light [class~="bg-gradient-to-tl"].text-white,
+html.theme-light [class~="bg-gradient-to-tl"] .text-white { color:#fff }

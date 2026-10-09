@@ -305,3 +305,9 @@ Un seul Claude travaille à la fois. Faire `git pull` avant tout. Recap court pu
 - Fenêtres : fond en fondu + fenêtre qui grandit (CSS global sur `.fixed.inset-0.flex`). **Pas d'animation de fermeture** (React retire la fenêtre tout de suite).
 - Grille des postes : classe `df-stagger` (apparition l'une après l'autre, 12 premières décalées). Pas appliqué aux listes de boosters ni aux messages.
 - Tout est coupé si le téléphone est réglé sur « réduire les animations ».
+
+## Thème clair : textes invisibles corrigés (2026-10-09)
+- Cause : les règles `html.theme-light [class*="bg-emerald-5"] .text-white {color:#fff}` se déclenchaient dès qu'un parent contenait « bg-emerald-5… » dans ses classes, même dans `selection:bg-emerald-500/20` de la racine (`App.tsx`) : tous les `text-white` de la page restaient blancs sur fond clair. Même défaut pour `[class*="bg-emerald-50"]` (qui attrapait aussi `bg-emerald-500`).
+- Correctif (`src/index.css`) : sélecteurs exacts `[class~="bg-emerald-500"]` (nom de classe complet). Ne plus utiliser `[class*=…]` pour une couleur.
+- Écran de démarrage clair (`index.html`) : plus de blanc pur, gris-bleu comme le site.
+- Vérifié sur des captures d'un navigateur simulé (serveur simulé), pages Accueil, Réglages, Historique, Calendrier, Boosters. Pas vu sur le vrai écran.
