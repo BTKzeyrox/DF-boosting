@@ -9,6 +9,7 @@ const T = {
   securityLogs: "df_security_logs",
   advances: "df_advances",
   messages: "df_messages",
+  groups: "df_groups",
   settings: "df_settings",
 } as const;
 type Col = keyof typeof T;
@@ -24,6 +25,9 @@ const PROFILE_REQ = "df_profile_requests";
 const PRESENCE = "df_presence";
 const ATTENDANCE = "df_attendance";
 const BUCKET = "df-files";
+const CHAT_READS = "df_chat_reads";
+const GROUP_PREFIX = "grp_";
+const EDIT_WINDOW_MS = 15 * 60 * 1000; // comme WhatsApp : on peut modifier son message pendant 15 minutes
 // Cloudinary : le nom du cloud n'est pas secret ; la clé API et le secret sont lus dans le coffre-fort (Vault)
 const CLD_CLOUD = "dirnrsy5v";
 const CLD_PREFIX = `https://res.cloudinary.com/${CLD_CLOUD}/image/upload/`;
@@ -260,6 +264,103 @@ async function login(req: any, res: any) {
   return res.json({ token, user });
 }
 
+// ---------- messagerie : groupes, discussions 1 à 1, règles comme WhatsApp ----------
+const getGroup = async (id: string) => {
+  const { data } = await sb.from(T.groups).select('data').eq('id', id).maybeSingle();
+  return (data?.data as any) || null;
+};
+const clipReply = (r: any) =>
+  r && typeof r.id === 'string'
+    ? { id: r.id.slice(0, 80), sender_name: String(r.sender_name || '').slice(0, 60), text: String(r.text || '').slice(0, 140), has_attachment: !!r.has_attachment }
+    : undefined;
+
+async function checkMessage(rec: any, existing: any, me: any, admin: boolean, now: string): Promise<{ ok: boolean; save?: any; reason?: string }> {
+  if (existing) {
+    // Supprimer pour tous : l'auteur, ou l'admin (modération). Une trace reste dans la conversation.
+    if (rec.deleted_at) {
+      if (existing.sender_id !== me.id && !admin) return { ok: false };
+      if (existing.deleted_at) return { ok: true, save: existing };
+      const save = { ...existing, message: '', deleted_at: now, deleted_by: existing.sender_id === me.id ? 'sender' : 'admin' };
+      for (const k of ['attachment_url', 'attachment_name', 'attachment_kind', 'pinned', 'pinned_at', 'reply_to', 'edited_at']) delete save[k];
+      return { ok: true, save };
+    }
+    // Modifier ou épingler : seulement l'auteur (même l'admin ne modifie jamais le message d'un autre)
+    if (existing.sender_id !== me.id || existing.deleted_at) return { ok: false };
+    if (typeof rec.message !== 'string' || rec.message.length > 4000) return { ok: false };
+    const text = rec.message.trim();
+    if (!text && !existing.attachment_url) return { ok: false };
+    const save = { ...existing, message: text };
+    if (text !== existing.message) {
+      if (existing.sent_ms && Date.now() - existing.sent_ms > EDIT_WINDOW_MS) return { ok: false, reason: 'edit_window' };
+      save.edited_at = now;
+    }
+    if (rec.pinned) { save.pinned = true; save.pinned_at = existing.pinned_at || now; }
+    else { delete save.pinned; delete save.pinned_at; }
+    return { ok: true, save };
+  }
+  // Nouveau message
+  if (rec.sender_id !== me.id || typeof rec.message !== 'string' || rec.message.length > 4000) return { ok: false };
+  const rid = typeof rec.recipient_id === 'string' && rec.recipient_id ? rec.recipient_id : 'all';
+  if (rid !== 'all') {
+    if (rid.startsWith(GROUP_PREFIX)) {
+      const g = await getGroup(rid);
+      if (!g || (!admin && !(g.members || []).includes(me.id))) return { ok: false };
+    } else {
+      if (rid === me.id) return { ok: false };
+      const t = await getUserRow(rid);
+      if (!t || t.status === 'blocked') return { ok: false };
+    }
+  }
+  if (!admin && rec.attachment_url && !isBucketUrl(rec.attachment_url)) return { ok: false };
+  const save: any = { ...rec, recipient_id: rid, sent_ms: Date.now() };
+  for (const k of ['deleted_at', 'deleted_by', 'edited_at', 'pinned', 'pinned_at']) delete save[k];
+  const rt = clipReply(rec.reply_to);
+  if (rt) save.reply_to = rt; else delete save.reply_to;
+  return { ok: true, save };
+}
+
+async function checkGroup(rec: any, existing: any, me: any, admin: boolean, now: string): Promise<{ ok: boolean; save?: any }> {
+  const name = String(rec.name || '').trim();
+  const members: string[] = Array.isArray(rec.members) ? [...new Set<string>(rec.members.filter((x: any) => typeof x === 'string'))].slice(0, 100) : [];
+  const allExist = async () => {
+    if (members.length === 0) return false;
+    const { data: found } = await sb.from(T.users).select('id').in('id', members);
+    return (found || []).length === members.length;
+  };
+  if (!existing) {
+    if (!rec.id.startsWith(GROUP_PREFIX) || rec.id.length > 40 || !/^[A-Za-z0-9_]+$/.test(rec.id)) return { ok: false };
+    if (name.length < 1 || name.length > 40) return { ok: false };
+    if (rec.owner_id !== me.id || !members.includes(me.id) || !(await allExist())) return { ok: false };
+    return { ok: true, save: { id: rec.id, name, owner_id: me.id, members, created_at: now } };
+  }
+  if (existing.owner_id === me.id || admin) {
+    if (name.length < 1 || name.length > 40 || !(await allExist())) return { ok: false };
+    const save = { ...existing, name, members };
+    if (!members.includes(existing.owner_id)) save.owner_id = members[0]; // le créateur est parti : le premier membre devient responsable
+    return { ok: true, save };
+  }
+  // Simple membre : il peut seulement quitter le groupe
+  if ((existing.members || []).includes(me.id)) {
+    const expected = existing.members.filter((x: string) => x !== me.id);
+    if (members.length === expected.length && expected.every((x: string) => members.includes(x))) return { ok: true, save: { ...existing, members: expected } };
+  }
+  return { ok: false };
+}
+
+// « Lu » : chaque personne enregistre jusqu'où elle a lu chaque conversation
+async function chatRead(req: any, res: any, me: any) {
+  const thread = String(req.body?.thread || '');
+  const ms = Number(req.body?.ms);
+  if (!thread || thread.length > 60 || !Number.isFinite(ms) || ms <= 0 || ms > Date.now() + 60_000) return res.status(400).json({ error: 'Requête invalide.' });
+  if (thread.startsWith(GROUP_PREFIX)) {
+    const g = await getGroup(thread);
+    if (!g || (me.role !== 'admin' && !(g.members || []).includes(me.id))) return res.status(403).json({ error: 'Interdit.' });
+  }
+  const { data: cur } = await sb.from(CHAT_READS).select('ms').eq('user_id', me.id).eq('thread', thread).maybeSingle();
+  if (!cur || Number(cur.ms) < ms) await sb.from(CHAT_READS).upsert({ user_id: me.id, thread, ms, updated_at: new Date().toISOString() });
+  return res.json({ ok: true });
+}
+
 // ---------- state (lecture) ----------
 const stripUser = (u: any, me: any) => (me.role === 'admin' || u.id === me.id ? u : { ...u, phone: undefined, cv_url: undefined, cv_data: undefined });
 const stripPost = (p: any, me: any) =>
@@ -274,12 +375,25 @@ async function state(req: any, res: any, me: any) {
   const admin = me.role === 'admin';
   if (!admin) await touchPresence(me);
 
+  // Groupes : chacun ne reçoit que les groupes dont il est membre (l'admin voit tout)
+  const { data: groupRows } = await sb.from(T.groups).select('id, data, updated_at');
+  const myGroups = (groupRows || []).filter((r: any) => admin || (r.data.members || []).includes(me.id));
+  const myGroupIds = myGroups.map((r: any) => r.id).filter((id: string) => /^[A-Za-z0-9_]+$/.test(id));
+
   for (const col of COLS) {
     if (col === 'securityLogs' && !admin) { out[col] = { changed: [], ids: [] }; continue; }
+    if (col === 'groups') {
+      const sinceMs = new Date(since).getTime();
+      out[col] = { changed: myGroups.filter((r: any) => new Date(r.updated_at).getTime() >= sinceMs).map((r: any) => r.data), ids: myGroups.map((r: any) => r.id) };
+      continue;
+    }
     const scope = (q: any) => {
       if (admin) return q;
       if (col === 'advances') return q.eq('data->>employee_id', me.id);
-      if (col === 'messages') return q.or(`data->>recipient_id.eq.all,data->>recipient_id.eq.${me.id},data->>sender_id.eq.${me.id}`);
+      if (col === 'messages') {
+        const grp = myGroupIds.length ? `,data->>recipient_id.in.(${myGroupIds.join(',')})` : '';
+        return q.or(`data->>recipient_id.eq.all,data->>recipient_id.eq.${me.id},data->>sender_id.eq.${me.id}${grp}`);
+      }
       return q;
     };
     const [{ data: changed }, { data: ids }] = await Promise.all([
@@ -306,7 +420,12 @@ async function state(req: any, res: any, me: any) {
   const profileRequests = (prs || []).map((r: any) => r.data).filter((r: any) => (admin ? r.status === 'pending' : r.user_id === me.id && (r.status === 'pending' || r.status === 'rejected')));
   const { data: presRows } = await sb.from(PRESENCE).select('*');
   const pres = presRows || [];
-  return res.json({ serverTime, me, collections: out, resets, signups, profileRequests, presence: admin ? pres : undefined, queue: admin ? undefined : queueOf(pres, me.id) });
+  // Coches « lu » : jusqu'où les autres ont lu mes conversations (l'admin voit tout)
+  let readsQ = sb.from(CHAT_READS).select('user_id, thread, ms');
+  if (!admin) readsQ = readsQ.in('thread', [me.id, ...myGroupIds]);
+  const { data: readRows } = await readsQ;
+  const reads = (readRows || []).map((r: any) => ({ user_id: r.user_id, thread: r.thread, ms: Number(r.ms) }));
+  return res.json({ serverTime, me, collections: out, reads, resets, signups, profileRequests, presence: admin ? pres : undefined, queue: admin ? undefined : queueOf(pres, me.id) });
 }
 
 // ---------- sync (écriture) ----------
@@ -329,7 +448,11 @@ async function sync(req: any, res: any, me: any) {
       const existing = row?.data as any | undefined;
       let toSave: any = rec;
 
-      if (!admin) {
+      if (col === 'messages' || col === 'groups') {
+        const v = col === 'messages' ? await checkMessage(rec, existing, me, admin, now) : await checkGroup(rec, existing, me, admin, now);
+        if (!v.ok) { rejected.push({ col, id: rec.id, reason: (v as any).reason || 'forbidden' }); continue; }
+        toSave = v.save;
+      } else if (!admin) {
         let ok = false;
         if (col === 'users') {
           ok = rec.id === me.id && !!existing;
@@ -353,26 +476,6 @@ async function sync(req: any, res: any, me: any) {
               if (room.available !== null && rec.amount_ar > room.available) ok = false; // au-dessus du plafond
             }
           }
-        } else if (col === 'messages') {
-          if (existing) {
-            // Modifier / épingler son propre message : seuls le texte et l'épingle changent
-            ok = existing.sender_id === me.id && typeof rec.message === 'string' && rec.message.length <= 4000 &&
-              (rec.message.trim().length > 0 || !!existing.attachment_url);
-            if (ok) {
-              const changed = rec.message.trim() !== existing.message;
-              toSave = { ...existing, message: rec.message.trim() };
-              if (changed) toSave.edited_at = now;
-              if (rec.pinned) { toSave.pinned = true; toSave.pinned_at = existing.pinned_at || now; }
-              else { delete toSave.pinned; delete toSave.pinned_at; }
-            }
-          } else {
-            ok = rec.sender_id === me.id && typeof rec.message === 'string' && rec.message.length <= 4000;
-            if (ok && rec.recipient_id && rec.recipient_id !== 'all') {
-              const target = await getUserRow(rec.recipient_id);
-              ok = !!target && target.role === 'admin';
-            }
-            if (ok && rec.attachment_url && !isBucketUrl(rec.attachment_url)) ok = false;
-          }
         } else if (col === 'securityLogs') {
           ok = !existing && rec.employee_id === me.id;
         }
@@ -391,6 +494,9 @@ async function sync(req: any, res: any, me: any) {
         } else if (col === 'messages') {
           const { data: row } = await sb.from(T.messages).select('data').eq('id', id).maybeSingle();
           ok = !!row && row.data.sender_id === me.id;
+        } else if (col === 'groups') {
+          const g = await getGroup(id);
+          ok = !!g && g.owner_id === me.id;
         }
         if (!ok) { rejected.push({ col, id, reason: 'forbidden' }); continue; }
       }
@@ -401,6 +507,10 @@ async function sync(req: any, res: any, me: any) {
         await sb.from(PRESENCE).delete().eq('user_id', id);
       }
       await sb.from(T[col]).delete().eq('id', id);
+      if (col === 'groups') {
+        await sb.from(T.messages).delete().eq('data->>recipient_id', id);
+        await sb.from(CHAT_READS).delete().eq('thread', id);
+      }
     }
   }
   if (tookPost) await sb.from(PRESENCE).update({ waiting_since: null }).eq('user_id', me.id);
@@ -1166,6 +1276,7 @@ Deno.serve(async (request: Request) => {
     if (action === "payroll-bonus" && req.method === "POST") return await payrollBonus(req, res, me);
     if (action === "payroll-bonus-delete" && req.method === "POST") return await payrollBonusDelete(req, res, me);
     if (action === "payroll-mine" && req.method === "POST") return await payrollMine(req, res, me);
+    if (action === "chat-read" && req.method === "POST") return await chatRead(req, res, me);
     if (action === "queue" && req.method === "POST") return await queueRoute(req, res, me);
     if (action === "upload" && req.method === "POST") return await upload(req, res, me);
     if (action === "profile-request" && req.method === "POST") return await profileRequest(req, res, me);
