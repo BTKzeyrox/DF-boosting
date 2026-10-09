@@ -699,7 +699,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
         </div>
 
       {showAdd && (
-        <div className="fixed inset-0 z-[90] flex items-center justify-center p-3 bg-black/80 backdrop-blur-sm overflow-y-auto" onClick={() => setShowAdd(false)}>
+        <div className="fixed inset-0 z-[90] flex items-start justify-center p-3 pt-24 bg-black/80 overflow-y-auto" onClick={() => setShowAdd(false)}>
           <form onSubmit={submitAdd} onClick={e => e.stopPropagation()} className="w-full max-w-sm my-auto bg-[#0d1624] border border-slate-700 p-5 space-y-3 text-slate-100 text-xs font-mono">
             <h3 className="font-tactical font-bold text-base text-white">Ajouter un poste</h3>
             <p className="text-slate-400 leading-relaxed">Laisse le nom vide pour créer un poste « sans compte » : il reste grisé jusqu'à l'arrivée du compte client.</p>

@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import React, { useState } from 'react';
 import { useLockBodyScroll } from '../utils/useLockBodyScroll';
 import { Pencil, X } from 'lucide-react';
@@ -82,9 +83,9 @@ export const PendingPostActions: React.FC<{ post: PostSession; onGoToPost: () =>
         </button>
       </div>
 
-      {editing && (
-        <div onClick={e => { e.stopPropagation(); if (e.target === e.currentTarget) setEditing(false); }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overscroll-contain">
-          <div onClick={e => e.stopPropagation()} className="bg-[#0f1722] border border-slate-700 w-full max-w-md rounded-xl p-5 space-y-4 text-xs font-mono">
+      {editing && createPortal(
+        <div onClick={e => { e.stopPropagation(); if (e.target === e.currentTarget) setEditing(false); }} className="fixed inset-0 z-[100] flex items-start justify-center bg-black/80 p-4 pt-24 pb-6 overflow-y-auto overscroll-contain">
+          <div onClick={e => e.stopPropagation()} className="bg-[#0f1722] border border-slate-700 w-full max-w-md rounded-xl p-5 space-y-4 text-xs font-mono my-auto">
             <h3 className="font-tactical font-bold text-white text-base">Modifier le poste en attente</h3>
             <p className="text-slate-400">Possible seulement avant la validation de l'admin.</p>
             <div>
@@ -103,7 +104,8 @@ export const PendingPostActions: React.FC<{ post: PostSession; onGoToPost: () =>
               <button type="button" disabled={busy} onClick={save} className="px-4 py-1.5 bg-emerald-600 text-white font-bold rounded disabled:opacity-50 cursor-pointer">Enregistrer</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
