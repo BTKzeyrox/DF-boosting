@@ -236,12 +236,22 @@ class DeltaForceStore {
     if (ok) this.startPolling();
   }
 
+  // Délai entre deux rechargements : 20 s normalement, plus court seulement quand la messagerie est ouverte
+  private pollMs = 20000;
+  public setFastPoll(on: boolean) {
+    const ms = on ? 4000 : 20000;
+    if (ms === this.pollMs) return;
+    this.pollMs = ms;
+    if (this.token && this.pollTimer) this.startPolling();
+    if (on && this.token) void this.pull();
+  }
+
   private startPolling() {
     this.stopPolling();
     this.pollTimer = setInterval(() => {
       if (typeof document !== 'undefined' && document.hidden) return;
       void this.pull();
-    }, 20000);
+    }, this.pollMs);
     // Retour sur l'onglet (ou l'appli) : on recharge tout de suite, sans attendre 5 s
     if (typeof document !== 'undefined') {
       this.onVisible = () => { if (!document.hidden) void this.pull(); };

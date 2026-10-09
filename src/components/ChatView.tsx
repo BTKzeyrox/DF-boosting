@@ -50,6 +50,12 @@ export const ChatView: React.FC<{ currentUser: User; initialThreadId?: string }>
   const [pinIdx, setPinIdx] = useState(0);
   const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Messagerie ouverte : les nouveaux messages arrivent en 4 s au lieu de 20 s (revient à 20 s en quittant la page)
+  useEffect(() => {
+    db.setFastPoll(true);
+    return () => db.setFastPoll(false);
+  }, []);
+
   useEffect(() => {
     const unsub = db.subscribe(() => {
       setMessages(db.getMessages());

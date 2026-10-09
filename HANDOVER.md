@@ -311,3 +311,7 @@ Un seul Claude travaille à la fois. Faire `git pull` avant tout. Recap court pu
 - Correctif (`src/index.css`) : sélecteurs exacts `[class~="bg-emerald-500"]` (nom de classe complet). Ne plus utiliser `[class*=…]` pour une couleur.
 - Écran de démarrage clair (`index.html`) : plus de blanc pur, gris-bleu comme le site.
 - Vérifié sur des captures d'un navigateur simulé (serveur simulé), pages Accueil, Réglages, Historique, Calendrier, Boosters. Pas vu sur le vrai écran.
+
+## Messagerie plus rapide (2026-10-09, non testé à l'écran)
+- Avant : les messages des autres n'arrivaient qu'à la synchro normale (toutes les 20 s). Maintenant `db.setFastPoll(true)` dans `ChatView` : 4 s tant que la messagerie est ouverte, retour à 20 s en la quittant. Coût : ≈ 900 appels par heure par personne qui reste sur la messagerie (quota gratuit, § 3 octies) : à surveiller si tout le monde y reste.
+- L'envoi lui-même était déjà instantané à l'écran (envoi au serveur 0,3 s après).
