@@ -8,6 +8,10 @@ interface AppContextType {
   lang: Language;
   toggleTheme: () => void;
   setLang: (lang: Language) => void;
+  gridCols: number; // 0 = réglage de l'admin
+  setGridCols: (n: number) => void;
+  fontScale: number; // 100, 112 ou 125 (%)
+  setFontScale: (n: number) => void;
   t: (key: TranslationKey) => string;
   isLoggingOut: boolean;
   startLogoutAnimation: (callback: () => void) => void;
@@ -26,7 +30,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return saved === 'zh' ? 'zh' : 'fr';
   });
 
+  const [gridCols, setGridColsState] = useState<number>(() => {
+    const n = Number(localStorage.getItem('delta_grid_cols'));
+    return n >= 2 && n <= 10 ? Math.round(n) : 0;
+  });
+  const [fontScale, setFontScaleState] = useState<number>(() => {
+    const n = Number(localStorage.getItem('delta_font_scale'));
+    return n === 112 || n === 125 ? n : 100;
+  });
+
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  useEffect(() => {
+    try { localStorage.setItem('delta_grid_cols', String(gridCols)); } catch { /* stockage indisponible */ }
+  }, [gridCols]);
+
+  useEffect(() => {
+    try { localStorage.setItem('delta_font_scale', String(fontScale)); } catch { /* stockage indisponible */ }
+    document.documentElement.style.fontSize = fontScale === 100 ? '' : fontScale + '%';
+  }, [fontScale]);
 
   useEffect(() => {
     localStorage.setItem('delta_theme', theme);
@@ -51,6 +73,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setLangState(newLang);
   };
 
+  const setGridCols = (n: number) => setGridColsState(n >= 2 && n <= 10 ? Math.round(n) : 0);
+  const setFontScale = (n: number) => setFontScaleState(n === 112 || n === 125 ? n : 100);
+
   const t = (key: TranslationKey) => {
     return getTranslation(lang, key);
   };
@@ -70,6 +95,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         lang,
         toggleTheme,
         setLang,
+        gridCols,
+        setGridCols,
+        fontScale,
+        setFontScale,
         t,
         isLoggingOut,
         startLogoutAnimation,

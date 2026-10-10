@@ -154,6 +154,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       sublabel: t('nav_calendar_sub'),
       icon: Calendar,
     },
+    {
+      id: 'my-settings',
+      label: t('nav_my_settings'),
+      sublabel: t('nav_my_settings_sub'),
+      icon: Settings,
+    },
     ...(isAdmin
       ? [
           {

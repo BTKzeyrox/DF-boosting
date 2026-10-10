@@ -30,6 +30,7 @@ const EmployeesManagement = lazy(() => import('./views/admin/EmployeesManagement
 const BoosterPage = lazy(() => import('./views/admin/BoosterPage').then(m => ({ default: m.BoosterPage })));
 const HistoryPage = lazy(() => import('./views/admin/HistoryPage').then(m => ({ default: m.HistoryPage })));
 const ErrorsLog = lazy(() => import('./views/admin/ErrorsLog').then(m => ({ default: m.ErrorsLog })));
+const MySettingsView = lazy(() => import('./views/MySettingsView').then(m => ({ default: m.MySettingsView })));
 const SettingsView = lazy(() => import('./views/admin/SettingsView').then(m => ({ default: m.SettingsView })));
 const EmployeeDashboard = lazy(() => import('./views/employee/EmployeeDashboard').then(m => ({ default: m.EmployeeDashboard })));
 const CalendarView = lazy(() => import('./views/CalendarView').then(m => ({ default: m.CalendarView })));
@@ -353,7 +354,9 @@ export default function App() {
           {viewUser.role === 'admin' ? (
             /* ================= ADMIN SEPARATED PAGES ================= */
             <>
-              {activeView === 'settings' ? (
+              {activeView === 'my-settings' ? (
+                <MySettingsView />
+              ) : activeView === 'settings' ? (
                 <SettingsView />
               ) : activeView === 'errors' ? (
                 <ErrorsLog />
@@ -404,7 +407,9 @@ export default function App() {
           ) : (
             /* ================= EMPLOYEE SEPARATED PAGES ================= */
             <>
-              {activeView === 'calendar' ? (
+              {activeView === 'my-settings' ? (
+                <MySettingsView />
+              ) : activeView === 'calendar' ? (
                 <CalendarView
                   currentUser={viewUser}
                   onSelectDay={handleSelectDay}

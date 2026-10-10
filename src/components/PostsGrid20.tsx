@@ -56,7 +56,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
   onOpenProofLightbox,
   onNavigateToActivePost,
 }) => {
-  const { t, theme } = useApp();
+  const { t, theme, gridCols: myGridCols } = useApp();
   const [contractsList, setContractsList] = useState<ClientContract[]>(() => db.getContracts());
   const [filterShift, setFilterShift] = useState<'all' | 'day' | 'night' | 'urgent'>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'active' | 'free'>('all');
@@ -174,7 +174,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
     return a.post_number - b.post_number;
   });
   const settings = db.getSettings();
-  const gridCols = Math.min(10, Math.max(1, Math.round(settings.grid_columns || 2)));
+  const gridCols = Math.min(10, Math.max(1, Math.round(myGridCols || settings.grid_columns || 2))); // choix perso d'abord, sinon réglage admin
   // Densité des cartes : selon la largeur réelle d'une carte (colonnes choisies + taille de l'écran), le texte et les blocs s'adaptent
   const gridRef = useRef<HTMLDivElement>(null);
   const [density, setDensity] = useState('xl');
