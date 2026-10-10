@@ -46,7 +46,7 @@ for f in LIRE_EN_PREMIER.md NOUVEAU_PROJET.md AI_STUDIO.md HANDOVER.md PROJET.md
   src/main.tsx src/db/store.ts; do [ -f "$f" ] || echo "MANQUE : $f"; done
 npm ci && npm run build        # doit finir par « built », sans erreur
 git remote -v                  # uniquement le NOUVEAU dépôt
-grep -rIl "ghp_[A-Za-z0-9]\{20,\}\|github_pat_" . --exclude-dir=node_modules --exclude-dir=.git   # aucun token (rien affiché)
+grep -rIl "ghp_[A-Za-z0-9]\{20,\}\|github_pat_[A-Za-z0-9_]\{20,\}" . --exclude-dir=node_modules --exclude-dir=.git   # aucun token (rien affiché)
 ```
 Ce premier envoi est la **copie pure** : aucune adaptation dedans. Toutes les modifications du nouveau projet (noms, mots, réglages) viennent ensuite, **dans des commits séparés**, pour qu'on puisse toujours comparer avec l'original.
 
