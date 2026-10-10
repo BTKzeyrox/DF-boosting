@@ -143,7 +143,7 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
           <span className={`font-tactical font-black text-sm tracking-wider ${L ? 'text-emerald-700' : 'text-emerald-400'} hidden min-[420px]:inline`}>DELTA FORCE</span>
         </div>
 
-        <div ref={box} className="relative flex-1 max-w-xl">
+        <div ref={box} className="relative flex-1 min-w-0">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             value={q}
