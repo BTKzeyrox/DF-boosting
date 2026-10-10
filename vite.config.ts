@@ -3,12 +3,25 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig} from 'vite';
 
+// Même numéro de version pour le site (__APP_VERSION__) et pour le fichier version.json (rechargement automatique)
+const APP_VERSION = (process.env.VERCEL_GIT_COMMIT_SHA || '').slice(0, 7) || `local-${Date.now().toString(36)}`;
+
 export default defineConfig(() => {
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [
+      react(),
+      tailwindcss(),
+      {
+        // Publie /version.json avec le numéro de cette version : le site ouvert le relit pour savoir qu'une mise à jour est sortie
+        name: 'df-version-json',
+        generateBundle() {
+          (this as any).emitFile({ type: 'asset', fileName: 'version.json', source: JSON.stringify({ v: APP_VERSION }) });
+        },
+      },
+    ],
     // Version affichée dans les rapports d'erreur : commit Vercel (7 caractères), sinon l'heure de construction
     define: {
-      __APP_VERSION__: JSON.stringify((process.env.VERCEL_GIT_COMMIT_SHA || '').slice(0, 7) || `local-${Date.now().toString(36)}`),
+      __APP_VERSION__: JSON.stringify(APP_VERSION),
     },
     resolve: {
       alias: {
