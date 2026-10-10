@@ -185,7 +185,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
     if (!el) return;
     const calc = () => {
       const w = el.clientWidth;
-      const gap = window.innerWidth >= 640 ? 16 : 10;
+      const gap = window.innerWidth >= 640 ? 10 : 6;
       // Une carte ne descend jamais sous 110 px (66 px sur téléphone) : trop de colonnes pour l'écran = moins de colonnes
       const minW = window.innerWidth >= 640 ? 110 : 66; // téléphone : on respecte le choix de BTK jusqu'à 66 px par carte
       const eff = Math.max(1, Math.min(gridCols, Math.floor((w + gap) / (minW + gap))));
@@ -355,7 +355,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
       </div>
 
       {/* Cartes des postes (2 colonnes) */}
-        <div ref={gridRef} data-d={density} className="pc-grid grid gap-2.5 sm:gap-4" style={{ gridTemplateColumns: `repeat(${Math.min(gridCols, effCols)}, minmax(0, 1fr))` }}>
+        <div ref={gridRef} data-d={density} className="pc-grid grid gap-1.5 sm:gap-2.5" style={{ gridTemplateColumns: `repeat(${Math.min(gridCols, effCols)}, minmax(0, 1fr))` }}>
           {sortedContracts.map(contract => {
             const isMyActive = activePost?.client_name === contract.client_name;
             const activeSessionOnThis = liveBy.get(contract.client_name);
@@ -380,11 +380,13 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
             const noAccount = !!contract.no_account || !contract.client_name;
             // Couleur selon le Reste : moins de 20M rouge, moins de 50M orange, au-dessus aucune couleur
             const band = getRemainingBand(remainingScore, noAccount);
-            // Seule la bordure extérieure est colorée (rouge ou orange) : le fond de la carte reste normal
+            // Bordure fine et douce (rouge ou orange) + fond en léger dégradé de la même couleur
             const bandStyle: React.CSSProperties | undefined =
               isPending || isMyActive || isTakenByOther || band === 'normal'
                 ? undefined
-                : { borderColor: band === 'red' ? '#ef4444' : '#f59e0b', borderWidth: 3 };
+                : band === 'red'
+                ? { borderColor: 'rgba(248,113,113,.7)', borderWidth: 2, backgroundImage: 'linear-gradient(135deg, rgba(248,113,113,.14) 0%, rgba(248,113,113,.04) 55%, transparent 100%)' }
+                : { borderColor: 'rgba(251,191,36,.7)', borderWidth: 2, backgroundImage: 'linear-gradient(135deg, rgba(251,191,36,.13) 0%, rgba(251,191,36,.04) 55%, transparent 100%)' };
             const photoCount =
               activeSessionOnThis?.start_proof_urls?.length || (activeSessionOnThis?.start_proof_url ? 1 : 0);
 
