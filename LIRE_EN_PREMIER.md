@@ -16,6 +16,7 @@ Ne modifie rien et ne propose rien avant d'avoir lu les trois.
 8. **Pousse directement sur `main`** (après GO), un commit clair par sujet, le projet doit compiler (`npm run build`).
 9. **Des fichiers un par un**, jamais de ZIP, sauf si BTK le demande.
 10. **Avant une action qui efface des données** : demande une confirmation précise à BTK. Ne supprime jamais rien sans son accord.
+11. **Ne pousse que sur le dépôt que BTK t'a donné pour CE chat.** Si tu travailles sur une **copie** (nouveau projet), le dépôt original `BTKzeyrox/DF-boosting` est en **lecture seule** : n'y écris jamais. Lance `git remote -v` avant chaque envoi.
 
 ## Le token GitHub (classique) : comment l'avoir
 - **Lien pour créer le token** (la case `repo` est déjà cochée) :

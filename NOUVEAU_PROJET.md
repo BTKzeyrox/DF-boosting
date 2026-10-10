@@ -1,10 +1,56 @@
 # NOUVEAU_PROJET.md — Copier ce site pour un autre projet (guide pour l'IA du nouveau compte)
 
+> Ce guide commence par **l'Étape 0 : copier le dépôt** (avec la règle de sécurité). Suis les étapes dans l'ordre : 0, 1, 2, 3, 4, 5, 6.
+
 > Lis d'abord `LIRE_EN_PREMIER.md` (règles de BTK : récap, puis attendre « GO » ; réponses courtes, mots simples).
 > Ce dépôt est la **copie** d'un site existant (DF-boosting : accueil, messagerie comme WhatsApp, gestion des employés, paie).
 > Tout ce qu'il faut pour monter le même site avec **ses propres** Supabase, Vercel, GitHub est ici. **Aucune donnée** de l'ancien projet n'est dans la copie : seulement la structure.
 
-## 0. Danger n°1 : ne jamais mélanger avec l'ancien projet
+## ⛔ Règle de sécurité (avant tout)
+Le dépôt **original** `https://github.com/BTKzeyrox/DF-boosting` est en **LECTURE SEULE** pour toi. **Tu ne dois JAMAIS y pousser, ni le modifier**, même si le token le permet.
+Tu pousses **seulement** sur le **nouveau dépôt** que le propriétaire t'a donné. **Avant chaque envoi**, lance `git remote -v` et vérifie que l'adresse est celle du nouveau dépôt. En cas de doute : arrête-toi et demande.
+
+## Étape 0 — Copier le dépôt, sans faute (à faire en premier)
+Le propriétaire te donne : (1) le lien du dépôt original (lecture, sans token : il est public), (2) l'adresse du **nouveau dépôt vide** `https://github.com/<PROPRIÉTAIRE>/<NOUVEAU_NOM>`, (3) un token limité à ce nouveau dépôt. Pas de ZIP.
+
+```bash
+# 1. Lire l'original (lecture seule) et noter sa version
+git clone --depth 1 https://github.com/BTKzeyrox/DF-boosting.git source-original
+SRC_SHA=$(git -C source-original rev-parse HEAD); echo "version copiée : $SRC_SHA"
+
+# 2. Copier les fichiers suivis par git, SANS l'historique ni le dossier .git
+mkdir nouveau-projet
+git -C source-original archive HEAD | tar -x -C nouveau-projet
+
+# 3. Vérifier que la copie est identique (la commande ne doit rien afficher)
+diff -r --exclude=.git source-original nouveau-projet
+
+# 4. Nouveau dépôt git, SANS lien avec l'original
+cd nouveau-projet
+git init -b main
+git config user.name "Claude"; git config user.email "noreply@anthropic.com"
+git add -A && git commit -m "Copie de DF-boosting @$SRC_SHA (aucune modification)"
+
+# 5. Pousser SEULEMENT sur le nouveau dépôt (le token reste dans la commande, jamais dans la config git)
+git remote add origin https://github.com/<PROPRIÉTAIRE>/<NOUVEAU_NOM>.git
+git remote -v        # ⛔ vérifier : jamais DF-boosting
+git push "https://x-access-token:$GH_TOKEN@github.com/<PROPRIÉTAIRE>/<NOUVEAU_NOM>.git" main
+```
+Si `git clone` est impossible dans ton environnement : liste les fichiers avec `https://api.github.com/repos/BTKzeyrox/DF-boosting/git/trees/main?recursive=1`, puis télécharge chaque fichier depuis `https://raw.githubusercontent.com/BTKzeyrox/DF-boosting/main/<chemin>` (octet pour octet, ne retape jamais un fichier à la main).
+
+**Contrôle « sans faute »** (dans `nouveau-projet`, avant toute modification) :
+```bash
+# Les fichiers indispensables sont là (rien ne doit être affiché ; sinon un fichier manque)
+for f in LIRE_EN_PREMIER.md NOUVEAU_PROJET.md AI_STUDIO.md HANDOVER.md PROJET.md package.json package-lock.json vite.config.ts index.html .gitignore .env.example \
+  supabase/schema.sql supabase/seed.sql supabase/create_admin.mjs supabase/functions/df-api/index.ts supabase/functions/df-restore/index.ts \
+  src/main.tsx src/db/store.ts; do [ -f "$f" ] || echo "MANQUE : $f"; done
+npm ci && npm run build        # doit finir par « built », sans erreur
+git remote -v                  # uniquement le NOUVEAU dépôt
+grep -rIl "ghp_[A-Za-z0-9]\{20,\}\|github_pat_" . --exclude-dir=node_modules --exclude-dir=.git   # aucun token (rien affiché)
+```
+Ce premier envoi est la **copie pure** : aucune adaptation dedans. Toutes les modifications du nouveau projet (noms, mots, réglages) viennent ensuite, **dans des commits séparés**, pour qu'on puisse toujours comparer avec l'original.
+
+## Danger n°1 : ne jamais mélanger avec l'ancien projet
 Le code est configuré par défaut pour l'**ancien** Supabase (`ljorjzrxkxqacmmkmqdx`). Si tu déploies sans régler `VITE_SUPABASE_URL` (étape 4), le nouveau site écrirait dans la base de l'ancien projet. **Ne saute pas l'étape 4.**
 Valeurs de l'ancien projet à **ne pas réutiliser** : Supabase `ljorjzrxkxqacmmkmqdx`, Cloudinary `dirnrsy5v`, site `df-boosting-5u7c.vercel.app`, dépôt `BTKzeyrox/DF-boosting`, tous ses tokens et clés.
 
