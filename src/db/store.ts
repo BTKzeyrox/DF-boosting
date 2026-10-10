@@ -19,8 +19,10 @@ import {
 import { AVAILABLE_CLIENT_CONTRACTS } from './initialData';
 
 const TOKEN_KEY = 'df_session_token_v2';
-const API_BASE = 'https://ljorjzrxkxqacmmkmqdx.supabase.co/functions/v1/df-api';
-const RESTORE_BASE = 'https://ljorjzrxkxqacmmkmqdx.supabase.co/functions/v1/df-restore';
+// Adresse du projet Supabase : réglage Vercel `VITE_SUPABASE_URL` (pour une copie du site), sinon le projet actuel
+const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || 'https://ljorjzrxkxqacmmkmqdx.supabase.co').replace(/\/+$/, '');
+const API_BASE = `${SUPABASE_URL}/functions/v1/df-api`;
+const RESTORE_BASE = `${SUPABASE_URL}/functions/v1/df-restore`;
 const COLS = ['users', 'posts', 'contracts', 'securityLogs', 'advances', 'messages', 'groups', 'settings'] as const;
 
 export const DEFAULT_SETTINGS: AppSettings = {
