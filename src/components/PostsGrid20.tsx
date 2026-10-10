@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useLockBodyScroll } from '../utils/useLockBodyScroll';
 import { NAV_TARGET_EVENT, peekNavTarget } from '../utils/navTarget';
 import {
@@ -175,6 +175,28 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
   });
   const settings = db.getSettings();
   const gridCols = Math.min(10, Math.max(1, Math.round(settings.grid_columns || 2)));
+  // Densité des cartes : selon la largeur réelle d'une carte (colonnes choisies + taille de l'écran), le texte et les blocs s'adaptent
+  const gridRef = useRef<HTMLDivElement>(null);
+  const [density, setDensity] = useState('xl');
+  const [effCols, setCols] = useState(gridCols);
+  const hasCards = sortedContracts.length > 0;
+  useEffect(() => {
+    const el = gridRef.current;
+    if (!el) return;
+    const calc = () => {
+      const w = el.clientWidth;
+      const gap = window.innerWidth >= 640 ? 16 : 10;
+      // Une carte ne descend jamais sous 150 px de large (sinon illisible) : trop de colonnes pour l'écran = moins de colonnes
+      const eff = Math.max(1, Math.min(gridCols, Math.floor((w + gap) / (150 + gap))));
+      setCols(eff);
+      const cw = (w - gap * (eff - 1)) / eff;
+      setDensity(cw >= 340 ? 'xl' : cw >= 260 ? 'l' : cw >= 190 ? 'm' : cw >= 140 ? 's' : 'xs');
+    };
+    calc();
+    const ro = new ResizeObserver(calc);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [gridCols, hasCards]);
   const isAdminView = currentUser.role === 'admin';
 
   return (
@@ -332,7 +354,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
       </div>
 
       {/* Cartes des postes (2 colonnes) */}
-        <div className="grid gap-2.5 sm:gap-4" style={{ gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))` }}>
+        <div ref={gridRef} data-d={density} className="pc-grid grid gap-2.5 sm:gap-4" style={{ gridTemplateColumns: `repeat(${Math.min(gridCols, effCols)}, minmax(0, 1fr))` }}>
           {sortedContracts.map(contract => {
             const isMyActive = activePost?.client_name === contract.client_name;
             const activeSessionOnThis = liveBy.get(contract.client_name);
@@ -370,7 +392,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
                 key={contract.id}
                 data-nav={`poste-${contract.post_number}`}
                 style={bandStyle}
-                className={`${noAccount ? 'opacity-60 grayscale ' : ''}border rounded-2xl p-3 sm:p-5 flex flex-col justify-between space-y-3 sm:space-y-4 transition-shadow duration-200 hover:shadow-xl relative overflow-hidden ${
+                className={`pc ${noAccount ? 'opacity-60 grayscale ' : ''}border rounded-2xl p-3 sm:p-5 flex flex-col justify-between space-y-3 sm:space-y-4 transition-shadow duration-200 hover:shadow-xl relative overflow-hidden ${
                   isPending
                     ? isLight
                       ? 'border-amber-500 ring-2 ring-amber-500/20 bg-amber-50/40'
@@ -421,14 +443,14 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
                     )
                   )}
                   <div
-                    className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pb-2.5 sm:pb-3 border-b ${
+                    className={`pc-head flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pb-2.5 sm:pb-3 border-b ${
                       isLight ? 'border-slate-100' : 'border-slate-800/80'
                     }`}
                   >
                     <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0">
                       {/* Post Number Badge */}
                       <div
-                        className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg font-tactical font-black text-xl sm:text-3xl leading-none tracking-wider shadow-sm shrink-0 ${
+                        className={`pc-badge px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg font-tactical font-black text-xl sm:text-3xl leading-none tracking-wider shadow-sm shrink-0 ${
                           isPending
                             ? 'bg-amber-500 text-black'
                             : isLight
@@ -439,7 +461,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
                         {postLabel}
                       </div>
 
-                      <div className="min-w-0">
+                      <div className="pc-name min-w-0">
                         <div className="flex items-center gap-1.5 sm:gap-2">
                           <h3
                             className={`font-tactical font-bold text-xs sm:text-base tracking-wide break-words leading-tight ${
@@ -449,7 +471,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
                             {contract.client_name || 'Poste sans compte'}
                           </h3>
                           <span
-                            className={`hidden sm:inline-block text-[10px] font-mono px-1.5 py-0.5 rounded border shrink-0 ${
+                            className={`pc-tag hidden sm:inline-block text-[10px] font-mono px-1.5 py-0.5 rounded border shrink-0 ${
                               isLight
                                 ? 'bg-slate-100 text-slate-600 border-slate-200'
                                 : 'bg-slate-800/80 text-slate-400 border-slate-700/60'
@@ -467,7 +489,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
                     </div>
 
                     {/* Status Indicator */}
-                    <div className="shrink-0">
+                    <div className="pc-status shrink-0">
                       {isPending ? (
                         <span className="inline-flex items-center gap-1.5 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[9px] sm:text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/60 animate-pulse">
                           <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
@@ -532,7 +554,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
                     </p>
                   )}
                   {/* 4 métriques : Départ, Actuel, Reste, Objectif */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2.5 mt-2.5 sm:mt-3.5 text-xs font-mono">
+                  <div className="pc-metrics grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2.5 mt-2.5 sm:mt-3.5 text-xs font-mono">
                     {/* 1. Score Départ */}
                     <div
                       className={`p-2.5 rounded-xl border ${
@@ -586,7 +608,7 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
                 </div>
 
                 {/* Action Buttons */}
-                <div className="pt-2">
+                <div className="pc-act pt-2">
                   {isPending ? (
                     currentUser.role === 'admin' ? (
                       <button

@@ -502,3 +502,40 @@ html.theme-light [class~="bg-gradient-to-tr"].text-white,
 html.theme-light [class~="bg-gradient-to-tr"] .text-white,
 html.theme-light [class~="bg-gradient-to-tl"].text-white,
 html.theme-light [class~="bg-gradient-to-tl"] .text-white { color:#fff }
+
+/* ===== Menu de gauche en bande d'icônes (tablette, ou réduit sur grand écran) ===== */
+.df-sb-compact { cursor: e-resize; }
+.df-sb-compact .df-sb-text { display: none !important; }
+.df-sb-compact > div:nth-child(1) { flex-direction: column; gap: .5rem; padding: .75rem .25rem; justify-content: center; }
+.df-sb-compact > div:nth-child(2) { justify-content: center; padding: .5rem .25rem; }
+.df-sb-compact > div:nth-child(3) { padding: .5rem .35rem; }
+.df-sb-compact nav button { justify-content: center; padding: .5rem 0; position: relative; }
+.df-sb-compact nav button > div { justify-content: center; }
+.df-sb-compact nav button > span { position: absolute; top: 4px; right: 8px; margin: 0; padding: 0; width: 8px; height: 8px; min-width: 0; border-radius: 9999px; font-size: 0; overflow: hidden; background: #f59e0b; border: 0; }
+.df-sb-compact > div:nth-child(4) { padding: .5rem .35rem; }
+.df-sb-compact .grid-cols-2 { grid-template-columns: 1fr; }
+.df-sb-compact > div:nth-child(4) button { padding-left: .25rem; padding-right: .25rem; }
+
+/* ===== Cartes de poste : le texte s'adapte à la largeur réelle d'une carte (réglage « colonnes ») ===== */
+.pc-grid[data-d="l"] .pc-head, .pc-grid[data-d="m"] .pc-head, .pc-grid[data-d="s"] .pc-head, .pc-grid[data-d="xs"] .pc-head { flex-direction: column; align-items: flex-start; }
+.pc-grid:not([data-d="xl"]) .pc-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.pc-grid:not([data-d="xl"]) .pc-tag { display: none; }
+.pc-grid:not([data-d="xl"]) .pc { padding: .75rem; }
+.pc-grid:not([data-d="xl"]) .pc-name, .pc-grid:not([data-d="xl"]) .pc-name h3 { min-width: 0; max-width: 100%; }
+.pc-grid:not([data-d="xl"]) .pc-name h3 { font-size: .8rem; word-break: normal; overflow-wrap: anywhere; }
+.pc-grid[data-d="m"] .pc-badge { font-size: 1.5rem; }
+.pc-grid[data-d="s"] .pc-badge, .pc-grid[data-d="xs"] .pc-badge { font-size: 1.15rem; padding: .1rem .35rem; }
+.pc-grid[data-d="s"] .pc-name h3, .pc-grid[data-d="xs"] .pc-name h3 { font-size: .68rem; }
+.pc-grid[data-d="s"] .pc-metrics > *, .pc-grid[data-d="xs"] .pc-metrics > * { padding: .25rem .3rem; min-width: 0; overflow: hidden; }
+.pc-grid[data-d="s"] .pc-metrics span, .pc-grid[data-d="xs"] .pc-metrics span { font-size: 9px !important; white-space: nowrap; overflow: hidden !important; text-overflow: ellipsis !important; word-break: normal; overflow-wrap: normal; }
+.pc-grid[data-d="s"] .pc-metrics span.font-bold, .pc-grid[data-d="xs"] .pc-metrics span.font-bold { font-size: 10px !important; }
+.pc-grid[data-d="xs"] .pc-metrics span.uppercase { font-size: 7px !important; }
+.pc-grid[data-d="s"] .pc-status, .pc-grid[data-d="xs"] .pc-status { max-width: 100%; }
+.pc-grid[data-d="s"] .pc-status span, .pc-grid[data-d="xs"] .pc-status span { font-size: 8px !important; white-space: nowrap; overflow: hidden !important; text-overflow: ellipsis !important; word-break: normal; }
+.pc-grid[data-d="s"] .pc-act button, .pc-grid[data-d="xs"] .pc-act button { font-size: 8px !important; padding: .35rem .15rem !important; letter-spacing: 0 !important; word-break: normal; white-space: nowrap; overflow: hidden !important; text-overflow: ellipsis !important; }
+.pc-grid[data-d="xs"] .pc-act button svg { display: none; }
+.pc-grid[data-d="s"] select, .pc-grid[data-d="xs"] select { font-size: 9px !important; padding: .1rem !important; text-overflow: ellipsis !important; }
+
+/* Petites cartes : le numéro et le nom passent l'un sous l'autre (jamais de lettres empilées) */
+.pc-grid[data-d="s"] .pc-head > div:first-child, .pc-grid[data-d="xs"] .pc-head > div:first-child { flex-wrap: wrap; row-gap: .25rem; }
+.pc-grid[data-d="s"] .pc-name, .pc-grid[data-d="xs"] .pc-name { flex-basis: 100%; }

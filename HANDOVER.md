@@ -330,3 +330,8 @@ Un seul Claude travaille à la fois. Faire `git pull` avant tout. Recap court pu
 - Le fichier déployé sur Supabase est un **petit fichier** qui importe le vrai serveur depuis GitHub à une version précise : `import "https://raw.githubusercontent.com/BTKzeyrox/DF-boosting/<COMMIT>/supabase/functions/df-api/index.ts"`.
 - **Pour mettre à jour le serveur** : pousser `index.ts` sur `main`, noter l'identifiant du commit, puis redéployer ce petit fichier avec le connecteur Supabase (projet Replay) en changeant le commit. **Retour en arrière** : redéployer avec un ancien commit (`7f87b5d` = avant la messagerie WhatsApp).
 - Version actuellement déployée : commit `a0fd77c`. La fonction `df-api-next` est désactivée (410). `df-restore` (restauration) est un fichier normal.
+
+## Cartes adaptables + menu en bande d'icônes (2026-10-10, repris et terminé par la session « animations »)
+- Menu de gauche (`Sidebar.tsx`, `App.tsx`, `index.css`) : tablette (768–1023 px) = bande d'icônes fixe ; un clic l'ouvre en entier (avec les mots). Grand écran : bouton pour réduire / ouvrir (mémorisé dans `localStorage` `df_sb_collapsed`) afin de donner plus de place aux postes. Largeur partagée via `--sbw` (TopBar, messagerie, contenu).
+- Cartes de poste (`PostsGrid20.tsx`, classes `pc-*`, `data-d`) : la densité (xl, l, m, s, xs) suit la largeur RÉELLE d'une carte. Une carte ne descend jamais sous 150 px : si Réglages demande trop de colonnes pour l'écran, la grille en met moins (10 colonnes demandées = autant que l'écran le permet).
+- Vérifié sur captures (serveur simulé) : 412, 820, 1400 et 1900 px, avec 2, 3, 5, 6 et 10 colonnes. Pas vu sur le vrai téléphone ni la vraie tablette.

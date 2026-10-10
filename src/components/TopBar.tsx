@@ -133,12 +133,12 @@ export const TopBar: React.FC<TopBarProps> = ({ currentUser, onOpenMenu, onNavig
     <>
     {/* Place réservée : la barre est en position fixe, le contenu ne passe pas dessous */}
     <div className="h-[57px] shrink-0" aria-hidden="true" />
-    <header style={{ top: 'var(--vvt, 0px)' }} className={`fixed left-0 right-0 lg:left-72 z-30 df-topbar border-b ${L ? 'border-slate-200' : 'border-slate-800'} ${L ? 'text-slate-800' : 'text-slate-100'} shadow-sm`}>
+    <header style={{ top: 'var(--vvt, 0px)', left: 'var(--sbw, 0px)' }} className={`fixed left-0 right-0 z-30 df-topbar border-b ${L ? 'border-slate-200' : 'border-slate-800'} ${L ? 'text-slate-800' : 'text-slate-100'} shadow-sm`}>
       <div className="h-14 px-2.5 sm:px-4 flex items-center gap-2.5 sm:gap-4">
-        <button onClick={onOpenMenu} title="Ouvrir le menu" className={`lg:hidden p-2 rounded-xl border ${L ? 'border-slate-200' : 'border-slate-700'} ${L ? 'bg-slate-50' : 'bg-slate-800'} ${L ? 'text-slate-700' : 'text-slate-300'} cursor-pointer`}>
+        <button onClick={onOpenMenu} title="Ouvrir le menu" className={`md:hidden p-2 rounded-xl border ${L ? 'border-slate-200' : 'border-slate-700'} ${L ? 'bg-slate-50' : 'bg-slate-800'} ${L ? 'text-slate-700' : 'text-slate-300'} cursor-pointer`}>
           <Menu className={`w-5 h-5 ${L ? 'text-emerald-600' : 'text-emerald-500'}`} />
         </button>
-        <div className="flex items-center gap-1.5 shrink-0 lg:hidden">
+        <div className="flex items-center gap-1.5 shrink-0 md:hidden">
           <Shield className={`w-4 h-4 ${L ? 'text-emerald-600' : 'text-emerald-500'}`} />
           <span className={`font-tactical font-black text-sm tracking-wider ${L ? 'text-emerald-700' : 'text-emerald-400'} hidden min-[420px]:inline`}>DELTA FORCE</span>
         </div>

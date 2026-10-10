@@ -25,6 +25,8 @@ import {
   Download,
   Bug,
   LifeBuoy,
+  PanelLeftOpen,
+  PanelLeftClose,
 } from 'lucide-react';
 import { User } from '../types';
 import { countPending } from '../utils/pendingCount';
@@ -44,6 +46,8 @@ interface SidebarProps {
   boosterMode?: boolean;
   onToggleBoosterMode?: () => void;
   onReportProblem?: () => void; // ouvre « Signaler un problème »
+  compact?: boolean; // bande d'icônes seulement
+  onToggleCompact?: () => void; // ouvrir / fermer la bande
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -58,6 +62,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   canSwitchMode = false,
   boosterMode = false,
   onToggleBoosterMode,
+  compact = false,
+  onToggleCompact,
 }) => {
   const { theme, toggleTheme, lang, setLang, t, startLogoutAnimation } = useApp();
   const [sound, setSound] = useSoundPrefs();
@@ -204,12 +210,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Sidebar Container */}
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-40 w-72 h-[100dvh] max-h-[100dvh] overflow-y-auto border-r flex flex-col justify-between transition-transform duration-300 ease-in-out overscroll-contain lg:translate-x-0 ${
+        onClick={e => { if (compact && onToggleCompact && !(e.target as HTMLElement).closest('button')) onToggleCompact(); }}
+        className={`${compact ? 'df-sb-compact w-[4.5rem]' : 'w-72'} fixed top-0 bottom-0 left-0 z-40 h-[100dvh] max-h-[100dvh] overflow-y-auto border-r flex flex-col justify-between transition-transform duration-300 ease-in-out overscroll-contain lg:translate-x-0 ${
           isLight
             ? 'bg-white border-slate-200 text-slate-800 shadow-xl'
             : 'bg-[#090f17] border-slate-800/80 text-slate-100'
         } ${
-          isOpenMobile ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+          isOpenMobile ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
       >
         {/* 1. TOP HEADER: Brand & Identity (Fixed / shrink-0) */}
@@ -224,7 +231,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <Shield className="w-5 h-5 text-emerald-500" />
               </div>
             </div>
-            <div>
+            <div className="df-sb-text">
               <div className="flex items-center gap-1.5">
                 <span className="font-tactical font-black text-base tracking-wider bg-gradient-to-r from-emerald-500 to-teal-500 bg-clip-text text-transparent">
                   DELTA FORCE
@@ -233,11 +240,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           </div>
 
+          {/* Bande d'icônes : ouvrir (ou refermer) le menu complet — tablette et grands écrans */}
+          {onToggleCompact && (
+            <button
+              type="button"
+              onClick={onToggleCompact}
+              title={compact ? 'Ouvrir le menu' : 'Réduire le menu'}
+              className="hidden md:inline-flex df-sb-toggle p-1.5 text-slate-400 hover:text-emerald-500 rounded-lg hover:bg-slate-800/60 transition-colors cursor-pointer"
+            >
+              {compact ? <PanelLeftOpen className="w-5 h-5" /> : <PanelLeftClose className="w-5 h-5" />}
+            </button>
+          )}
+
           {/* Close button on mobile */}
           {onCloseMobile && (
             <button
               onClick={onCloseMobile}
-              className="lg:hidden p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+              className="md:hidden p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
               title="Fermer le menu"
             >
               <X className="w-5 h-5" />
@@ -254,7 +273,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <Avatar src={currentUser.avatar_url} name={currentUser.name} className="w-8 h-8" />
               <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white dark:border-[#0d1624]" />
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 df-sb-text">
               <p className={`text-xs font-bold truncate font-tactical ${isLight ? 'text-slate-900' : 'text-white'}`}>
                 {currentUser.name}
               </p>
@@ -273,7 +292,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           </div>
 
-          <span className={`text-[9px] font-mono px-2 py-0.5 rounded border uppercase ${
+          <span className={`df-sb-text text-[9px] font-mono px-2 py-0.5 rounded border uppercase ${
             isLight ? 'bg-slate-100 text-slate-700 border-slate-200' : 'bg-slate-800/80 text-slate-300 border-slate-700/60'
           }`}>
             {currentUser.performance_badge || 'Actif'}
@@ -291,6 +310,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               return (
                 <button
                   key={item.id}
+                  title={compact ? item.label : undefined}
                   onClick={() => handleItemClick(item.id)}
                   className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left transition-all group cursor-pointer ${
                     isActive
@@ -314,7 +334,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     >
                       <Icon className="w-4 h-4 shrink-0" />
                     </div>
-                    <div className="min-w-0">
+                    <div className="min-w-0 df-sb-text">
                       <div className="text-xs font-tactical font-bold tracking-wide truncate">
                         {item.label}
                       </div>
@@ -360,12 +380,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {isLight ? (
                 <>
                   <Moon className="w-3.5 h-3.5 text-indigo-500" />
-                  <span>Sombre</span>
+                  <span className="df-sb-text">Sombre</span>
                 </>
               ) : (
                 <>
                   <Sun className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Clair</span>
+                  <span className="df-sb-text">Clair</span>
                 </>
               )}
             </button>
@@ -381,7 +401,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               title="Changer de langue / 切换语言"
             >
               <Globe className="w-3.5 h-3.5 text-teal-400" />
-              <span>{lang === 'fr' ? '🇨🇳 中文' : '🇫🇷 FR'}</span>
+              <span className="df-sb-text">{lang === 'fr' ? '🇨🇳 中文' : '🇫🇷 FR'}</span>
             </button>
           </div>
 
@@ -394,7 +414,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               }`}
               title="Son des notifications"
             >
-              <span>{sound.on ? '🔔 Son activé' : '🔕 Son coupé'}</span>
+              <span>{compact ? (sound.on ? '🔔' : '🔕') : sound.on ? '🔔 Son activé' : '🔕 Son coupé'}</span>
             </button>
           )}
 
@@ -412,7 +432,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               }`}
             >
               <Swords className="w-3.5 h-3.5" />
-              <span>{boosterMode ? 'Retour admin' : 'Mode booster'}</span>
+              <span className="df-sb-text">{boosterMode ? 'Retour admin' : 'Mode booster'}</span>
             </button>
           )}
 
@@ -423,7 +443,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-slate-800/60 hover:bg-slate-700/70 border border-slate-600/60 text-slate-300 hover:text-white text-xs font-tactical font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer"
             >
               <LifeBuoy className="w-3.5 h-3.5" />
-              <span>Signaler un problème</span>
+              <span className="df-sb-text">Signaler un problème</span>
             </button>
           )}
 
@@ -433,7 +453,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-red-950/40 hover:bg-red-900/60 border border-red-800/50 text-red-300 hover:text-white text-xs font-tactical font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer shadow-sm active:scale-98"
           >
             <LogOut className="w-3.5 h-3.5" />
-            <span>{t('btn_logout')}</span>
+            <span className="df-sb-text">{t('btn_logout')}</span>
           </button>
         </div>
       </aside>

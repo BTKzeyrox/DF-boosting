@@ -96,6 +96,22 @@ export default function App() {
   }, []);
   const [isWelcomeAnimating, setIsWelcomeAnimating] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  // Menu de gauche : téléphone = tiroir ; tablette = bande d'icônes qui s'ouvre au clic ; grand écran = menu complet ou bande d'icônes (choix gardé)
+  const [wide, setWide] = useState(() => (typeof window === 'undefined' ? 1280 : window.innerWidth));
+  useEffect(() => {
+    const on = () => setWide(window.innerWidth);
+    window.addEventListener('resize', on);
+    return () => window.removeEventListener('resize', on);
+  }, []);
+  const [sbCollapsed, setSbCollapsed] = useState(() => { try { return localStorage.getItem('df_sb_collapsed') === '1'; } catch { return false; } });
+  const toggleSbCollapsed = () => setSbCollapsed(v => { const n = !v; try { localStorage.setItem('df_sb_collapsed', n ? '1' : '0'); } catch { /* ignore */ } return n; });
+  const sbPhone = wide < 768;
+  const sbTablet = wide >= 768 && wide < 1024;
+  const sbCompact = sbTablet ? !isMobileSidebarOpen : !sbPhone && sbCollapsed;
+  const sbWidth = sbPhone ? '0px' : sbTablet || sbCollapsed ? '4.5rem' : '18rem';
+  useEffect(() => {
+    document.documentElement.style.setProperty('--sbw', sbWidth);
+  }, [sbWidth]);
   // Admin : peut jouer son propre rôle de booster, puis revenir en admin
   const [boosterMode, setBoosterMode] = useState(false);
 
@@ -311,10 +327,12 @@ export default function App() {
         onOpenEmployeeCV={handleOpenEmployeeCV}
         isOpenMobile={isMobileSidebarOpen}
         onCloseMobile={() => setIsMobileSidebarOpen(false)}
+        compact={sbCompact}
+        onToggleCompact={() => (sbTablet ? setIsMobileSidebarOpen(v => !v) : toggleSbCollapsed())}
       />
 
       {/* Main Container with Sidebar offset */}
-      <div className="flex-1 lg:pl-72 flex flex-col min-h-screen">
+      <div style={{ paddingLeft: 'var(--sbw, 0px)' }} className="flex-1 flex flex-col min-h-screen">
         
         <LoadingBar />
         <ConnectionBanner />
@@ -328,7 +346,7 @@ export default function App() {
         />
 
         {/* Dynamic Page Content Based on activeView */}
-        <main style={activeView === 'chat' ? { top: 'calc(57px + var(--vvt, 0px))', height: 'calc(var(--vvh, 100dvh) - 57px)' } : undefined} className={activeView === 'chat' ? 'fixed left-0 right-0 lg:left-72 z-20 min-h-0 overflow-hidden p-0 sm:p-2' : 'flex-1 p-2 sm:p-3 lg:p-4 max-w-none w-full mx-auto'}>
+        <main style={activeView === 'chat' ? { top: 'calc(57px + var(--vvt, 0px))', height: 'calc(var(--vvh, 100dvh) - 57px)', left: 'var(--sbw, 0px)' } : undefined} className={activeView === 'chat' ? 'fixed left-0 right-0 z-20 min-h-0 overflow-hidden p-0 sm:p-2' : 'flex-1 p-2 sm:p-3 lg:p-4 max-w-none w-full mx-auto'}>
           <Suspense fallback={<PageSkeleton />}>
           <ErrorBoundary scope="page" key={activeView}>
           <div className={`h-full min-h-0 ${fadeClass}`}>
