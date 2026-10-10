@@ -27,7 +27,7 @@ Ne modifie rien et ne propose rien avant d'avoir lu les trois.
 
 ## Les liens utiles
 - Dépôt : https://github.com/BTKzeyrox/DF-boosting
-- Site en ligne : https://df-boosting-5u7c.vercel.app/
+- Site en ligne : https://deltaforce-boosting.vercel.app/ (ancienne adresse : df-boosting-5u7c.vercel.app)
 - Supabase (projet « Replay ») : https://supabase.com/dashboard/project/ljorjzrxkxqacmmkmqdx
 - Vercel : https://vercel.com/dashboard
 

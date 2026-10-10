@@ -10,7 +10,7 @@ Mis à jour : 2026-10-09. « Non testé à l'écran » = le code compile et a é
 - Taille : jusqu'à 100 postes (30 à 50 en vrai), 100 à 200 boosters par jour.
 - Budget : **0 Ar**. Tout reste sur les offres gratuites (Supabase, Vercel, Cloudinary).
 - Langues : français et chinois. Thème clair et sombre. Site installable sur téléphone (icône, `manifest.webmanifest`).
-- Site en ligne : https://df-boosting-5u7c.vercel.app/ (republié à chaque push sur `main`).
+- Site en ligne : https://deltaforce-boosting.vercel.app/ (republié à chaque push sur `main`). Ancienne adresse : `df-boosting-5u7c.vercel.app`.
 
 ## 2. Où est quoi
 | Élément | Où |
