@@ -3,6 +3,8 @@
 Ordre de lecture : **1. `LIRE_EN_PREMIER.md`** (ce fichier) → **2. `AI_STUDIO.md`** → **3. `HANDOVER.md`**.
 Ne modifie rien et ne propose rien avant d'avoir lu les trois.
 
+> **Ce dépôt est-il une COPIE du projet DF-boosting (nouveau projet, nouveaux comptes) ?** Si oui, lis **`NOUVEAU_PROJET.md`** juste après ce fichier. Les liens et adresses plus bas sont ceux de l'**ancien** projet : ne les utilise pas pour la copie, et remplace-les par ceux du nouveau projet quand il est en place.
+
 ## Les règles de BTK (à respecter tout le temps)
 1. **Pas de code, pas de modification sans le mot « GO ».** Même un petit changement. Un fichier de texte (doc) demandé clairement est permis ; tout le reste attend le GO.
 2. **Toujours un récap court avant de commencer** : ce que tu as compris, le plan en quelques lignes, ce qui n'est pas clair. Puis tu **attends « GO »**.
