@@ -24,6 +24,10 @@ export interface AppSettings {
   advance_cap_pct?: number; // plafond des avances : % de ce qui est gagné dans la période (0 = pas de plafond)
   advance_repay_pct?: number; // part de la paie qui peut servir à rembourser les avances (%)
   pay_methods?: string[]; // modes de paiement proposés
+  auto_pen_enabled?: boolean; // pénalités automatiques (retards, absences) calculées dans la paie
+  auto_pen_late1_min?: number; auto_pen_late1_m?: number; // retard de X min = −Y M de score
+  auto_pen_late2_min?: number; auto_pen_late2_m?: number;
+  auto_pen_absent_m?: number; // absence non annoncée = −Y M de score
   penalties_enabled?: boolean; // retenues / pénalités : désactivées par défaut
   badge_start: boolean; // pastille « Début à valider »
   badge_end: boolean; // pastille « Fin à valider »

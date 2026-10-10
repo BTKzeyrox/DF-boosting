@@ -338,3 +338,9 @@ Un seul Claude travaille à la fois. Faire `git pull` avant tout. Recap court pu
 
 ## Cartes : espace réduit, couleurs douces (2026-10-10)
 - Espace entre les cartes : `gap-1.5 sm:gap-2.5` (avant 2.5 / 4). Bordure rouge/orange fine (2 px, couleur adoucie) + fond en léger dégradé de la même couleur (`bandStyle` dans `PostsGrid20.tsx`). Seuils inchangés (`postBand.ts`).
+
+## Pénalités automatiques en score (2026-10-10, demande de BTK, non testé en vrai)
+- Règle de BTK : retard 15 min = −1M de score, 30 min = −2M, absence non annoncée sur le site = −5M ; calculé à la fiche de paie de chaque employé. Tous les nombres sont réglables : Réglages > Paie > « Pénalités automatiques » (`auto_pen_*`, activé par défaut). 1M retiré = `price_per_million` (1 000 Ar par défaut, donc −1 000 Ar).
+- Code : `autoPenalties()` dans `df-api` (appelée par `computeSlips`), mêmes règles que `CalendarView` : retard = première session du jour après le début du shift (palier 2 si ≥ 30 min, sinon palier 1 si ≥ 15 min) ; absence = jour passé, hors dimanche, depuis la première activité (première session ou première connexion), sans aucune session. Les pénalités ressortent dans `penalties` de la fiche (id `auto-…`, motif daté), figées à la clôture. Pas de bouton de suppression sur les lignes automatiques ; net jamais négatif.
+- **Limite** : « absence annoncée » n'existe pas sur le site (pas de congés) : toute absence compte pour l'instant. Règles légales de Madagascar non vérifiées (comme pour `penalties_enabled`).
+- Vérifié : logique testée avec une base simulée (retards 08:10 / 08:15 / 08:45, dimanche sauté, jour courant exclu). Pas testé sur le vrai serveur : **df-api à redéployer** (voir § 1).

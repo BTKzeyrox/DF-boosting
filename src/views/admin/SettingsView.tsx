@@ -49,6 +49,8 @@ export const SettingsView: React.FC = () => {
   const save = () => {
     setError(null);
     if (!s.price_per_million || s.price_per_million < 1) return setError('Le prix du 1M doit être supérieur à 0.');
+    for (const k of ['auto_pen_late1_min', 'auto_pen_late2_min'] as const) if (s[k] !== undefined && !(Number(s[k]) >= 1)) return setError('Pénalités automatiques : les minutes de retard doivent être 1 ou plus.');
+    for (const k of ['auto_pen_late1_m', 'auto_pen_late2_m', 'auto_pen_absent_m'] as const) if (s[k] !== undefined && !(Number(s[k]) >= 0)) return setError('Pénalités automatiques : le nombre de M de score ne peut pas être négatif.');
     if (s.retention_days < 1) return setError('Conservation des photos : 1 jour minimum.');
     if ((s.advance_cap_pct ?? 0) < 0 || (s.advance_cap_pct ?? 0) > 100) return setError('Plafond des avances : entre 0 et 100 %.');
     if ((s.advance_repay_pct ?? 100) < 0 || (s.advance_repay_pct ?? 100) > 100) return setError('Remboursement des avances : entre 0 et 100 %.');
@@ -268,6 +270,20 @@ export const SettingsView: React.FC = () => {
           Activer les retenues / pénalités (désactivé par défaut)
         </label>
         <p className="text-[11px] text-amber-300">Les règles de Madagascar sur les retenues de salaire n'ont pas été vérifiées. Demande à un comptable ou à l'Inspection du travail avant de les activer. Chaque retenue est saisie à la main avec un motif.</p>
+        <div className="pt-3 mt-1 border-t border-slate-700 space-y-2">
+          <label className="flex items-center gap-2 text-sm text-slate-200 cursor-pointer">
+            <input type="checkbox" checked={s.auto_pen_enabled !== false} onChange={e => set('auto_pen_enabled', e.target.checked)} className="w-4 h-4 accent-emerald-500" />
+            Pénalités automatiques en score (retards et absences), calculées dans la paie de chaque employé
+          </label>
+          <p className="text-[11px] text-slate-400">Chaque 1M de score retiré = le prix du 1M réglé plus haut. Calculé à chaque fiche de paie, avec les mêmes règles que le calendrier (dimanche = repos). Un employé qui n'a rien gagné n'aura pas de net négatif.</p>
+          <div className="grid grid-cols-2 gap-2">
+            <div><label className={labelCls}>Retard : à partir de (min)</label><input type="number" min={1} value={s.auto_pen_late1_min ?? 15} onChange={e => set('auto_pen_late1_min', Number(e.target.value))} className={inputCls} /></div>
+            <div><label className={labelCls}>Retard : pénalité (M de score)</label><input type="number" min={0} step="0.5" value={s.auto_pen_late1_m ?? 1} onChange={e => set('auto_pen_late1_m', Number(e.target.value))} className={inputCls} /></div>
+            <div><label className={labelCls}>Gros retard : à partir de (min)</label><input type="number" min={1} value={s.auto_pen_late2_min ?? 30} onChange={e => set('auto_pen_late2_min', Number(e.target.value))} className={inputCls} /></div>
+            <div><label className={labelCls}>Gros retard : pénalité (M de score)</label><input type="number" min={0} step="0.5" value={s.auto_pen_late2_m ?? 2} onChange={e => set('auto_pen_late2_m', Number(e.target.value))} className={inputCls} /></div>
+            <div className="col-span-2"><label className={labelCls}>Absence non annoncée : pénalité (M de score)</label><input type="number" min={0} step="0.5" value={s.auto_pen_absent_m ?? 5} onChange={e => set('auto_pen_absent_m', Number(e.target.value))} className={inputCls} /></div>
+          </div>
+        </div>
       </section>
 
       <section className="bg-[#0f1722] border border-slate-700 p-4 space-y-3">

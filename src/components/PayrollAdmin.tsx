@@ -207,7 +207,7 @@ export const PayrollAdmin: React.FC = () => {
               ))}
               {open.penalties.map(b => (
                 <div key={b.id} className="flex justify-between gap-2 text-red-300"><span className="break-words">Retenue : {b.reason}</span>
-                  <span className="shrink-0">− {formatCurrencyAr(b.amount)}{!isClosed && <button type="button" className="ml-2 text-slate-400 underline cursor-pointer" onClick={() => askReason({ title: 'Supprimer cette retenue ?', confirmLabel: 'Supprimer', onSubmit: reason => void act('payroll-bonus-delete', { id: b.id, reason }) })}>retirer</button>}</span></div>
+                  <span className="shrink-0">− {formatCurrencyAr(b.amount)}{!isClosed && !String(b.id).startsWith('auto-') && <button type="button" className="ml-2 text-slate-400 underline cursor-pointer" onClick={() => askReason({ title: 'Supprimer cette retenue ?', confirmLabel: 'Supprimer', onSubmit: reason => void act('payroll-bonus-delete', { id: b.id, reason }) })}>retirer</button>}</span></div>
               ))}
               {open.advance_deducted > 0 && <div className="flex justify-between text-amber-300"><span>Avances remboursées</span><span>− {formatCurrencyAr(open.advance_deducted)}</span></div>}
               {open.advance_carry > 0 && <div className="flex justify-between text-slate-400"><span>Avance restant à rembourser (reportée)</span><span>{formatCurrencyAr(open.advance_carry)}</span></div>}

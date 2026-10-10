@@ -745,7 +745,8 @@ async function signupDecision(req: any, res: any, me: any) {
 
 // ---------- paie : périodes, fiches figées, primes, retenues, paiement (table df_payroll) ----------
 const PAYROLL = "df_payroll";
-type PayCfg = { mode: 'month' | 'half'; capPct: number; repayPct: number; methods: string[]; penalties: boolean };
+type AutoPen = { on: boolean; late1Min: number; late1M: number; late2Min: number; late2M: number; absentM: number };
+type PayCfg = { mode: 'month' | 'half'; capPct: number; repayPct: number; methods: string[]; penalties: boolean; auto: AutoPen; price: number; dayStart: string; nightStart: string };
 const num = (v: any, def: number, lo: number, hi: number) => { const n = Number(v); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : def; };
 async function payCfg(): Promise<PayCfg> {
   const { data: st } = await sb.from(T.settings).select('data').eq('id', 'general').maybeSingle();
@@ -757,7 +758,78 @@ async function payCfg(): Promise<PayCfg> {
     repayPct: num(d.advance_repay_pct, 100, 0, 100),
     methods: methods.length ? methods : ['MVola', 'Orange Money', 'Airtel Money', 'Espèces'],
     penalties: d.penalties_enabled === true,
+    // Pénalités automatiques en score (1M de score = prix du 1M) : retards par paliers, absence non annoncée
+    auto: {
+      on: d.auto_pen_enabled !== false,
+      late1Min: num(d.auto_pen_late1_min, 15, 1, 600), late1M: num(d.auto_pen_late1_m, 1, 0, 1000),
+      late2Min: num(d.auto_pen_late2_min, 30, 1, 600), late2M: num(d.auto_pen_late2_m, 2, 0, 1000),
+      absentM: num(d.auto_pen_absent_m, 5, 0, 1000),
+    },
+    price: num(d.price_per_million, 1000, 0, 100000000),
+    dayStart: String(d.day_shift_start || '08:00'), nightStart: String(d.night_shift_start || '20:00'),
   };
+}
+
+// Pénalités automatiques d'une période : retard (palier 1 / palier 2) et absence, chacune en millions de score × prix du 1M.
+// Mêmes règles que le calendrier : retard = première session du jour plus tard que le début du shift ; absence = jour passé (lundi à samedi)
+// sans aucune session, depuis la première activité du booster. Les absences « annoncées » n'existent pas encore sur le site : toute absence compte.
+const hmMin = (t: string) => { const [h, m] = String(t || '0:0').split(':').map(Number); return (h || 0) * 60 + (m || 0); };
+async function autoPenalties(info: { start: string; end: string }, cfg: PayCfg, onlyUser: string | undefined, users: Map<string, any>) {
+  const out = new Map<string, any[]>();
+  if (!cfg.auto.on) return out;
+  const rows = await fetchAll((a, b) => {
+    let q = sb.from(T.posts).select('data').gte('data->>date', info.start).lte('data->>date', info.end);
+    if (onlyUser) q = q.eq('data->>employee_id', onlyUser);
+    return q.order('id').range(a, b);
+  });
+  const WORKED = new Set(['completed', 'active', 'pending_start', 'pending_end']);
+  const byUser = new Map<string, Map<string, any[]>>();
+  for (const r of rows) {
+    const p = r.data;
+    if (!WORKED.has(p.status)) continue;
+    if (!byUser.has(p.employee_id)) byUser.set(p.employee_id, new Map());
+    const days = byUser.get(p.employee_id)!;
+    if (!days.has(p.date)) days.set(p.date, []);
+    days.get(p.date)!.push(p);
+  }
+  const yesterday = new Date(new Date(todayMada() + 'T00:00:00Z').getTime() - 86400000).toISOString().slice(0, 10);
+  const lastAbs = info.end < yesterday ? info.end : yesterday;
+  const emps = [...users.values()].filter(u => u.role === 'employee' && u.status !== 'blocked' && (!onlyUser || u.id === onlyUser));
+  const first = new Map<string, string>(); // première activité (première session ou première connexion)
+  for (let i = 0; i < emps.length; i += 20) {
+    await Promise.all(emps.slice(i, i + 20).map(async u => {
+      const [{ data: a }, { data: b }] = await Promise.all([
+        sb.from(T.posts).select('d:data->>date').eq('data->>employee_id', u.id).order('data->>date', { ascending: true }).limit(1),
+        sb.from(ATTENDANCE).select('day').eq('user_id', u.id).order('day', { ascending: true }).limit(1),
+      ]);
+      const c = [a?.[0]?.d, b?.[0]?.day].filter(Boolean).sort();
+      if (c.length) first.set(u.id, c[0] as string);
+    }));
+  }
+  const addM = (uid: string, id: string, m: number, reason: string, date: string) => {
+    if (m <= 0) return;
+    if (!out.has(uid)) out.set(uid, []);
+    out.get(uid)!.push({ id, amount: Math.round(m * cfg.price), reason, at: date + 'T12:00:00.000Z', auto: true });
+  };
+  for (const u of emps) {
+    const days = byUser.get(u.id) || new Map<string, any[]>();
+    for (const [date, list] of days) {
+      const first1 = [...list].sort((x, y) => String(x.start_time).localeCompare(String(y.start_time)))[0];
+      const base = first1.shift_type === 'night' ? cfg.nightStart : cfg.dayStart;
+      const diff = hmMin(first1.start_time) - hmMin(base);
+      if (diff < 0 || diff >= 12 * 60) continue;
+      if (diff >= cfg.auto.late2Min) addM(u.id, `auto-late-${date}`, cfg.auto.late2M, `Retard de ${diff} min le ${date} (−${cfg.auto.late2M}M de score)`, date);
+      else if (diff >= cfg.auto.late1Min) addM(u.id, `auto-late-${date}`, cfg.auto.late1M, `Retard de ${diff} min le ${date} (−${cfg.auto.late1M}M de score)`, date);
+    }
+    const f = first.get(u.id);
+    if (!f) continue;
+    for (let d = info.start; d <= lastAbs; d = new Date(new Date(d + 'T00:00:00Z').getTime() + 86400000).toISOString().slice(0, 10)) {
+      if (d < f || days.has(d)) continue;
+      if (new Date(d + 'T00:00:00Z').getUTCDay() === 0) continue; // dimanche = repos
+      addM(u.id, `auto-abs-${d}`, cfg.auto.absentM, `Absence non annoncée le ${d} (−${cfg.auto.absentM}M de score)`, d);
+    }
+  }
+  return out;
 }
 const todayMada = () => new Date(Date.now() + 3 * 3600 * 1000).toISOString().slice(0, 10);
 const p2 = (n: number) => (n < 10 ? `0${n}` : `${n}`);
@@ -840,6 +912,7 @@ async function computeSlips(info: { pid: string; start: string; end: string }, c
     const e = { id: b.id, amount: Number(b.amount) || 0, reason: b.reason, at: b.at };
     (b.type === 'penalty' ? get(b.user_id).penalties : get(b.user_id).bonuses).push(e);
   }
+  for (const [uid, list] of await autoPenalties(info, cfg, onlyUser, users)) get(uid).penalties.push(...list);
   for (const r of advRows) get(r.data.employee_id).approved += Math.max(0, Math.round(Number(r.data.amount_ar) || 0));
   for (const r of slipRows) get(r.data.user_id).deducted += Math.round(Number(r.data.advance_deducted) || 0);
 
