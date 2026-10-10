@@ -539,3 +539,10 @@ html.theme-light [class~="bg-gradient-to-tl"] .text-white { color:#fff }
 /* Petites cartes : le numéro et le nom passent l'un sous l'autre (jamais de lettres empilées) */
 .pc-grid[data-d="s"] .pc-head > div:first-child, .pc-grid[data-d="xs"] .pc-head > div:first-child { flex-wrap: wrap; row-gap: .25rem; }
 .pc-grid[data-d="s"] .pc-name, .pc-grid[data-d="xs"] .pc-name { flex-basis: 100%; }
+/* Très petites cartes (téléphone, 4 colonnes ou plus) : les 4 chiffres l'un sous l'autre, pas coupés */
+.pc-grid[data-d="xs"] .pc-metrics { grid-template-columns: minmax(0, 1fr); gap: .25rem; }
+.pc-grid[data-d="xs"] .pc-metrics > * { display: block; padding: .2rem .3rem; }
+.pc-grid[data-d="xs"] .pc-metrics span { display: block !important; text-overflow: clip !important; overflow: visible !important; }
+.pc-grid[data-d="xs"] .pc-metrics span.uppercase { font-size: 7px !important; }
+.pc-grid[data-d="xs"] .pc-act button { white-space: normal !important; line-height: 1.1; text-align: center; font-size: 7px !important; }
+.pc-grid[data-d="xs"] .pc { padding: .5rem; }

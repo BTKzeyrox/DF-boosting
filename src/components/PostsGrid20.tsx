@@ -186,8 +186,9 @@ export const PostsGrid20: React.FC<PostsGrid20Props> = ({
     const calc = () => {
       const w = el.clientWidth;
       const gap = window.innerWidth >= 640 ? 16 : 10;
-      // Une carte ne descend jamais sous 150 px de large (sinon illisible) : trop de colonnes pour l'écran = moins de colonnes
-      const eff = Math.max(1, Math.min(gridCols, Math.floor((w + gap) / (150 + gap))));
+      // Une carte ne descend jamais sous 110 px (66 px sur téléphone) : trop de colonnes pour l'écran = moins de colonnes
+      const minW = window.innerWidth >= 640 ? 110 : 66; // téléphone : on respecte le choix de BTK jusqu'à 66 px par carte
+      const eff = Math.max(1, Math.min(gridCols, Math.floor((w + gap) / (minW + gap))));
       setCols(eff);
       const cw = (w - gap * (eff - 1)) / eff;
       setDensity(cw >= 340 ? 'xl' : cw >= 260 ? 'l' : cw >= 190 ? 'm' : cw >= 140 ? 's' : 'xs');
