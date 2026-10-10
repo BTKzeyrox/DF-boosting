@@ -1,4 +1,4 @@
-# HANDOVER.md — Passation du projet DF-boosting (à lire après AI_STUDIO.md)
+# HANDOVER.md — Passation du projet DF-boosting (à lire après `LIRE_EN_PREMIER.md` puis `AI_STUDIO.md`)
 
 Dernière mise à jour : 2026-10-08. Les livraisons 1, 2 et 3 sont faites et poussées sur `main` ; elles restent à tester à l'écran par BTK (personne n'a vu l'écran réel). Propriétaire : BTK (français, mots simples, réponses COURTES).
 Vue d'ensemble courte (pages, sécurité, secours, limites) : voir `PROJET.md`.

@@ -1,3 +1,9 @@
+# ⛔ LIS D'ABORD `LIRE_EN_PREMIER.md`
+
+Avant tout, lis **entièrement** `LIRE_EN_PREMIER.md` (règles de BTK : récap puis « GO », lien du token), puis `AI_STUDIO.md`, puis `HANDOVER.md`.
+
+---
+
 # ⛔ LIS D'ABORD `AI_STUDIO.md`
 
 Avant toute action sur ce repo, lis **entièrement** le fichier `AI_STUDIO.md` (à la racine). Il décrit le projet, l'architecture (Vercel + Supabase), les règles INTERDITES et la méthode de travail.

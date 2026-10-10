@@ -1,3 +1,5 @@
+> **Lis d'abord `LIRE_EN_PREMIER.md`** (règles de BTK, lien du token, ordre de lecture), puis ce fichier, puis `HANDOVER.md`.
+
 > # ⛔ STOP — LIS CE FICHIER EN ENTIER AVANT TOUTE ACTION
 > Si tu es une IA (AI Studio, Claude, ChatGPT, Gemini, Cursor, Copilot...) : ne modifie rien, ne propose rien, tant que tu n'as pas lu ce fichier jusqu'au bout.
 > **Règle d'or :** avant d'écrire du code, fais un court résumé de ton plan et **attends que BTK écrive « GO »**.
